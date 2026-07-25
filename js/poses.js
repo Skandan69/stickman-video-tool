@@ -38,6 +38,63 @@ function poseWalk(t){
     mouthOpen: 0
   };
 }
+function poseRun(t){
+  const w = t*10;
+  return {
+    torsoLean: 0.25 + 0.05*Math.sin(w), headTilt: 0.08*Math.sin(w), bounceY: Math.abs(Math.sin(w))*7,
+    leftShoulderAngle: -0.9*Math.sin(w), leftElbowBend: 0.9, rightShoulderAngle: 0.9*Math.sin(w), rightElbowBend: 0.9,
+    leftHipAngle: 0.9*Math.sin(w), leftKneeBend: 1.3*Math.max(0, Math.sin(w+Math.PI)),
+    rightHipAngle: -0.9*Math.sin(w), rightKneeBend: 1.3*Math.max(0, Math.sin(w)),
+    mouthOpen: 0
+  };
+}
+// NOTE on fight/argue/hug/high-five: each character's pose is still computed independently (no
+// cross-character contact solving, same as the existing 'dance' clip) — placing two characters
+// close together with phase-offset motion reads as "interacting" without literal hand contact.
+// True skeletal contact would need pose functions to receive the partner's transform, which the
+// evaluateScene(scene,t) pipeline doesn't pass today.
+function poseFight(t, offset){
+  const w = t*6 + (offset||0);
+  const punch = Math.max(0, Math.sin(w));
+  return {
+    torsoLean: 0.15 + 0.1*Math.sin(w*2), headTilt: -0.05*Math.sin(w), bounceY: Math.abs(Math.sin(w*2))*3,
+    leftShoulderAngle: 0.6 - 0.3*Math.sin(w), leftElbowBend: -0.9,
+    rightShoulderAngle: 1.4*punch, rightElbowBend: -1.5*punch - 0.3,
+    leftHipAngle: 0.15, leftKneeBend: 0.3, rightHipAngle: -0.1, rightKneeBend: 0.2,
+    mouthOpen: 0
+  };
+}
+function poseArgue(t, offset){
+  const w = t*3 + (offset||0);
+  return {
+    torsoLean: 0.12*Math.sin(w), headTilt: 0.1*Math.sin(w*1.5), bounceY: Math.abs(Math.sin(w*2))*1.5,
+    leftShoulderAngle: 0.2, leftElbowBend: 0.5,
+    rightShoulderAngle: 1.1 + 0.3*Math.sin(w*2), rightElbowBend: -0.5,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: Math.sin(w*4) > 0 ? 1 : 0.2
+  };
+}
+function poseHug(t){
+  const settle = Math.min(1, t/0.6);
+  return {
+    torsoLean: 0.1*settle, headTilt: 0.05*Math.sin(t*1.5), bounceY: Math.sin(t*2)*1,
+    leftShoulderAngle: 1.3*settle, leftElbowBend: -0.4*settle,
+    rightShoulderAngle: 1.3*settle, rightElbowBend: -0.4*settle,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseHighFive(t){
+  const cycle = t % 2;
+  const raise = cycle < 1 ? Math.sin(cycle*Math.PI) : 0;
+  return {
+    torsoLean: 0.05*Math.sin(t*1.3), headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
+    leftShoulderAngle: 0.1*Math.sin(t*1.3), leftElbowBend: 0.15,
+    rightShoulderAngle: 2.2*raise, rightElbowBend: -0.5*raise,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
 function poseWave(t){
   return {
     torsoLean: 0.02*Math.sin(t*1.3), headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
@@ -157,12 +214,21 @@ const CLIPS = {
   drink:{ label:'Drink Coffee', pose:(t)=>poseDrinkCoffee(t) },
   phone:{ label:'Talk on Phone', pose:(t)=>posePhoneCall(t) },
   jump: { label:'Jump', pose:(t)=>poseJump(t) },
-  eat:  { label:'Eat', pose:(t)=>poseEat(t) }
+  eat:  { label:'Eat', pose:(t)=>poseEat(t) },
+  run:  { label:'Run', pose:(t)=>poseRun(t) },
+  fight:{ label:'Fight', pose:(t,opts)=>poseFight(t, opts&&opts.phase) },
+  argue:{ label:'Argue', pose:(t,opts)=>poseArgue(t, opts&&opts.phase) },
+  hug:  { label:'Hug', pose:(t)=>poseHug(t) },
+  highfive: { label:'High Five', pose:(t)=>poseHighFive(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
   {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'},
   {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'},
-  {id:'jump', label:'Jump'}, {id:'eat', label:'Eat'}
+  {id:'jump', label:'Jump'}, {id:'eat', label:'Eat'}, {id:'run', label:'Run'},
+  {id:'fight', label:'Fight'}, {id:'argue', label:'Argue'}, {id:'hug', label:'Hug'}, {id:'highfive', label:'High Five'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true };
+// Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
+// resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
+const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true };

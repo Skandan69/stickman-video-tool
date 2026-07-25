@@ -40,6 +40,11 @@ const ACTION_KEYWORDS = [
   { clipId:'dance', words:['danc'] },
   { clipId:'kite',  words:['kite'] },
   { clipId:'jump',  words:['jump'] },
+  { clipId:'run',   words:['run','runs','running','sprint','sprints','sprinting'] },
+  { clipId:'fight', words:['fight','fights','fighting','punch','punches','battle'] },
+  { clipId:'argue', words:['argue','argues','arguing','yell at','yells at','shout at'] },
+  { clipId:'hug',   words:['hug','hugs','hugging','embrace','embraces'] },
+  { clipId:'highfive', words:['high five','high-five','high fives'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -99,7 +104,7 @@ function detectFood(text){
 }
 
 function detectTwoCharacters(text){
-  return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen)/.test(text);
+  return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen|fight|argue|hug|high five|high-five)/.test(text);
 }
 
 function extractQuotedLines(text){
@@ -137,7 +142,10 @@ function parsePromptToScene(rawText){
     } else if(clipId === 'talk'){
       dialogue = { speakerIdx:0, text: quoted[quoteIdx] ? quoted[quoteIdx++] : 'Hey, good to see you!' };
     }
-    const actions = charCount === 2 ? { 0: clipId, 1: 'idle' } : { 0: clipId };
+    // Interactive clips (fight/argue/hug/highfive/dance) read best with BOTH characters performing
+    // the same clip together, rather than character 1 defaulting to idle.
+    const pairSame = charCount === 2 && INTERACTIVE_CLIPS[clipId];
+    const actions = charCount === 2 ? { 0: clipId, 1: pairSame ? clipId : 'idle' } : { 0: clipId };
     return { duration: Math.round(perSeg*10)/10, actions: actions, dialogue: dialogue };
   });
 
