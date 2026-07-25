@@ -188,9 +188,10 @@
       UPPER_LEG = BASE_GEOMETRY.upperLeg, LOWER_LEG = BASE_GEOMETRY.lowerLeg,
       LW = BASE_GEOMETRY.lw, HIP_HEIGHT = BASE_GEOMETRY.hipHeight;
 
-  function applyBodyScale(bodyType){
+  function applyBodyScale(bodyType, sizeScale){
     const preset = BODY_PRESETS[bodyType] || BODY_PRESETS.adult;
-    const s = preset.scale;
+    const sizeMul = sizeScale || 1;
+    const s = preset.scale * sizeMul;
     HEAD_R = BASE_GEOMETRY.headR * s * preset.headScale;
     NECK_LEN = BASE_GEOMETRY.neckLen * s;
     TORSO_LEN = BASE_GEOMETRY.torsoLen * s;
@@ -235,7 +236,8 @@
   function makeCharacter(overrides){
     return Object.assign({
       id: charUid(), name: 'Stickman', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd',
-      hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult'
+      hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult',
+      sizeScale: 1, emotion: 'neutral'
     }, overrides || {});
   }
   const DEFAULT_CHARACTER_PALETTE = [
@@ -297,6 +299,58 @@
     ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
   }
 
+  // ---------- face: eyebrows + eyes + mouth, driven by eyeStyle (shape) and emotion (expression) ----------
+  function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
+    const ex = head.x + faceDir*7, ey = head.y - 3;
+    const wide = emotion === 'surprised' ? 1.3 : 1;
+
+    // eyebrow: angle communicates the emotion even though the eye shape stays the same
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if(emotion === 'angry'){
+      ctx.moveTo(ex - faceDir*5, ey-11); ctx.lineTo(ex + faceDir*5, ey-6);
+    } else if(emotion === 'sad'){
+      ctx.moveTo(ex - faceDir*5, ey-6); ctx.lineTo(ex + faceDir*5, ey-11);
+    } else if(emotion === 'surprised'){
+      ctx.moveTo(ex - faceDir*5, ey-14); ctx.lineTo(ex + faceDir*5, ey-14);
+    } else if(emotion === 'happy'){
+      ctx.moveTo(ex - faceDir*5, ey-10); ctx.lineTo(ex + faceDir*5, ey-11);
+    } else {
+      ctx.moveTo(ex - faceDir*5, ey-9); ctx.lineTo(ex + faceDir*5, ey-9);
+    }
+    ctx.stroke();
+
+    // eye (shape controlled by eyeStyle, size bumped up for surprised)
+    ctx.fillStyle = '#222';
+    if(eyeStyle === 'round'){
+      ctx.beginPath(); ctx.arc(ex, ey, 3*wide, 0, Math.PI*2); ctx.fill();
+    } else if(eyeStyle === 'happy'){
+      ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ex, ey, 3*wide, Math.PI, 0); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(ex, ey, 2*wide, 0, Math.PI*2); ctx.fill();
+    }
+
+    // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise emotion picks the shape
+    const mx = head.x + faceDir*6, my = head.y + 8;
+    ctx.strokeStyle = '#222'; ctx.fillStyle = '#222'; ctx.lineWidth = 2;
+    if(mouthOpen > 0.5){
+      ctx.beginPath(); ctx.ellipse(mx, my, 3.5, 3, 0, 0, Math.PI*2); ctx.fill();
+    } else if(emotion === 'surprised'){
+      ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI*2); ctx.fill();
+    } else if(emotion === 'happy'){
+      ctx.beginPath(); ctx.arc(mx - faceDir*2, my-2, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+    } else if(emotion === 'sad'){
+      ctx.beginPath(); ctx.arc(mx - faceDir*2, my+5, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
+    } else if(emotion === 'angry'){
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+9); ctx.lineTo(head.x+faceDir*10, head.y+7); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+8); ctx.lineTo(head.x+faceDir*10, head.y+8); ctx.stroke();
+    }
+    ctx.lineWidth = LW;
+  }
+
   // ---------- stickman renderer (kept from v1, appearance + skeleton still fused —
   // splitting Character/Skeleton is Sprint 2, out of scope here) ----------
   function drawStickman(x, faceDir, appearance, pose){
@@ -307,9 +361,10 @@
     const hairStyle = appearance.hairStyle || (gender === 'female' ? 'long' : 'short');
     const hairColor = appearance.hairColor || '#2b1b12';
     const eyeStyle = appearance.eyeStyle || 'dot';
+    const emotion = appearance.emotion || 'neutral';
     const accessory = appearance.accessory || 'none';
     const color = outfit; // kept for the female skirt tint below
-    const bodyPreset = applyBodyScale(appearance.bodyType); // sets HEAD_R/TORSO_LEN/etc for THIS character
+    const bodyPreset = applyBodyScale(appearance.bodyType, appearance.sizeScale); // sets HEAD_R/TORSO_LEN/etc for THIS character
     const stoop = bodyPreset.stoop || 0;
     const effTorsoLean = pose.torsoLean + stoop;
     const effHeadTilt = pose.headTilt + stoop*0.5;
@@ -369,24 +424,7 @@
     if(accessory === 'hat') drawHat(head, hairColor);
     ctx.strokeStyle = outfit; ctx.lineWidth = LW;
 
-    ctx.fillStyle = '#222';
-    if(eyeStyle === 'round'){
-      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 3, 0, Math.PI*2); ctx.fill();
-    } else if(eyeStyle === 'happy'){
-      ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 3, Math.PI, 0); ctx.stroke();
-      ctx.lineWidth = LW;
-    } else {
-      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 2, 0, Math.PI*2); ctx.fill();
-    }
-    if(pose.mouthOpen > 0.5){
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.ellipse(head.x+faceDir*6, head.y+8, 3.5, 3, 0, 0, Math.PI*2); ctx.fill();
-    } else {
-      ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+8); ctx.lineTo(head.x+faceDir*10, head.y+8); ctx.stroke();
-      ctx.lineWidth = LW;
-    }
+    drawFace(head, faceDir, eyeStyle, emotion, pose.mouthOpen);
     if(accessory === 'glasses') drawGlasses(head);
 
     ctx.fillStyle = '#444';
@@ -885,9 +923,9 @@
     const characters = scene.characters.map((appearance, i)=>{
       const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
       const speaking = clipId === 'talk' && active.dialogue && active.dialogue.speakerId === appearance.id;
-      const preset = applyBodyScale(appearance.bodyType); // must be active before the pose is computed (arm IK reads current geometry)
+      const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale); // must be active before the pose is computed (arm IK reads current geometry)
       const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
-      pose.bounceY *= preset.scale; // keep jump/idle/sit bounce proportional to body size
+      pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
       return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
     });
 
@@ -1027,6 +1065,10 @@
     return [['child','Kid'],['adult','Adult'],['elder','Elderly']]
       .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
   }
+  function emotionOptionsHtml(sel){
+    return [['neutral','Neutral'],['happy','Happy'],['sad','Sad'],['angry','Angry'],['surprised','Surprised']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
 
   function characterCardHtml(c, idx){
     return (
@@ -1046,11 +1088,15 @@
           '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="male" '+(c.gender==='male'?'checked':'')+'> Male</label>' +
           '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="female" '+(c.gender==='female'?'checked':'')+'> Female</label>' +
         '</div>' +
-        '<div class="field"><label>Body type</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
+        '<div class="row">' +
+          '<div class="field"><label>Body type</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
+          '<div class="field"><label>Size <span class="size-val" data-sizeval="'+c.id+'">'+(c.sizeScale||1).toFixed(2)+'x</span></label><input type="range" min="0.6" max="1.6" step="0.05" data-cfield="sizeScale" data-cid="'+c.id+'" value="'+(c.sizeScale||1)+'"></div>' +
+        '</div>' +
         '<div class="row">' +
           '<div class="field"><label>Skin tone</label><select data-cfield="skin" data-cid="'+c.id+'">'+skinOptionsHtml(c.skin)+'</select></div>' +
           '<div class="field"><label>Eyes</label><select data-cfield="eyeStyle" data-cid="'+c.id+'">'+eyeOptionsHtml(c.eyeStyle)+'</select></div>' +
         '</div>' +
+        '<div class="field"><label>Emotion</label><select data-cfield="emotion" data-cid="'+c.id+'">'+emotionOptionsHtml(c.emotion)+'</select></div>' +
         '<div class="row">' +
           '<div class="field"><label>Hairstyle</label><select data-cfield="hairStyle" data-cid="'+c.id+'">'+hairOptionsHtml(c.hairStyle)+'</select></div>' +
           '<div class="field"><label>Hair color</label><div class="color-row"><input type="color" data-cfield="hairColor" data-cid="'+c.id+'" value="'+c.hairColor+'"></div></div>' +
@@ -1079,6 +1125,11 @@
     if(!c) return;
     if(field === 'gender'){ if(e.target.checked) c.gender = e.target.value; }
     else if(field === 'name'){ c.name = e.target.value || 'Stickman'; renderSegmentList(); }
+    else if(field === 'sizeScale'){
+      c.sizeScale = parseFloat(e.target.value) || 1;
+      const label = characterList.querySelector('[data-sizeval="'+id+'"]');
+      if(label) label.textContent = c.sizeScale.toFixed(2) + 'x';
+    }
     else { c[field] = e.target.value; }
   }
 
