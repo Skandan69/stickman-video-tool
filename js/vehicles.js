@@ -192,6 +192,98 @@ const VEHICLES = {
       });
       ctx.restore();
     }
+  },
+  airplane: {
+    label: 'Airplane',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const by = gy - 12*s;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#e5e7eb';
+      ctx.beginPath();
+      ctx.moveTo(x-44*s, by); ctx.quadraticCurveTo(x, by-14*s, x+50*s, by-2*s);
+      ctx.lineTo(x+44*s, by+4*s); ctx.quadraticCurveTo(x, by+8*s, x-44*s, by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#60a5fa';
+      ctx.beginPath(); ctx.moveTo(x-10*s, by-4*s); ctx.lineTo(x-30*s, by-24*s); ctx.lineTo(x-14*s, by-24*s); ctx.lineTo(x+4*s, by-4*s); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.beginPath(); ctx.moveTo(x+30*s, by-2*s); ctx.lineTo(x+48*s, by-16*s); ctx.lineTo(x+52*s, by-16*s); ctx.lineTo(x+44*s, by); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#bfe3ff';
+      [-30,-16,-2,12].forEach(ox=>{
+        ctx.beginPath(); ctx.arc(x+ox*s, by-3*s, 3*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      });
+      ctx.restore();
+    }
+  },
+  boat: {
+    label: 'Boat',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*2)*3*s;
+      const by = gy - 6*s - bob;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#8b5e3c';
+      ctx.beginPath();
+      ctx.moveTo(x-40*s, by); ctx.lineTo(x-30*s, by+16*s); ctx.lineTo(x+30*s, by+16*s); ctx.lineTo(x+40*s, by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x-48*s, by+3*s); ctx.quadraticCurveTo(x, by+10*s, x+48*s, by+3*s); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, by-40*s); ctx.stroke();
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath(); ctx.moveTo(x, by-38*s); ctx.lineTo(x+26*s, by-14*s); ctx.lineTo(x, by-14*s); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  },
+  helicopter: {
+    label: 'Helicopter',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const by = gy - 60*s + Math.sin(t*2)*4*s;
+      const spin = t*20;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.ellipse(x, by, 22*s, 13*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-faceDir*22*s, by+2*s); ctx.lineTo(x-faceDir*40*s, by-2*s); ctx.lineTo(x-faceDir*40*s, by+4*s); ctx.lineTo(x-faceDir*22*s, by+7*s); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, by-12*s); ctx.lineTo(x, by-18*s); ctx.stroke();
+      ctx.save(); ctx.translate(x, by-18*s); ctx.rotate(spin);
+      ctx.strokeStyle = 'rgba(20,20,20,0.6)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-42*s,0); ctx.lineTo(42*s,0); ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x-8*s, by+12*s); ctx.lineTo(x-8*s, by+20*s); ctx.moveTo(x+8*s, by+12*s); ctx.lineTo(x+8*s, by+20*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-14*s, by+20*s); ctx.lineTo(x+14*s, by+20*s); ctx.stroke();
+      ctx.restore();
+    }
+  },
+  scooter: {
+    label: 'Scooter',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const wheelR = 7*s, spin = t*8;
+      const wy = gy, backX = x-14*s, frontX = x+14*s;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      [backX, frontX].forEach(wx=>{
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.stroke();
+        for(let i=0;i<4;i++){
+          const ang = spin + i*Math.PI/2;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR*0.7, wy+Math.sin(ang)*wheelR*0.7); ctx.stroke();
+        }
+      });
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(backX-6*s, wy-wheelR); ctx.lineTo(frontX+4*s, wy-wheelR); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(frontX, wy-wheelR); ctx.lineTo(frontX, wy-wheelR-22*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(frontX-7*s, wy-wheelR-22*s); ctx.lineTo(frontX+7*s, wy-wheelR-22*s); ctx.stroke();
+      ctx.restore();
+    }
   }
 };
 const VEHICLE_LIST = Object.keys(VEHICLES).map(id => ({ id, label: VEHICLES[id].label }));

@@ -85,6 +85,12 @@ function detectBackground(text){
   if(/(space|outer space|galaxy|planet|astronaut)/.test(text)) return 'space';
   if(/(restaurant|diner)/.test(text)) return 'restaurant';
   if(/(farm|barn|farmyard)/.test(text)) return 'farm';
+  if(/(mountain|mountains)/.test(text)) return 'mountain';
+  if(/(lake|pond)/.test(text)) return 'lake';
+  if(/(desert|dunes)/.test(text)) return 'desert';
+  if(/(castle)/.test(text)) return 'castle';
+  if(/(stadium|arena)/.test(text)) return 'stadium';
+  if(/(underwater|under the sea|ocean floor)/.test(text)) return 'underwater';
   if(/(park|outside|outdoor|garden)/.test(text)) return 'sky';
   if(/(grid|graph paper)/.test(text)) return 'grid';
   return 'white';
@@ -116,6 +122,10 @@ function detectFood(text){
   if(/(ice cream|icecream)/.test(text)) return 'icecream';
   if(/(cake)/.test(text)) return 'cake';
   if(/(donut|doughnut)/.test(text)) return 'donut';
+  if(/(taco)/.test(text)) return 'taco';
+  if(/(sushi)/.test(text)) return 'sushi';
+  if(/(popcorn)/.test(text)) return 'popcorn';
+  if(/(waffle)/.test(text)) return 'waffle';
   if(/(sandwich)/.test(text)) return 'sandwich';
   return null; // no explicit food mentioned -> leave whatever's already selected alone
 }
@@ -133,7 +143,13 @@ const ANIMAL_KEYWORDS = [
   { type:'horse',    words:['horse','pony'] },
   { type:'cow',      words:['cow','cattle'] },
   { type:'sheep',    words:['sheep','lamb'] },
-  { type:'elephant', words:['elephant'] }
+  { type:'elephant', words:['elephant'] },
+  { type:'fish',     words:['fish','goldfish'] },
+  { type:'snake',    words:['snake'] },
+  { type:'chicken',  words:['chicken','hen','rooster'] },
+  { type:'pig',      words:['pig','piglet'] },
+  { type:'monkey',   words:['monkey'] },
+  { type:'lion',     words:['lion'] }
 ];
 function detectAnimals(text){
   const found = [];
@@ -150,7 +166,11 @@ const VEHICLE_KEYWORDS = [
   { type:'bus',        words:['bus','buses'] },
   { type:'truck',      words:['truck'] },
   { type:'motorcycle', words:['motorcycle','motorbike'] },
-  { type:'train',      words:['train'] }
+  { type:'train',      words:['train'] },
+  { type:'airplane',   words:['airplane','plane','jet'] },
+  { type:'boat',       words:['boat','ship','sailboat'] },
+  { type:'helicopter', words:['helicopter','chopper'] },
+  { type:'scooter',    words:['scooter'] }
 ];
 function detectVehicles(text){
   const found = [];
