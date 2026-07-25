@@ -14,6 +14,12 @@ const COSTUMES = {
   teacher:     { label: 'Teacher',     outfit: '#92400e', accessory: 'glasses' },
   firefighter: { label: 'Firefighter', outfit: '#dc2626', accessory: 'hat' },
   scientist:   { label: 'Scientist',   outfit: '#f1f5f9', accessory: 'glasses' },
-  artist:      { label: 'Artist',      outfit: '#0891b2', accessory: 'bag' }
+  artist:      { label: 'Artist',      outfit: '#0891b2', accessory: 'bag' },
+  superhero: { label: 'Superhero', outfit: '#dc2626', accessory: 'cape' },
+  astronaut: { label: 'Astronaut', outfit: '#f1f5f9', accessory: 'helmet' },
+  pirate:    { label: 'Pirate',    outfit: '#78350f', accessory: 'headband' },
+  wizard:    { label: 'Wizard',    outfit: '#6d28d9', accessory: 'wizardhat' },
+  ninja:     { label: 'Ninja',     outfit: '#1f2937', accessory: 'mask' },
+  knight:    { label: 'Knight',    outfit: '#64748b', accessory: 'helmet' }
 };
 const COSTUME_LIST = Object.keys(COSTUMES).map(id => ({ id, label: COSTUMES[id].label }));

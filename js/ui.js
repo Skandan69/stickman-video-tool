@@ -116,7 +116,8 @@ function hairOptionsHtml(sel){
 function accessoryOptionsHtml(sel){
   return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag'],
           ['chefhat','Chef Hat'],['police','Police Cap'],['headband','Headband'],['doctor','Stethoscope'],
-          ['crown','Crown'],['backpack','Backpack'],['scarf','Scarf'],['mask','Mask']]
+          ['crown','Crown'],['backpack','Backpack'],['scarf','Scarf'],['mask','Mask'],
+          ['cape','Cape'],['wizardhat','Wizard Hat'],['helmet','Helmet']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function costumeOptionsHtml(){

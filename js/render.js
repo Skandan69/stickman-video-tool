@@ -176,6 +176,7 @@ function drawStickman(x, faceDir, appearance, pose){
   }
   if(accessory === 'backpack') drawBackpack(shoulder, hip, faceDir, outfit);
   if(accessory === 'scarf') drawScarf(neck, outfit);
+  if(accessory === 'cape') drawCape(shoulder, hip, faceDir, outfit);
 
   // bold black head outline (like the reference "cartoon stickman" style) — outfit color stays on
   // the body/limbs for per-character identity, but the face itself always reads in high-contrast black
@@ -188,6 +189,8 @@ function drawStickman(x, faceDir, appearance, pose){
   if(accessory === 'police') drawPoliceCap(head);
   if(accessory === 'headband') drawHeadband(head, outfit);
   if(accessory === 'crown') drawCrown(head);
+  if(accessory === 'wizardhat') drawWizardHat(head);
+  if(accessory === 'helmet') drawHelmet(head);
   ctx.strokeStyle = outfit; ctx.lineWidth = LW;
 
   drawFace(head, faceDir, eyeStyle, emotion, pose.mouthOpen);
@@ -404,6 +407,38 @@ function drawBackpack(shoulder, hip, faceDir, color){
   ctx.beginPath(); ctx.rect(bx-9, by-14, 18, 26); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(bx-9, by-2); ctx.lineTo(bx+9, by-2); ctx.stroke();
+  ctx.restore();
+}
+function drawCape(shoulder, hip, faceDir, color){
+  ctx.save();
+  const cx = shoulder.x - faceDir*6;
+  ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx-8, shoulder.y-2);
+  ctx.lineTo(cx+8, shoulder.y-2);
+  ctx.quadraticCurveTo(cx+14, hip.y+20, cx, hip.y+34);
+  ctx.quadraticCurveTo(cx-14, hip.y+20, cx-8, shoulder.y-2);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawWizardHat(head){
+  ctx.save();
+  ctx.fillStyle = '#4c1d95'; ctx.strokeStyle = '#2e1065'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R+2, HEAD_R+4, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(head.x-HEAD_R*0.5, head.y-HEAD_R);
+  ctx.lineTo(head.x+6, head.y-HEAD_R-34);
+  ctx.lineTo(head.x+HEAD_R*0.5, head.y-HEAD_R);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(head.x+6, head.y-HEAD_R-34, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawHelmet(head){
+  ctx.save();
+  ctx.fillStyle = 'rgba(203,213,225,0.9)'; ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(head.x, head.y-2, HEAD_R+3, Math.PI*1.05, Math.PI*1.95); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(head.x-HEAD_R-2, head.y-2); ctx.lineTo(head.x+HEAD_R+2, head.y-2); ctx.stroke();
   ctx.restore();
 }
 function drawScarf(neck, color){

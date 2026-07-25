@@ -52,6 +52,13 @@ const ACTION_KEYWORDS = [
   { clipId:'read',  words:['read','reads','reading a book','reads a book'] },
   { clipId:'clap',  words:['clap','claps','clapping','applause'] },
   { clipId:'bow',   words:['bows','bowing','takes a bow'] },
+  { clipId:'yoga',  words:['yoga','meditates','meditating'] },
+  { clipId:'cry',   words:['cry','cries','crying','sobs','sobbing'] },
+  { clipId:'point', words:['point','points','pointing'] },
+  { clipId:'salute',words:['salute','salutes','saluting'] },
+  { clipId:'shrug', words:['shrug','shrugs','shrugging'] },
+  { clipId:'stretch',words:['stretch','stretches','stretching'] },
+  { clipId:'fall',  words:['falls down','falling down','trips and falls','stumbles and falls'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }

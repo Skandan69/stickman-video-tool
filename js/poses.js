@@ -286,6 +286,92 @@ function poseBow(t){
   };
 }
 
+function poseYoga(t){
+  const w = t*1.5;
+  return {
+    torsoLean: 0.05*Math.sin(w), headTilt: 0, bounceY: 0,
+    leftShoulderAngle: 2.9, leftElbowBend: 0.3,
+    rightShoulderAngle: -2.9, rightElbowBend: -0.3,
+    leftHipAngle: -1.2, leftKneeBend: 1.8,
+    rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseCry(t){
+  const w = t*8;
+  return {
+    torsoLean: 0.15, headTilt: 0.5+0.05*Math.sin(w), bounceY: Math.abs(Math.sin(w))*1.5,
+    leftShoulderAngle: 0.7, leftElbowBend: -1.3,
+    rightShoulderAngle: -0.7, rightElbowBend: -1.3,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function posePoint(t){
+  const w = t*1.5;
+  return {
+    torsoLean: 0.05, headTilt: 0.05*Math.sin(w), bounceY: 0,
+    leftShoulderAngle: 0.1, leftElbowBend: 0.15,
+    rightShoulderAngle: 1.55, rightElbowBend: -0.1,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseSalute(t){
+  return {
+    torsoLean: 0, headTilt: 0, bounceY: Math.sin(t*2)*0.6,
+    leftShoulderAngle: 0.05, leftElbowBend: 0.1,
+    rightShoulderAngle: 0.3, rightElbowBend: -2.0,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseShrug(t){
+  return {
+    torsoLean: 0, headTilt: 0.1*Math.sin(t*2), bounceY: Math.abs(Math.sin(t*2))*2,
+    leftShoulderAngle: 0.3, leftElbowBend: -0.9,
+    rightShoulderAngle: -0.3, rightElbowBend: -0.9,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseStretch(t){
+  const w = t*1.2;
+  return {
+    torsoLean: 0.15*Math.sin(w), headTilt: 0.1*Math.sin(w), bounceY: 0,
+    leftShoulderAngle: 3.0+0.2*Math.sin(w), leftElbowBend: 0,
+    rightShoulderAngle: -3.0-0.2*Math.sin(w), rightElbowBend: 0,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+// "Fall down" cycles a stumble into a sprawled lying moment (reusing the pose.lying anchor scheme
+// from poseSleep) — the loop resetting back to the stumble at the top reads as "gets back up".
+function poseFallDown(t){
+  const cycle = 2.5;
+  const phase = (t % cycle) / cycle;
+  if(phase < 0.3){
+    const stumble = phase/0.3;
+    return {
+      torsoLean: 0.3+0.9*stumble, headTilt: 0.2+0.7*stumble, bounceY: 0,
+      leftShoulderAngle: -0.5, leftElbowBend: 0.3,
+      rightShoulderAngle: 0.8, rightElbowBend: -0.3,
+      leftHipAngle: 0.3*stumble, leftKneeBend: 0.5*stumble,
+      rightHipAngle: -0.2*stumble, rightKneeBend: 0.3*stumble,
+      mouthOpen: stumble>0.5 ? 1 : 0
+    };
+  }
+  return {
+    lying: true,
+    torsoLean: 1.5, headTilt: 1.3, bounceY: 0,
+    leftShoulderAngle: -0.6, leftElbowBend: 0.6,
+    rightShoulderAngle: -2.2, rightElbowBend: -0.5,
+    leftHipAngle: -1.9, leftKneeBend: 0.6,
+    rightHipAngle: -1.1, rightKneeBend: -0.3,
+    mouthOpen: 0
+  };
+}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t)=>poseIdle(t) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
@@ -309,7 +395,14 @@ const CLIPS = {
   sleep:{ label:'Sleep', pose:(t)=>poseSleep(t) },
   read: { label:'Read', pose:(t)=>poseRead(t) },
   clap: { label:'Clap', pose:(t)=>poseClap(t) },
-  bow:  { label:'Bow', pose:(t)=>poseBow(t) }
+  bow:  { label:'Bow', pose:(t)=>poseBow(t) },
+  yoga: { label:'Yoga', pose:(t)=>poseYoga(t) },
+  cry:  { label:'Cry', pose:(t)=>poseCry(t) },
+  point:{ label:'Point', pose:(t)=>posePoint(t) },
+  salute:{ label:'Salute', pose:(t)=>poseSalute(t) },
+  shrug:{ label:'Shrug', pose:(t)=>poseShrug(t) },
+  stretch:{ label:'Stretch', pose:(t)=>poseStretch(t) },
+  fall: { label:'Fall Down', pose:(t)=>poseFallDown(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -318,7 +411,9 @@ const CLIP_LIST = [
   {id:'jump', label:'Jump'}, {id:'eat', label:'Eat'}, {id:'run', label:'Run'},
   {id:'fight', label:'Fight'}, {id:'argue', label:'Argue'}, {id:'hug', label:'Hug'}, {id:'highfive', label:'High Five'},
   {id:'kick', label:'Kick'}, {id:'throw', label:'Throw'}, {id:'swim', label:'Swim'}, {id:'sleep', label:'Sleep'},
-  {id:'read', label:'Read'}, {id:'clap', label:'Clap'}, {id:'bow', label:'Bow'}
+  {id:'read', label:'Read'}, {id:'clap', label:'Clap'}, {id:'bow', label:'Bow'},
+  {id:'yoga', label:'Yoga'}, {id:'cry', label:'Cry'}, {id:'point', label:'Point'}, {id:'salute', label:'Salute'},
+  {id:'shrug', label:'Shrug'}, {id:'stretch', label:'Stretch'}, {id:'fall', label:'Fall Down'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
