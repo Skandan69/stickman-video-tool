@@ -122,6 +122,134 @@ const ANIMALS = {
       ctx.beginPath(); ctx.arc(hx+faceDir*4*s, hy-1*s, 1.3*s, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
+  },
+  horse: {
+    label: 'Horse',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*3)*1.2*s;
+      const bx = x, by = gy - 36*s - bob;
+      const swing = Math.sin(t*5)*6*s;
+      ctx.save();
+      ctx.lineWidth = 3.5; ctx.strokeStyle = INK;
+      [[-18,swing],[8,-swing],[-8,-swing],[18,swing]].forEach(([ox,sw])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+16*s); ctx.lineTo(bx+ox*s+sw*0.3, gy); ctx.stroke();
+      });
+      const tailSway = Math.sin(t*2.5)*8*s;
+      ctx.beginPath();
+      ctx.moveTo(bx-faceDir*30*s, by-4*s);
+      ctx.quadraticCurveTo(bx-faceDir*40*s+tailSway, by+14*s, bx-faceDir*36*s+tailSway, by+30*s);
+      ctx.stroke();
+      ctx.fillStyle = '#8b5e3c';
+      ctx.beginPath(); ctx.ellipse(bx, by, 32*s, 16*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      const neckX = bx+faceDir*26*s, neckY = by-18*s;
+      ctx.beginPath(); ctx.moveTo(bx+faceDir*18*s, by-8*s); ctx.lineTo(neckX, neckY); ctx.lineTo(neckX-faceDir*10*s, by-6*s); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const hx = neckX+faceDir*6*s, hy = neckY-6*s;
+      ctx.beginPath(); ctx.ellipse(hx, hy, 9*s, 7*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(hx+faceDir*9*s, hy+3*s, 6*s, 3.5*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#3a2a1a';
+      ctx.beginPath();
+      ctx.moveTo(neckX-faceDir*4*s, neckY-10*s);
+      ctx.quadraticCurveTo(neckX+faceDir*2*s, neckY, neckX-faceDir*2*s, by-6*s);
+      ctx.lineTo(neckX-faceDir*8*s, by-8*s);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*3*s, hy-2*s, 1.5*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  cow: {
+    label: 'Cow',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*2.5)*1*s;
+      const bx = x, by = gy - 26*s - bob;
+      const swing = Math.sin(t*4)*3*s;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      [[-16,swing],[6,-swing],[-6,-swing],[16,swing]].forEach(([ox,sw])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+13*s); ctx.lineTo(bx+ox*s+sw*0.3, gy); ctx.stroke();
+      });
+      const wag = Math.sin(t*6)*8*s;
+      ctx.beginPath();
+      ctx.moveTo(bx-faceDir*26*s, by);
+      ctx.quadraticCurveTo(bx-faceDir*32*s, by+16*s+wag, bx-faceDir*28*s, by+28*s);
+      ctx.stroke();
+      ctx.fillStyle = '#f5f5f5';
+      ctx.beginPath(); ctx.ellipse(bx, by, 26*s, 15*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#222';
+      [[-6,-2,7,5],[8,3,6,4]].forEach(([ox,oy,rx,ry])=>{
+        ctx.beginPath(); ctx.ellipse(bx+ox*s, by+oy*s, rx*s, ry*s, 0.4, 0, Math.PI*2); ctx.fill();
+      });
+      const hx = bx+faceDir*24*s, hy = by-6*s;
+      ctx.fillStyle = '#f5f5f5';
+      ctx.beginPath(); ctx.ellipse(hx, hy, 10*s, 8*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fbcfe8';
+      ctx.beginPath(); ctx.ellipse(hx+faceDir*8*s, hy+4*s, 5*s, 3.5*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#eee';
+      ctx.beginPath(); ctx.ellipse(hx-faceDir*4*s, hy-9*s, 3*s, 4*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*4*s, hy-3*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  sheep: {
+    label: 'Sheep',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*3)*1*s;
+      const bx = x, by = gy - 20*s - bob;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      [-11,-4,4,11].forEach(ox=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+10*s); ctx.lineTo(bx+ox*s, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#fafafa';
+      [[0,0,20,13],[-12,-6,9,8],[10,-6,9,8],[-4,-10,8,7],[6,-10,8,7]].forEach(([ox,oy,rx,ry])=>{
+        ctx.beginPath(); ctx.ellipse(bx+ox*s, by+oy*s, rx*s, ry*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      });
+      const hx = bx+faceDir*20*s, hy = by-3*s;
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.ellipse(hx, hy, 7*s, 6*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(hx+faceDir*4*s, hy-4*s, 2.5*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx-faceDir*4*s, hy-4*s, 2.5*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#eee';
+      ctx.beginPath(); ctx.arc(hx+faceDir*2*s, hy+3*s, 1.6*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  elephant: {
+    label: 'Elephant',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*2)*1*s;
+      const bx = x, by = gy - 38*s - bob;
+      const swing = Math.sin(t*3)*3*s;
+      ctx.save();
+      ctx.lineWidth = 3.5; ctx.strokeStyle = INK;
+      [[-20,swing],[10,-swing],[-10,-swing],[20,swing]].forEach(([ox,sw])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+18*s); ctx.lineTo(bx+ox*s+sw*0.2, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath(); ctx.ellipse(bx, by, 36*s, 20*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx-faceDir*32*s, by-6*s);
+      ctx.quadraticCurveTo(bx-faceDir*44*s, by, bx-faceDir*34*s, by+14*s);
+      ctx.stroke();
+      const hx = bx+faceDir*28*s, hy = by-14*s;
+      ctx.beginPath(); ctx.ellipse(hx, hy, 13*s, 12*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(hx-faceDir*10*s, hy-6*s, 10*s, 12*s, 0.3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      const trunkSway = Math.sin(t*2)*6*s;
+      ctx.beginPath();
+      ctx.moveTo(hx+faceDir*10*s, hy+6*s);
+      ctx.quadraticCurveTo(hx+faceDir*16*s+trunkSway, hy+22*s, hx+faceDir*8*s+trunkSway, hy+34*s);
+      ctx.lineWidth = 5*s; ctx.stroke();
+      ctx.lineWidth = 3.5;
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*5*s, hy-2*s, 1.6*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
   }
 };
 const ANIMAL_LIST = Object.keys(ANIMALS).map(id => ({ id, label: ANIMALS[id].label }));

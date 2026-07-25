@@ -105,6 +105,93 @@ const VEHICLES = {
       });
       ctx.restore();
     }
+  },
+  truck: {
+    label: 'Truck',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const by = gy - 16*s, wheelR = 10*s, spin = t*3.5;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.rect(x-44*s, by-18*s, 60*s, 34*s); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.beginPath();
+      ctx.moveTo(x+16*s, by-30*s); ctx.lineTo(x+40*s, by-30*s);
+      ctx.lineTo(x+44*s, by-6*s); ctx.lineTo(x+16*s, by-6*s);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#bfe3ff';
+      ctx.fillRect(x+20*s, by-26*s, 16*s, 12*s); ctx.strokeRect(x+20*s, by-26*s, 16*s, 12*s);
+      [[-26,wheelR],[26,wheelR]].forEach(([ox])=>{
+        const wx = x+ox*s, wy = gy;
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+        for(let i=0;i<4;i++){
+          const ang = spin + i*Math.PI/2;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR*0.7, wy+Math.sin(ang)*wheelR*0.7); ctx.stroke();
+        }
+        ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      });
+      ctx.restore();
+    }
+  },
+  motorcycle: {
+    label: 'Motorcycle',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const wheelR = 12*s, spin = t*7;
+      const wy = gy, backX = x-14*s, frontX = x+14*s;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      [backX, frontX].forEach(wx=>{
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.stroke();
+        for(let i=0;i<6;i++){
+          const ang = spin + i*Math.PI/3;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR, wy+Math.sin(ang)*wheelR); ctx.stroke();
+        }
+      });
+      const seatX = x-2*s, seatY = wy-wheelR-16*s;
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(backX, wy-wheelR*0.6); ctx.lineTo(seatX-6*s, seatY+4*s); ctx.lineTo(seatX+14*s, seatY);
+      ctx.lineTo(frontX, wy-wheelR*0.6); ctx.lineTo(seatX+2*s, wy-wheelR*0.3);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      const handleX = x+14*s, handleY = wy-wheelR-14*s;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(handleX-6*s, handleY); ctx.lineTo(handleX+6*s, handleY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(handleX, handleY); ctx.lineTo(frontX, wy-wheelR*0.5); ctx.stroke();
+      ctx.restore();
+    }
+  },
+  train: {
+    label: 'Train',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const by = gy - 20*s, wheelR = 9*s, spin = t*3;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath(); ctx.rect(x-56*s, by-24*s, 112*s, 40*s); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.rect(x-50*s, by-38*s, 26*s, 16*s); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#bfe3ff';
+      for(let i=0;i<5;i++){
+        ctx.fillRect(x-34*s+i*20*s, by-16*s, 12*s, 12*s);
+        ctx.strokeRect(x-34*s+i*20*s, by-16*s, 12*s, 12*s);
+      }
+      [-40,-14,14,40].forEach(ox=>{
+        const wx = x+ox*s, wy = gy;
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+        for(let i=0;i<4;i++){
+          const ang = spin + i*Math.PI/2;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR*0.7, wy+Math.sin(ang)*wheelR*0.7); ctx.stroke();
+        }
+        ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      });
+      ctx.restore();
+    }
   }
 };
 const VEHICLE_LIST = Object.keys(VEHICLES).map(id => ({ id, label: VEHICLES[id].label }));

@@ -72,6 +72,12 @@ function detectBackground(text){
   if(/(bedroom|bed room)/.test(text)) return 'bedroom';
   if(/(street|sidewalk|city)/.test(text)) return 'street';
   if(/(beach|seaside|ocean|sea shore|shoreline)/.test(text)) return 'beach';
+  if(/(forest|woods)/.test(text)) return 'forest';
+  if(/(gym|gymnasium|workout)/.test(text)) return 'gym';
+  if(/(classroom|school)/.test(text)) return 'school';
+  if(/(space|outer space|galaxy|planet|astronaut)/.test(text)) return 'space';
+  if(/(restaurant|diner)/.test(text)) return 'restaurant';
+  if(/(farm|barn|farmyard)/.test(text)) return 'farm';
   if(/(park|outside|outdoor|garden)/.test(text)) return 'sky';
   if(/(grid|graph paper)/.test(text)) return 'grid';
   return 'white';
@@ -99,6 +105,10 @@ function detectFood(text){
   if(/(pizza)/.test(text)) return 'pizza';
   if(/(burger|hamburger)/.test(text)) return 'burger';
   if(/(apple)/.test(text)) return 'apple';
+  if(/(hot dog|hotdog)/.test(text)) return 'hotdog';
+  if(/(ice cream|icecream)/.test(text)) return 'icecream';
+  if(/(cake)/.test(text)) return 'cake';
+  if(/(donut|doughnut)/.test(text)) return 'donut';
   if(/(sandwich)/.test(text)) return 'sandwich';
   return null; // no explicit food mentioned -> leave whatever's already selected alone
 }
@@ -109,10 +119,14 @@ function detectTwoCharacters(text){
 
 // ---------- animals: decorative scene creatures, detected independently of the character count ----------
 const ANIMAL_KEYWORDS = [
-  { type:'dog',    words:['dog','puppy','puppies'] },
-  { type:'cat',    words:['cat','kitten'] },
-  { type:'bird',   words:['bird','parrot','pigeon'] },
-  { type:'rabbit', words:['rabbit','bunny'] }
+  { type:'dog',      words:['dog','puppy','puppies'] },
+  { type:'cat',      words:['cat','kitten'] },
+  { type:'bird',     words:['bird','parrot','pigeon'] },
+  { type:'rabbit',   words:['rabbit','bunny'] },
+  { type:'horse',    words:['horse','pony'] },
+  { type:'cow',      words:['cow','cattle'] },
+  { type:'sheep',    words:['sheep','lamb'] },
+  { type:'elephant', words:['elephant'] }
 ];
 function detectAnimals(text){
   const found = [];
@@ -124,9 +138,12 @@ function detectAnimals(text){
 
 // ---------- vehicles: static scene props, detected independently of the character count ----------
 const VEHICLE_KEYWORDS = [
-  { type:'car',     words:['car','drives','driving'] },
-  { type:'bicycle', words:['bicycle','bike','bikes'] },
-  { type:'bus',     words:['bus','buses'] }
+  { type:'car',        words:['car','drives','driving'] },
+  { type:'bicycle',    words:['bicycle','bike','bikes'] },
+  { type:'bus',        words:['bus','buses'] },
+  { type:'truck',      words:['truck'] },
+  { type:'motorcycle', words:['motorcycle','motorbike'] },
+  { type:'train',      words:['train'] }
 ];
 function detectVehicles(text){
   const found = [];

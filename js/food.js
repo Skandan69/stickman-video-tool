@@ -48,6 +48,58 @@ const FOODS = {
       ctx.fillStyle = '#e0a94c'; ctx.fillRect(hand.x-7, hand.y+3, 14, 4); ctx.strokeRect(hand.x-7, hand.y+3, 14, 4);
       ctx.restore();
     }
+  },
+  hotdog: {
+    label: 'Hot Dog',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#e0c07d'; ctx.strokeStyle = '#a97c3f'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(hand.x, hand.y, 11, 4.5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#a0522d';
+      ctx.beginPath(); ctx.ellipse(hand.x, hand.y, 8, 2.6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#f2c94c'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(hand.x-7,hand.y-1); ctx.lineTo(hand.x+7,hand.y+1); ctx.stroke();
+      ctx.restore();
+    }
+  },
+  icecream: {
+    label: 'Ice Cream',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#f9a8d4'; ctx.strokeStyle = '#c2185b'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hand.x, hand.y-6, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e2b98f'; ctx.strokeStyle = '#a97c3f';
+      ctx.beginPath(); ctx.moveTo(hand.x-5, hand.y-2); ctx.lineTo(hand.x+5, hand.y-2); ctx.lineTo(hand.x, hand.y+10); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  },
+  cake: {
+    label: 'Slice of Cake',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#fbcfe8'; ctx.strokeStyle = '#be185d'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(hand.x-8, hand.y+6); ctx.lineTo(hand.x+8, hand.y+6); ctx.lineTo(hand.x, hand.y-8); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.moveTo(hand.x-6, hand.y+2); ctx.lineTo(hand.x+6, hand.y+2); ctx.lineTo(hand.x, hand.y-6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e0453f';
+      ctx.beginPath(); ctx.arc(hand.x, hand.y-9, 1.6, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  donut: {
+    label: 'Donut',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#f2c879'; ctx.strokeStyle = '#c98a3a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hand.x, hand.y, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(hand.x, hand.y, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      [[-3,-2],[2,-4],[4,1],[-2,3]].forEach(o=>{ ctx.beginPath(); ctx.arc(hand.x+o[0], hand.y+o[1], 1, 0, Math.PI*2); ctx.fill(); });
+      ctx.restore();
+    }
   }
 };
 const FOOD_LIST = Object.keys(FOODS).map(id => ({ id, label: FOODS[id].label }));
