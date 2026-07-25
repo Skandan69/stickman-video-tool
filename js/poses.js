@@ -93,7 +93,7 @@ function poseDrinkCoffee(t){
   const base = poseSit(t);
   base.headTilt = base.headTilt + 0.06*liftPhase;
   const head = headPointsRelToShoulder(base.headTilt);
-  const mouth = { x: head.x + 6, y: head.y + 8 }; // matches drawStickman's mouth position (head.x+faceDir*6, head.y+8)
+  const mouth = { x: head.x + 7.2, y: head.y + 9.6 }; // matches drawFace's mouth position (head.x+faceDir*6*S, head.y+8*S)
   const reach = armReachAngles(mouth.x, mouth.y);
   const restShoulder = 0.4, restElbow = 0.6; // relaxed, cup resting near the lap
   base.rightShoulderAngle = restShoulder + (reach.shoulderAngle - restShoulder) * liftPhase;
@@ -107,7 +107,7 @@ function poseEat(t){
   const base = poseSit(t);
   base.headTilt = base.headTilt + 0.05*liftPhase;
   const head = headPointsRelToShoulder(base.headTilt);
-  const mouth = { x: head.x + 6, y: head.y + 8 };
+  const mouth = { x: head.x + 7.2, y: head.y + 9.6 }; // matches drawFace's mouth position (head.x+faceDir*6*S, head.y+8*S)
   const reach = armReachAngles(mouth.x, mouth.y);
   const restShoulder = 0.4, restElbow = 0.6; // relaxed, food resting near the lap between bites
   base.rightShoulderAngle = restShoulder + (reach.shoulderAngle - restShoulder) * liftPhase;
@@ -119,7 +119,7 @@ function posePhoneCall(t){
   const base = poseIdle(t);
   base.headTilt = base.headTilt + 0.15;
   const head = headPointsRelToShoulder(base.headTilt);
-  const ear = { x: head.x + 11, y: head.y - 2 }; // side of the head, ear height
+  const ear = { x: head.x + 13.2, y: head.y - 2.4 }; // side of the head, ear height (scaled with the bigger head — see drawFace's S)
   const reach = armReachAngles(ear.x, ear.y);
   base.rightShoulderAngle = reach.shoulderAngle + 0.03*Math.sin(t*2);
   base.rightElbowBend = reach.elbowBend;

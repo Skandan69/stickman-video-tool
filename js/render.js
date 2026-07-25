@@ -20,43 +20,47 @@ function drawBackground(bg){
 // whatever that registry says, so adding a new emotion never requires touching this code.
 function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
   const em = EMOTIONS[emotion] || EMOTIONS.neutral;
-  const ex = head.x + faceDir*7, ey = head.y - 3;
+  // S scales all the feature offsets/sizes below, which were originally tuned for the old, smaller
+  // head radius — keeping them proportionate to today's bigger "bold cartoon" head (see humanTypes.js).
+  const S = 1.2;
+  const ex = head.x + faceDir*7*S, ey = head.y - 3*S;
   const wide = em.eyeScale || 1;
+  const INK = '#111';
 
   // eyebrow: angle communicates the emotion even though the eye shape stays the same
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(ex - faceDir*5, ey + em.browLeftY);
-  ctx.lineTo(ex + faceDir*5, ey + em.browRightY);
+  ctx.moveTo(ex - faceDir*5*S, ey + em.browLeftY*S);
+  ctx.lineTo(ex + faceDir*5*S, ey + em.browRightY*S);
   ctx.stroke();
 
   // eye (shape controlled by eyeStyle, size bumped up for wide-eyed emotions like surprise)
-  ctx.fillStyle = '#222';
+  ctx.fillStyle = INK;
   if(eyeStyle === 'round'){
-    ctx.beginPath(); ctx.arc(ex, ey, 3*wide, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, 0, Math.PI*2); ctx.fill();
   } else if(eyeStyle === 'happy'){
-    ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(ex, ey, 3*wide, Math.PI, 0); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, Math.PI, 0); ctx.stroke();
   } else {
-    ctx.beginPath(); ctx.arc(ex, ey, 2*wide, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex, ey, 2.4*wide*S, 0, Math.PI*2); ctx.fill();
   }
 
   // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise the emotion's shape applies
-  const mx = head.x + faceDir*6, my = head.y + 8;
-  ctx.strokeStyle = '#222'; ctx.fillStyle = '#222'; ctx.lineWidth = 2;
+  const mx = head.x + faceDir*6*S, my = head.y + 8*S;
+  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 2.5;
   if(mouthOpen > 0.5){
-    ctx.beginPath(); ctx.ellipse(mx, my, 3.5, 3, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx, my, 4*S, 3.5*S, 0, 0, Math.PI*2); ctx.fill();
   } else if(em.mouth === 'o'){
-    ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, 3*S, 0, Math.PI*2); ctx.fill();
   } else if(em.mouth === 'smile'){
-    ctx.beginPath(); ctx.arc(mx - faceDir*2, my-2, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(mx - faceDir*2*S, my-2*S, 6*S, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
   } else if(em.mouth === 'frown'){
-    ctx.beginPath(); ctx.arc(mx - faceDir*2, my+5, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(mx - faceDir*2*S, my+5*S, 6*S, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
   } else if(em.mouth === 'grimace'){
-    ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+9); ctx.lineTo(head.x+faceDir*10, head.y+7); ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(head.x+faceDir*2*S, head.y+9*S); ctx.lineTo(head.x+faceDir*10*S, head.y+7*S); ctx.stroke();
   } else {
-    ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+8); ctx.lineTo(head.x+faceDir*10, head.y+8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(head.x+faceDir*2*S, head.y+8*S); ctx.lineTo(head.x+faceDir*10*S, head.y+8*S); ctx.stroke();
   }
   ctx.lineWidth = LW;
 }
@@ -99,6 +103,8 @@ function drawStickman(x, faceDir, appearance, pose){
   [[hip,lKnee,lFoot],[hip,rKnee,rFoot]].forEach(seg=>{
     ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
   });
+  drawShoeBlob(lFoot, faceDir);
+  drawShoeBlob(rFoot, faceDir);
 
   if(gender === 'female'){
     ctx.beginPath();
@@ -116,6 +122,8 @@ function drawStickman(x, faceDir, appearance, pose){
   [[shoulder,lElbow,lHand],[shoulder,rElbow,rHand]].forEach(seg=>{
     ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
   });
+  drawHandBlob(lHand, skin);
+  drawHandBlob(rHand, skin);
 
   if(accessory === 'bag'){
     const bagAnchor = faceDir > 0 ? lHand : rHand;
@@ -126,8 +134,10 @@ function drawStickman(x, faceDir, appearance, pose){
     ctx.lineWidth = LW;
   }
 
+  // bold black head outline (like the reference "cartoon stickman" style) — outfit color stays on
+  // the body/limbs for per-character identity, but the face itself always reads in high-contrast black
   ctx.beginPath(); ctx.arc(head.x, head.y, HEAD_R, 0, Math.PI*2);
-  ctx.fillStyle = skin; ctx.fill(); ctx.strokeStyle = outfit; ctx.stroke();
+  ctx.fillStyle = skin; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = LW*0.85; ctx.stroke();
 
   drawHair(head, faceDir, hairStyle, hairColor);
   if(accessory === 'hat') drawHat(head, hairColor);
@@ -245,12 +255,26 @@ function drawHair(head, faceDir, hairStyle, hairColor){
   ctx.restore();
 }
 
+// ---------- mitten hands + oval shoes (bold-cartoon look — replaces bare line-ends) ----------
+function drawHandBlob(pos, skin){
+  ctx.save();
+  ctx.fillStyle = skin; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(pos.x, pos.y, 4.5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawShoeBlob(pos, faceDir){
+  ctx.save();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.ellipse(pos.x + faceDir*3, pos.y, 9, 4.5, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawGlasses(head){
   ctx.save();
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(head.x-6, head.y-2, 5, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(head.x+6, head.y-2, 5, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(head.x-1, head.y-2); ctx.lineTo(head.x+1, head.y-2); ctx.stroke();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2.3;
+  ctx.beginPath(); ctx.arc(head.x-7.2, head.y-2.4, 6, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(head.x+7.2, head.y-2.4, 6, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(head.x-1.2, head.y-2.4); ctx.lineTo(head.x+1.2, head.y-2.4); ctx.stroke();
   ctx.restore();
 }
 

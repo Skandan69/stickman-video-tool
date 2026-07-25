@@ -5,7 +5,9 @@
 //   sizeScale (height): a free 0.6x-1.6x slider, applied on top of both
 // To add a new age or build preset: add one entry to the relevant object below — the character
 // card's dropdowns and applyBodyScale() both read these registries, nothing else needs to change.
-const BASE_GEOMETRY = { headR:18, neckLen:8, torsoLen:60, upperArm:28, foreArm:26, upperLeg:38, lowerLeg:38, lw:5, hipHeight:66 };
+// headR/lw are deliberately larger than a "minimal" stick figure — bigger heads read more
+// expressive faces, and thicker strokes give the bold-cartoon-outline look (vs. thin wireframe).
+const BASE_GEOMETRY = { headR:22, neckLen:8, torsoLen:60, upperArm:28, foreArm:26, upperLeg:38, lowerLeg:38, lw:6, hipHeight:66 };
 const BODY_PRESETS = {
   adult: { label:'Adult', scale:1.0,  headScale:1.0,  stoop:0 },
   child: { label:'Kid',   scale:0.62, headScale:1.28, stoop:0 },
