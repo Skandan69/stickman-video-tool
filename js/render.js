@@ -300,6 +300,38 @@ function drawHair(head, faceDir, hairStyle, hairColor){
       }
       ctx.stroke();
     });
+  } else if(hairStyle === 'buzzcut'){
+    for(let i=-3;i<=3;i++){
+      ctx.beginPath(); ctx.arc(head.x+i*5, head.y-HEAD_R+2, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+  } else if(hairStyle === 'spiky'){
+    ctx.beginPath();
+    for(let i=-3;i<=3;i++){
+      const bx = head.x+i*5.5, by0 = head.y-HEAD_R+3;
+      const spikeLen = 10 + (Math.abs(i)%2)*4;
+      ctx.moveTo(bx-2, by0);
+      ctx.lineTo(bx+i*1.5, by0-spikeLen);
+      ctx.lineTo(bx+2, by0);
+    }
+    ctx.closePath(); ctx.fill();
+  } else if(hairStyle === 'pigtails'){
+    ctx.beginPath();
+    for(let i=-2;i<=2;i++){ ctx.moveTo(head.x+i*7, head.y-HEAD_R+3); ctx.lineTo(head.x+i*8, head.y-HEAD_R-4); }
+    ctx.lineWidth = LW-2; ctx.stroke();
+    [-1,1].forEach(side=>{
+      ctx.beginPath();
+      ctx.ellipse(head.x+side*(HEAD_R+2), head.y-2, 5, 12, side*0.3, 0, Math.PI*2);
+      ctx.fill();
+    });
+  } else if(hairStyle === 'dreadlocks'){
+    ctx.lineWidth = LW+1; ctx.lineCap = 'round';
+    for(let i=-3;i<=3;i++){
+      const bx = head.x + i*6;
+      ctx.beginPath();
+      ctx.moveTo(bx, head.y-HEAD_R+4);
+      ctx.lineTo(bx + i*1.5, head.y+18);
+      ctx.stroke();
+    }
   } else {
     ctx.beginPath();
     ctx.moveTo(head.x-HEAD_R+2, head.y-4);

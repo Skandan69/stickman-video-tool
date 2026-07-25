@@ -110,7 +110,8 @@ function eyeOptionsHtml(sel){
 }
 function hairOptionsHtml(sel){
   return [['none','Bald'],['short','Short'],['long','Long'],['ponytail','Ponytail'],['mohawk','Mohawk'],
-          ['curly','Curly'],['afro','Afro'],['bun','Bun'],['braids','Braids']]
+          ['curly','Curly'],['afro','Afro'],['bun','Bun'],['braids','Braids'],
+          ['buzzcut','Buzzcut'],['spiky','Spiky'],['pigtails','Pigtails'],['dreadlocks','Dreadlocks']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function accessoryOptionsHtml(sel){
