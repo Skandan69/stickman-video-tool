@@ -34,6 +34,7 @@ function resolveIndexedTimeline(indexedSegments, charCount){
 const ACTION_KEYWORDS = [
   { clipId:'sit',   words:['sit','take a seat','takes a seat'] },
   { clipId:'drink', words:['drink','sip'] },
+  { clipId:'eat',   words:['eat','ate','eating','bites into','takes a bite','has lunch','has dinner'] },
   { clipId:'phone', words:['on the phone','on a call','phone call','answers the phone','makes a call','calling','phone'] },
   { clipId:'wave',  words:['wav','says hello','says hi'] },
   { clipId:'dance', words:['danc'] },
@@ -89,6 +90,14 @@ function detectBodyType(text){
   return 'adult';
 }
 
+function detectFood(text){
+  if(/(pizza)/.test(text)) return 'pizza';
+  if(/(burger|hamburger)/.test(text)) return 'burger';
+  if(/(apple)/.test(text)) return 'apple';
+  if(/(sandwich)/.test(text)) return 'sandwich';
+  return null; // no explicit food mentioned -> leave whatever's already selected alone
+}
+
 function detectTwoCharacters(text){
   return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen)/.test(text);
 }
@@ -107,6 +116,7 @@ function parsePromptToScene(rawText){
   if(!seq.length) seq = ['idle'];
   const bg = detectBackground(text);
   const furniture = detectFurniture(text);
+  const food = detectFood(text);
   const bodyType = detectBodyType(text);
   const explicitDuration = detectDuration(rawText);
   const enableB = detectTwoCharacters(text);
@@ -132,7 +142,7 @@ function parsePromptToScene(rawText){
   });
 
   return {
-    background: bg, furniture: furniture, bodyType: bodyType, charCount: charCount, timeline: timeline,
+    background: bg, furniture: furniture, food: food, bodyType: bodyType, charCount: charCount, timeline: timeline,
     summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
   };
 }
@@ -144,6 +154,7 @@ const state = {
     background: 'white',
     customBgImage: null,
     furniture: 'chair',
+    food: 'sandwich',
     characters: [
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[0])),
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[1]))
@@ -187,7 +198,7 @@ function evaluateScene(scene, t){
     return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
-  return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', localT: localT, totalDuration: total };
+  return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
@@ -209,6 +220,7 @@ function renderFrame(frame){
     }
     if(c.clipId === 'drink') drawCoffeeCupProp(handsById[c.id].rightHand);
     if(c.clipId === 'phone') drawPhoneProp(handsById[c.id].rightHand);
+    if(c.clipId === 'eat') drawFoodProp(handsById[c.id].rightHand, frame.food);
   });
   if(frame.dialogue){
     const res = handsById[frame.dialogue.speakerId];

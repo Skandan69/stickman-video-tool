@@ -101,6 +101,20 @@ function poseDrinkCoffee(t){
   base.mouthOpen = liftPhase > 0.6 ? 1 : 0;
   return base;
 }
+function poseEat(t){
+  const cycle = t % 3;
+  const liftPhase = cycle < 1 ? Math.sin(cycle*Math.PI) : 0;
+  const base = poseSit(t);
+  base.headTilt = base.headTilt + 0.05*liftPhase;
+  const head = headPointsRelToShoulder(base.headTilt);
+  const mouth = { x: head.x + 6, y: head.y + 8 };
+  const reach = armReachAngles(mouth.x, mouth.y);
+  const restShoulder = 0.4, restElbow = 0.6; // relaxed, food resting near the lap between bites
+  base.rightShoulderAngle = restShoulder + (reach.shoulderAngle - restShoulder) * liftPhase;
+  base.rightElbowBend = restElbow + (reach.elbowBend - restElbow) * liftPhase;
+  base.mouthOpen = liftPhase > 0.5 ? 1 : 0;
+  return base;
+}
 function posePhoneCall(t){
   const base = poseIdle(t);
   base.headTilt = base.headTilt + 0.15;
@@ -142,12 +156,13 @@ const CLIPS = {
   sit:  { label:'Sit (chair)', pose:(t)=>poseSit(t) },
   drink:{ label:'Drink Coffee', pose:(t)=>poseDrinkCoffee(t) },
   phone:{ label:'Talk on Phone', pose:(t)=>posePhoneCall(t) },
-  jump: { label:'Jump', pose:(t)=>poseJump(t) }
+  jump: { label:'Jump', pose:(t)=>poseJump(t) },
+  eat:  { label:'Eat', pose:(t)=>poseEat(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
   {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'},
   {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'},
-  {id:'jump', label:'Jump'}
+  {id:'jump', label:'Jump'}, {id:'eat', label:'Eat'}
 ];
-const SEATED_CLIPS = { sit:true, drink:true, phone:false };
+const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true };

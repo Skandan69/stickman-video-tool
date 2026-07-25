@@ -44,6 +44,7 @@ generateBtn.addEventListener('click', ()=>{
   if(state.scene.characters[0]) state.scene.characters[0].bodyType = result.bodyType;
   bgSelect.value = result.background;
   furnitureSelect.value = result.furniture;
+  if(result.food){ state.scene.food = result.food; foodSelect.value = result.food; }
   renderCharacterList();
   renderSegmentList();
   elapsed = 0;
@@ -53,10 +54,14 @@ generateBtn.addEventListener('click', ()=>{
 presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
 const bgImageInput = document.getElementById('bgImageInput');
 const furnitureSelect = document.getElementById('furnitureSelect');
-// Populate the Background dropdown from the BACKGROUNDS registry (js/backgrounds.js) — adding a new
-// background there is enough for it to show up here, no HTML edits needed.
+const foodSelect = document.getElementById('foodSelect');
+// Populate the Background/Food dropdowns from their registries (js/backgrounds.js, js/food.js) —
+// adding a new entry there is enough for it to show up here, no HTML edits needed.
 bgSelect.innerHTML = BACKGROUND_LIST.map(b=> '<option value="'+b.id+'">'+escapeHtml(b.label)+'</option>').join('');
 bgSelect.value = state.scene.background;
+foodSelect.innerHTML = FOOD_LIST.map(f=> '<option value="'+f.id+'">'+escapeHtml(f.label)+'</option>').join('');
+foodSelect.value = state.scene.food;
+foodSelect.addEventListener('change', ()=> { state.scene.food = foodSelect.value; });
 bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
 furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });
 bgImageInput.addEventListener('change', (e)=>{
