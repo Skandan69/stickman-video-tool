@@ -66,6 +66,7 @@ const ACTION_KEYWORDS = [
   { clipId:'paint', words:['paint','paints','painting'] },
   { clipId:'write', words:['writ','writes','writing'] },
   { clipId:'fish',  words:['fish','fishes','fishing'] },
+  { clipId:'shake', words:['shake hands','shakes hands','shaking hands','handshake'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -155,7 +156,7 @@ function detectFood(text){
 }
 
 function detectTwoCharacters(text){
-  return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen|fight|argue|hug|high five|high-five)/.test(text);
+  return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen|fight|argue|hug|high five|high-five|shake hands|shakes hands|handshake)/.test(text);
 }
 
 // ---------- animals: decorative scene creatures, detected independently of the character count ----------

@@ -95,6 +95,17 @@ function poseHighFive(t){
     mouthOpen: 0
   };
 }
+function poseShake(t){
+  const settle = Math.min(1, t/0.5);
+  const shake = t > 0.5 ? Math.sin((t-0.5)*14)*0.15 : 0;
+  return {
+    torsoLean: 0.08*settle, headTilt: 0.05*Math.sin(t*1.5), bounceY: Math.abs(Math.sin(t*2))*1,
+    leftShoulderAngle: 0.1*Math.sin(t*1.3), leftElbowBend: 0.15,
+    rightShoulderAngle: 1.5*settle+shake, rightElbowBend: -0.6*settle,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
 function poseWave(t){
   return {
     torsoLean: 0.02*Math.sin(t*1.3), headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
@@ -490,7 +501,8 @@ const CLIPS = {
   cartwheel: { label:'Cartwheel', pose:(t)=>poseCartwheel(t) },
   paint: { label:'Paint', pose:(t)=>posePaint(t) },
   write: { label:'Write', pose:(t)=>poseWrite(t) },
-  fish: { label:'Fish', pose:(t)=>poseFish(t) }
+  fish: { label:'Fish', pose:(t)=>poseFish(t) },
+  shake: { label:'Shake Hands', pose:(t)=>poseShake(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -503,9 +515,10 @@ const CLIP_LIST = [
   {id:'yoga', label:'Yoga'}, {id:'cry', label:'Cry'}, {id:'point', label:'Point'}, {id:'salute', label:'Salute'},
   {id:'shrug', label:'Shrug'}, {id:'stretch', label:'Stretch'}, {id:'fall', label:'Fall Down'},
   {id:'pushup', label:'Push-up'}, {id:'cheer', label:'Cheer'}, {id:'drum', label:'Play Drums'},
-  {id:'cartwheel', label:'Cartwheel'}, {id:'paint', label:'Paint'}, {id:'write', label:'Write'}, {id:'fish', label:'Fish'}
+  {id:'cartwheel', label:'Cartwheel'}, {id:'paint', label:'Paint'}, {id:'write', label:'Write'}, {id:'fish', label:'Fish'},
+  {id:'shake', label:'Shake Hands'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
 // resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
-const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true };
+const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true, shake:true };
