@@ -105,16 +105,18 @@ function skinOptionsHtml(sel){
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function eyeOptionsHtml(sel){
-  return [['dot','Dot'],['round','Round'],['happy','Happy']]
+  return [['dot','Dot'],['round','Round'],['happy','Happy'],['closed','Closed'],['star','Star'],['heart','Heart']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function hairOptionsHtml(sel){
-  return [['none','Bald'],['short','Short'],['long','Long'],['ponytail','Ponytail'],['mohawk','Mohawk']]
+  return [['none','Bald'],['short','Short'],['long','Long'],['ponytail','Ponytail'],['mohawk','Mohawk'],
+          ['curly','Curly'],['afro','Afro'],['bun','Bun'],['braids','Braids']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function accessoryOptionsHtml(sel){
   return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag'],
-          ['chefhat','Chef Hat'],['police','Police Cap'],['headband','Headband'],['doctor','Stethoscope']]
+          ['chefhat','Chef Hat'],['police','Police Cap'],['headband','Headband'],['doctor','Stethoscope'],
+          ['crown','Crown'],['backpack','Backpack'],['scarf','Scarf'],['mask','Mask']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function costumeOptionsHtml(){

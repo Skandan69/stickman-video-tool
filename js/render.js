@@ -41,6 +41,26 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
   } else if(eyeStyle === 'happy'){
     ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, Math.PI, 0); ctx.stroke();
+  } else if(eyeStyle === 'closed'){
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(ex-3*S, ey); ctx.lineTo(ex+3*S, ey); ctx.stroke();
+  } else if(eyeStyle === 'star'){
+    ctx.beginPath();
+    for(let i=0;i<10;i++){
+      const ang = -Math.PI/2 + i*(Math.PI/5);
+      const r = (i%2===0) ? 3.6*wide*S : 1.5*wide*S;
+      const px = ex + Math.cos(ang)*r, py = ey + Math.sin(ang)*r;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fill();
+  } else if(eyeStyle === 'heart'){
+    ctx.fillStyle = '#e11d48';
+    const hr = 2.2*wide*S;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey+hr*1.3);
+    ctx.bezierCurveTo(ex-hr*1.6, ey-hr*0.6, ex-hr*0.4, ey-hr*1.8, ex, ey-hr*0.3);
+    ctx.bezierCurveTo(ex+hr*0.4, ey-hr*1.8, ex+hr*1.6, ey-hr*0.6, ex, ey+hr*1.3);
+    ctx.closePath(); ctx.fill();
   } else {
     ctx.beginPath(); ctx.arc(ex, ey, 2.4*wide*S, 0, Math.PI*2); ctx.fill();
   }
@@ -148,6 +168,8 @@ function drawStickman(x, faceDir, appearance, pose){
     ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
     ctx.lineWidth = LW;
   }
+  if(accessory === 'backpack') drawBackpack(shoulder, hip, faceDir, outfit);
+  if(accessory === 'scarf') drawScarf(neck, outfit);
 
   // bold black head outline (like the reference "cartoon stickman" style) — outfit color stays on
   // the body/limbs for per-character identity, but the face itself always reads in high-contrast black
@@ -159,11 +181,13 @@ function drawStickman(x, faceDir, appearance, pose){
   if(accessory === 'chefhat') drawChefHat(head);
   if(accessory === 'police') drawPoliceCap(head);
   if(accessory === 'headband') drawHeadband(head, outfit);
+  if(accessory === 'crown') drawCrown(head);
   ctx.strokeStyle = outfit; ctx.lineWidth = LW;
 
   drawFace(head, faceDir, eyeStyle, emotion, pose.mouthOpen);
   if(accessory === 'glasses') drawGlasses(head);
   if(accessory === 'doctor') drawStethoscope(neck);
+  if(accessory === 'mask') drawMask(head);
 
   ctx.fillStyle = '#444';
   ctx.font = '13px "Comic Sans MS", cursive, sans-serif';
@@ -243,6 +267,30 @@ function drawHair(head, faceDir, hairStyle, hairColor){
       ctx.lineTo(head.x+i*3, head.y-HEAD_R-12);
     }
     ctx.lineWidth = LW-1; ctx.stroke();
+  } else if(hairStyle === 'curly'){
+    for(let i=-3;i<=3;i++){
+      const cx = head.x+i*6, cy = head.y-HEAD_R+2 - Math.abs(i)*1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
+    }
+  } else if(hairStyle === 'afro'){
+    ctx.beginPath(); ctx.arc(head.x, head.y-2, HEAD_R+6, Math.PI*0.95, Math.PI*2.05); ctx.fill();
+  } else if(hairStyle === 'bun'){
+    ctx.beginPath();
+    for(let i=-2;i<=2;i++){ ctx.moveTo(head.x+i*7, head.y-HEAD_R+3); ctx.lineTo(head.x+i*8, head.y-HEAD_R-4); }
+    ctx.lineWidth = LW-2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(head.x - faceDir*HEAD_R*0.7, head.y-HEAD_R*0.6, 7, 0, Math.PI*2); ctx.fill();
+  } else if(hairStyle === 'braids'){
+    ctx.lineWidth = LW-1.5;
+    [-1,1].forEach(side=>{
+      ctx.beginPath();
+      const bx = head.x+side*(HEAD_R-2), by0 = head.y-2;
+      ctx.moveTo(bx,by0);
+      for(let i=1;i<=4;i++){
+        const zig = (i%2===0) ? 3 : -3;
+        ctx.lineTo(bx+zig, by0+i*8);
+      }
+      ctx.stroke();
+    });
   } else {
     ctx.beginPath();
     ctx.moveTo(head.x-HEAD_R+2, head.y-4);
@@ -323,6 +371,48 @@ function drawHeadband(head, color){
   ctx.save();
   ctx.strokeStyle = color || '#dc2626'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.arc(head.x, head.y-2, HEAD_R-1, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+  ctx.restore();
+}
+function drawCrown(head){
+  ctx.save();
+  ctx.fillStyle = '#facc15'; ctx.strokeStyle = '#a16207'; ctx.lineWidth = 1.5;
+  const baseY = head.y-HEAD_R-2;
+  ctx.beginPath();
+  ctx.moveTo(head.x-HEAD_R*0.6, baseY);
+  ctx.lineTo(head.x-HEAD_R*0.6, baseY-8);
+  ctx.lineTo(head.x-HEAD_R*0.3, baseY-2);
+  ctx.lineTo(head.x, baseY-12);
+  ctx.lineTo(head.x+HEAD_R*0.3, baseY-2);
+  ctx.lineTo(head.x+HEAD_R*0.6, baseY-8);
+  ctx.lineTo(head.x+HEAD_R*0.6, baseY);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.arc(head.x, baseY-11, 2, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawBackpack(shoulder, hip, faceDir, color){
+  ctx.save();
+  const bx = shoulder.x - faceDir*10, by = (shoulder.y+hip.y)/2;
+  ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(bx-9, by-14, 18, 26); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx-9, by-2); ctx.lineTo(bx+9, by-2); ctx.stroke();
+  ctx.restore();
+}
+function drawScarf(neck, color){
+  ctx.save();
+  ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(neck.x, neck.y+2, 10, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(neck.x-4, neck.y+2, 8, 18); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawMask(head){
+  ctx.save();
+  ctx.fillStyle = '#e5e7eb'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(head.x+3, head.y+8, 7, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(head.x-4, head.y+3); ctx.lineTo(head.x-HEAD_R-3, head.y-4); ctx.stroke();
   ctx.restore();
 }
 function drawStethoscope(neck){
