@@ -177,6 +177,9 @@ function drawStickman(x, faceDir, appearance, pose){
   if(accessory === 'backpack') drawBackpack(shoulder, hip, faceDir, outfit);
   if(accessory === 'scarf') drawScarf(neck, outfit);
   if(accessory === 'cape') drawCape(shoulder, hip, faceDir, outfit);
+  if(accessory === 'necktie') drawNecktie(neck, outfit);
+  if(accessory === 'bowtie') drawBowtie(neck, outfit);
+  if(accessory === 'wristwatch') drawWristwatch(rHand);
 
   // bold black head outline (like the reference "cartoon stickman" style) — outfit color stays on
   // the body/limbs for per-character identity, but the face itself always reads in high-contrast black
@@ -197,6 +200,7 @@ function drawStickman(x, faceDir, appearance, pose){
   if(accessory === 'glasses') drawGlasses(head);
   if(accessory === 'doctor') drawStethoscope(neck);
   if(accessory === 'mask') drawMask(head);
+  if(accessory === 'earrings') drawEarrings(head);
 
   ctx.fillStyle = '#444';
   ctx.font = '13px "Comic Sans MS", cursive, sans-serif';
@@ -494,6 +498,37 @@ function drawStethoscope(neck){
   ctx.beginPath(); ctx.arc(neck.x, neck.y+4, 6, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(neck.x-5, neck.y+8); ctx.lineTo(neck.x-5, neck.y+22); ctx.stroke();
   ctx.beginPath(); ctx.arc(neck.x-5, neck.y+24, 3, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawNecktie(neck, color){
+  ctx.save();
+  ctx.fillStyle = color || '#7f1d1d'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(neck.x-3, neck.y+2); ctx.lineTo(neck.x+3, neck.y+2); ctx.lineTo(neck.x+1.5, neck.y+8); ctx.lineTo(neck.x-1.5, neck.y+8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(neck.x-1.5, neck.y+8); ctx.lineTo(neck.x+1.5, neck.y+8); ctx.lineTo(neck.x+3.5, neck.y+22); ctx.lineTo(neck.x, neck.y+26); ctx.lineTo(neck.x-3.5, neck.y+22); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawBowtie(neck, color){
+  ctx.save();
+  ctx.fillStyle = color || '#1e1e1e'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(neck.x, neck.y+3); ctx.lineTo(neck.x-8, neck.y-1); ctx.lineTo(neck.x-8, neck.y+7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(neck.x, neck.y+3); ctx.lineTo(neck.x+8, neck.y-1); ctx.lineTo(neck.x+8, neck.y+7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(neck.x, neck.y+3, 2.5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawEarrings(head){
+  ctx.save();
+  ctx.fillStyle = '#fbbf24'; ctx.strokeStyle = '#a16207'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(head.x-HEAD_R+1, head.y+3, 2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(head.x+HEAD_R-1, head.y+3, 2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawWristwatch(hand){
+  ctx.save();
+  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(hand.x, hand.y, 4, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(hand.x, hand.y, 2.5, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
