@@ -112,6 +112,13 @@
       <label for="bgImageInput">Or upload your own background</label>
       <input type="file" id="bgImageInput" accept="image/*">
     </div>
+    <div class="field">
+      <label for="furnitureSelect">Seating (used by Sit / Drink Coffee / Talk on Phone)</label>
+      <select id="furnitureSelect">
+        <option value="chair">Chair</option>
+        <option value="sofa">Sofa</option>
+      </select>
+    </div>
     <div class="checkbox-field"><input type="checkbox" id="enableB" checked> <label for="enableB">Enable Character B</label></div>
 
     <hr class="sep">
@@ -262,7 +269,7 @@
 
 </div>
 
-<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance and fly a kite, plus a duration like "2 minutes" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
+<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes" and seating like "sofa" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <script>
 (function(){
@@ -567,6 +574,17 @@
     ctx.beginPath(); ctx.moveTo(x+24, seatY-46); ctx.lineTo(x+24, seatY-6); ctx.stroke();
   }
 
+  function drawSofaProp(x, groundY){
+    const seatY = groundY - 22;
+    ctx.strokeStyle = '#6b4a30'; ctx.fillStyle = '#8a6a4a'; ctx.lineWidth = 3;
+    ctx.fillRect(x-55, seatY-8, 110, 30); ctx.strokeRect(x-55, seatY-8, 110, 30);
+    ctx.fillRect(x-55, seatY-46, 110, 20); ctx.strokeRect(x-55, seatY-46, 110, 20);
+    ctx.fillRect(x-62, seatY-40, 12, 46); ctx.strokeRect(x-62, seatY-40, 12, 46);
+    ctx.fillRect(x+50, seatY-40, 12, 46); ctx.strokeRect(x+50, seatY-40, 12, 46);
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x-45, groundY-2); ctx.lineTo(x-45, groundY+8); ctx.moveTo(x+45, groundY-2); ctx.lineTo(x+45, groundY+8); ctx.stroke();
+  }
+
   function drawCoffeeCupProp(hand){
     ctx.save();
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#7c5a3a'; ctx.lineWidth = 2;
@@ -702,6 +720,23 @@
     return base;
   }
 
+  function poseJump(t){
+    const cycle = 1.1;
+    const phase = (t % cycle) / cycle;
+    const height = Math.max(0, Math.sin(phase*Math.PI)) * 26;
+    const crouch = phase < 0.12 ? (0.12-phase)/0.12 : (phase > 0.9 ? (phase-0.9)/0.1 : 0);
+    return {
+      torsoLean: -0.05 + 0.05*Math.sin(phase*Math.PI),
+      headTilt: 0.05*Math.sin(phase*Math.PI),
+      bounceY: height - crouch*8,
+      leftShoulderAngle: -0.9 - crouch*0.4 + 0.5*Math.sin(phase*Math.PI), leftElbowBend: 0.4,
+      rightShoulderAngle: 0.9 + crouch*0.4 - 0.5*Math.sin(phase*Math.PI), rightElbowBend: -0.4,
+      leftHipAngle: crouch*0.7 - height*0.015, leftKneeBend: crouch*1.1 + height*0.02,
+      rightHipAngle: crouch*0.7 - height*0.015, rightKneeBend: crouch*1.1 + height*0.02,
+      mouthOpen: height > 18 ? 1 : 0
+    };
+  }
+
   const CLIPS = {
     idle: { label:'Idle', pose:(t)=>poseIdle(t) },
     talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
@@ -711,12 +746,14 @@
     kite: { label:'Fly Kite', pose:(t)=>poseKite(t) },
     sit:  { label:'Sit (chair)', pose:(t)=>poseSit(t) },
     drink:{ label:'Drink Coffee', pose:(t)=>poseDrinkCoffee(t) },
-    phone:{ label:'Talk on Phone', pose:(t)=>posePhoneCall(t) }
+    phone:{ label:'Talk on Phone', pose:(t)=>posePhoneCall(t) },
+    jump: { label:'Jump', pose:(t)=>poseJump(t) }
   };
   const CLIP_LIST = [
     {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
     {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'},
-    {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'}
+    {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'},
+    {id:'jump', label:'Jump'}
   ];
   const SEATED_CLIPS = { sit:true, drink:true, phone:false };
 
@@ -746,6 +783,7 @@
     { clipId:'wave',  words:['wav','says hello','says hi'] },
     { clipId:'dance', words:['danc'] },
     { clipId:'kite',  words:['kite'] },
+    { clipId:'jump',  words:['jump'] },
     { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
     { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
     { clipId:'idle',  words:['stand','wait','relax'] }
@@ -782,6 +820,10 @@
     return Math.max(2, Math.min(300, seconds));
   }
 
+  function detectFurniture(text){
+    return /(sofa|couch)/.test(text) ? 'sofa' : 'chair';
+  }
+
   function detectTwoCharacters(text){
     return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen)/.test(text);
   }
@@ -799,6 +841,7 @@
     let seq = findActionSequence(text);
     if(!seq.length) seq = ['idle'];
     const bg = detectBackground(text);
+    const furniture = detectFurniture(text);
     const explicitDuration = detectDuration(rawText);
     const enableB = detectTwoCharacters(text);
     const quoted = extractQuotedLines(rawText);
@@ -822,7 +865,7 @@
     });
 
     return {
-      background: bg, enableB: enableB, timeline: timeline,
+      background: bg, furniture: furniture, enableB: enableB, timeline: timeline,
       summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
     };
   }
@@ -833,6 +876,7 @@
     scene: {
       background: 'white',
       customBgImage: null,
+      furniture: 'chair',
       enableB: true,
       charA: { name: 'Alex', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd', hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none' },
       charB: { name: 'Sam', outfit: '#db2777', gender: 'female', skin: '#ffe0bd', hairStyle: 'long', hairColor: '#3a2317', eyeStyle: 'dot', accessory: 'none' },
@@ -866,13 +910,15 @@
         pose: (CLIPS[clipIdB]||CLIPS.idle).pose(localT, { speaking: speakingB, phase: Math.PI }) });
     }
 
-    return { characters: characters, dialogue: active.dialogue, background: scene.background, localT: localT, totalDuration: total };
+    return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', localT: localT, totalDuration: total };
   }
 
   function renderFrame(frame){
     drawBackground(frame.background);
     frame.characters.forEach(c=>{
-      if(SEATED_CLIPS[c.clipId]) drawChairProp(c.x, GROUND_Y);
+      if(SEATED_CLIPS[c.clipId]){
+        if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
+      }
     });
     const handsBySlot = {};
     frame.characters.forEach(c=>{
@@ -940,9 +986,11 @@
     if(!text){ generateStatus.textContent = 'Type a description first.'; return; }
     const result = parsePromptToScene(text);
     state.scene.background = result.background;
+    state.scene.furniture = result.furniture;
     state.scene.enableB = result.enableB;
     state.scene.timeline = result.timeline;
     bgSelect.value = result.background;
+    furnitureSelect.value = result.furniture;
     enableBCheckbox.checked = result.enableB;
     updateVisibility();
     renderSegmentList();
@@ -952,7 +1000,9 @@
   });
   presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
   const bgImageInput = document.getElementById('bgImageInput');
+  const furnitureSelect = document.getElementById('furnitureSelect');
   bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
+  furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });
   bgImageInput.addEventListener('change', (e)=>{
     const file = e.target.files && e.target.files[0];
     if(!file) return;
