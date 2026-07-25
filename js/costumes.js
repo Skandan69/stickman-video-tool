@@ -10,6 +10,10 @@ const COSTUMES = {
   chef:    { label: 'Chef',          outfit: '#f8fafc',  accessory: 'chefhat' },
   police:  { label: 'Police',        outfit: '#1e3a8a',  accessory: 'police' },
   athlete: { label: 'Athlete',       outfit: '#16a34a',  accessory: 'headband' },
-  student: { label: 'Student',       outfit: '#7c3aed',  accessory: 'bag' }
+  student: { label: 'Student',       outfit: '#7c3aed',  accessory: 'bag' },
+  teacher:     { label: 'Teacher',     outfit: '#92400e', accessory: 'glasses' },
+  firefighter: { label: 'Firefighter', outfit: '#dc2626', accessory: 'hat' },
+  scientist:   { label: 'Scientist',   outfit: '#f1f5f9', accessory: 'glasses' },
+  artist:      { label: 'Artist',      outfit: '#0891b2', accessory: 'bag' }
 };
 const COSTUME_LIST = Object.keys(COSTUMES).map(id => ({ id, label: COSTUMES[id].label }));

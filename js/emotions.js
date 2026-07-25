@@ -10,6 +10,10 @@ const EMOTIONS = {
   happy:     { label: 'Happy',     browLeftY: -10, browRightY: -11, mouth: 'smile' },
   sad:       { label: 'Sad',       browLeftY: -6,  browRightY: -11, mouth: 'frown' },
   angry:     { label: 'Angry',     browLeftY: -11, browRightY: -6,  mouth: 'grimace' },
-  surprised: { label: 'Surprised', browLeftY: -14, browRightY: -14, mouth: 'o', eyeScale: 1.3 }
+  surprised: { label: 'Surprised', browLeftY: -14, browRightY: -14, mouth: 'o', eyeScale: 1.3 },
+  scared:    { label: 'Scared',    browLeftY: -14, browRightY: -9,  mouth: 'o', eyeScale: 1.5 },
+  sleepy:    { label: 'Sleepy',    browLeftY: -6,  browRightY: -6,  mouth: 'flat', eyeScale: 0.3 },
+  confused:  { label: 'Confused',  browLeftY: -14, browRightY: -4,  mouth: 'flat' },
+  laughing:  { label: 'Laughing',  browLeftY: -11, browRightY: -11, mouth: 'smile', eyeScale: 0.25 }
 };
 const EMOTION_LIST = Object.keys(EMOTIONS).map(id => ({ id, label: EMOTIONS[id].label }));
