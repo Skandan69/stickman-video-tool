@@ -464,6 +464,56 @@ function poseFish(t){
   };
 }
 
+function poseGuitar(t){
+  const strum = t*8;
+  return {
+    torsoLean: 0.08, headTilt: 0.15, bounceY: Math.sin(t*2)*1,
+    leftShoulderAngle: 0.5, leftElbowBend: -0.3,
+    rightShoulderAngle: 0.9+0.3*Math.sin(strum), rightElbowBend: -0.7+0.2*Math.sin(strum),
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseUmbrella(t){
+  return {
+    torsoLean: 0.03*Math.sin(t*1.2), headTilt: 0.05, bounceY: Math.abs(Math.sin(t*2))*1.5,
+    leftShoulderAngle: 0.1*Math.sin(t*1.2), leftElbowBend: 0.15,
+    rightShoulderAngle: 2.4, rightElbowBend: -0.2,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseSkateboard(t){
+  const w = t*6;
+  return {
+    torsoLean: 0.15+0.05*Math.sin(w), headTilt: 0.05*Math.sin(w), bounceY: Math.sin(w)*1.5,
+    leftShoulderAngle: -1.4, leftElbowBend: 0.2,
+    rightShoulderAngle: 1.4, rightElbowBend: -0.2,
+    leftHipAngle: -0.4, leftKneeBend: 0.7,
+    rightHipAngle: 0.3, rightKneeBend: 0.5,
+    mouthOpen: 0
+  };
+}
+function poseLaptop(t){
+  const w = t*10;
+  return {
+    torsoLean: 0.1, headTilt: 0.2, bounceY: 0,
+    leftShoulderAngle: 0.7, leftElbowBend: -0.9,
+    rightShoulderAngle: 0.7, rightElbowBend: -0.9+0.1*Math.sin(w),
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseCamera(t){
+  return {
+    torsoLean: 0.05, headTilt: 0, bounceY: Math.sin(t*2)*0.5,
+    leftShoulderAngle: 1.6, leftElbowBend: -1.5,
+    rightShoulderAngle: 1.6, rightElbowBend: -1.5,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t)=>poseIdle(t) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
@@ -502,7 +552,12 @@ const CLIPS = {
   paint: { label:'Paint', pose:(t)=>posePaint(t) },
   write: { label:'Write', pose:(t)=>poseWrite(t) },
   fish: { label:'Fish', pose:(t)=>poseFish(t) },
-  shake: { label:'Shake Hands', pose:(t)=>poseShake(t) }
+  shake: { label:'Shake Hands', pose:(t)=>poseShake(t) },
+  guitar: { label:'Play Guitar', pose:(t)=>poseGuitar(t) },
+  umbrella: { label:'Hold Umbrella', pose:(t)=>poseUmbrella(t) },
+  skateboard: { label:'Skateboard', pose:(t)=>poseSkateboard(t) },
+  laptop: { label:'Type on Laptop', pose:(t)=>poseLaptop(t) },
+  camera: { label:'Take Photo', pose:(t)=>poseCamera(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -516,9 +571,11 @@ const CLIP_LIST = [
   {id:'shrug', label:'Shrug'}, {id:'stretch', label:'Stretch'}, {id:'fall', label:'Fall Down'},
   {id:'pushup', label:'Push-up'}, {id:'cheer', label:'Cheer'}, {id:'drum', label:'Play Drums'},
   {id:'cartwheel', label:'Cartwheel'}, {id:'paint', label:'Paint'}, {id:'write', label:'Write'}, {id:'fish', label:'Fish'},
-  {id:'shake', label:'Shake Hands'}
+  {id:'shake', label:'Shake Hands'},
+  {id:'guitar', label:'Play Guitar'}, {id:'umbrella', label:'Hold Umbrella'}, {id:'skateboard', label:'Skateboard'},
+  {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'}
 ];
-const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true };
+const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
 // resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
 const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true, shake:true };

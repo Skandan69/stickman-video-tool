@@ -532,6 +532,68 @@ function drawWristwatch(hand){
   ctx.restore();
 }
 
+function drawGuitarProp(leftHand, rightHand){
+  ctx.save();
+  ctx.strokeStyle = '#7c4a2d'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(leftHand.x, leftHand.y); ctx.lineTo(rightHand.x, rightHand.y-4); ctx.stroke();
+  ctx.fillStyle = '#a97c3f'; ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(rightHand.x-2, rightHand.y+6, 10, 13, -0.3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2a1a10';
+  ctx.beginPath(); ctx.arc(rightHand.x-2, rightHand.y+4, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 0.8;
+  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(leftHand.x+i*1.5, leftHand.y-2); ctx.lineTo(rightHand.x+i*1.5, rightHand.y+2); ctx.stroke(); }
+  ctx.restore();
+}
+function drawUmbrellaProp(hand, t){
+  ctx.save();
+  const topY = hand.y - 46;
+  ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.lineTo(hand.x, topY); ctx.stroke();
+  ctx.fillStyle = '#dc2626'; ctx.strokeStyle = '#8b2f2a'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(hand.x-24, topY);
+  ctx.quadraticCurveTo(hand.x-24, topY-16, hand.x-8, topY-14);
+  ctx.quadraticCurveTo(hand.x, topY-20, hand.x+8, topY-14);
+  ctx.quadraticCurveTo(hand.x+24, topY-16, hand.x+24, topY);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#8b2f2a'; ctx.lineWidth = 1;
+  [-12,0,12].forEach(ox=>{ ctx.beginPath(); ctx.moveTo(hand.x+ox, topY); ctx.lineTo(hand.x+ox*0.4, topY-15); ctx.stroke(); });
+  ctx.restore();
+}
+function drawSkateboardProp(x, groundY, faceDir, t){
+  const wobble = Math.sin(t*6)*1.5;
+  ctx.save();
+  ctx.fillStyle = '#1f2937'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(x, groundY+4+wobble, 26, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9ca3af';
+  [-18,18].forEach(ox=>{ ctx.beginPath(); ctx.arc(x+ox, groundY+8+wobble, 3.5, 0, Math.PI*2); ctx.fill(); });
+  ctx.restore();
+}
+function drawLaptopProp(leftHand, rightHand){
+  ctx.save();
+  const mx = (leftHand.x+rightHand.x)/2, my = (leftHand.y+rightHand.y)/2;
+  ctx.fillStyle = '#9ca3af'; ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(mx-14, my, 28, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.rect(mx-13, my-14, 26, 14); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath(); ctx.rect(mx-11, my-12, 22, 10); ctx.fill();
+  ctx.restore();
+}
+function drawCameraProp(leftHand, rightHand){
+  ctx.save();
+  const mx = (leftHand.x+rightHand.x)/2, my = (leftHand.y+rightHand.y)/2;
+  ctx.fillStyle = '#1f2937'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(mx-11, my-7, 22, 14); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#374151';
+  ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#93c5fd';
+  ctx.beginPath(); ctx.arc(mx, my, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#f87171';
+  ctx.beginPath(); ctx.rect(mx-9, my-9, 3, 2); ctx.fill();
+  ctx.restore();
+}
+
 function drawChairProp(x, groundY){
   const seatY = groundY - 20;
   ctx.strokeStyle = '#8b5e3c'; ctx.fillStyle = '#a97c50'; ctx.lineWidth = 3;

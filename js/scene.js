@@ -67,6 +67,11 @@ const ACTION_KEYWORDS = [
   { clipId:'write', words:['writ','writes','writing'] },
   { clipId:'fish',  words:['fish','fishes','fishing'] },
   { clipId:'shake', words:['shake hands','shakes hands','shaking hands','handshake'] },
+  { clipId:'guitar', words:['guitar','plays the guitar','playing guitar'] },
+  { clipId:'umbrella', words:['umbrella'] },
+  { clipId:'skateboard', words:['skateboard','skateboards','skateboarding'] },
+  { clipId:'laptop', words:['laptop','types on a laptop','typing on a laptop','works on a laptop'] },
+  { clipId:'camera', words:['takes a photo','takes a picture','photographs','snaps a photo'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -382,6 +387,11 @@ function renderFrame(frame){
     if(c.clipId === 'eat') drawFoodProp(handsById[c.id].rightHand, frame.food);
     if(c.clipId === 'read') drawBookProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
     if(c.clipId === 'sleep') drawSleepZzz(handsById[c.id].head, frame.localT);
+    if(c.clipId === 'guitar') drawGuitarProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
+    if(c.clipId === 'umbrella') drawUmbrellaProp(handsById[c.id].rightHand, frame.localT);
+    if(c.clipId === 'skateboard') drawSkateboardProp(c.x, GROUND_Y, c.faceDir, frame.localT);
+    if(c.clipId === 'laptop') drawLaptopProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
+    if(c.clipId === 'camera') drawCameraProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
   });
   if(frame.dialogue){
     const res = handsById[frame.dialogue.speakerId];
