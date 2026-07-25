@@ -133,6 +133,13 @@
       <label><input type="radio" name="genderA" value="male" checked> Male</label>
       <label><input type="radio" name="genderA" value="female"> Female</label>
     </div>
+    <div class="field"><label>Body type</label>
+      <select id="bodyTypeA">
+        <option value="child">Kid</option>
+        <option value="adult" selected>Adult</option>
+        <option value="elder">Elderly</option>
+      </select>
+    </div>
     <div class="row">
       <div class="field"><label>Skin tone</label>
         <select id="skinA">
@@ -185,6 +192,13 @@
       <div class="field gender-toggle">
         <label><input type="radio" name="genderB" value="male"> Male</label>
         <label><input type="radio" name="genderB" value="female" checked> Female</label>
+      </div>
+      <div class="field"><label>Body type</label>
+        <select id="bodyTypeB">
+          <option value="child">Kid</option>
+          <option value="adult" selected>Adult</option>
+          <option value="elder">Elderly</option>
+        </select>
       </div>
       <div class="row">
         <div class="field"><label>Skin tone</label>
@@ -277,7 +291,34 @@
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const GROUND_Y = 380;
-  const HEAD_R = 18, NECK_LEN = 8, TORSO_LEN = 60, UPPER_ARM = 28, FORE_ARM = 26, UPPER_LEG = 38, LOWER_LEG = 38, LW = 5;
+  // Base (adult) skeleton geometry. These become the "current character's" scaled values
+  // via applyBodyScale() below — mutated per-character right before each pose/draw call,
+  // since pose functions and the arm-IK solver read them by closure rather than by parameter.
+  const BASE_GEOMETRY = { headR:18, neckLen:8, torsoLen:60, upperArm:28, foreArm:26, upperLeg:38, lowerLeg:38, lw:5, hipHeight:66 };
+  const BODY_PRESETS = {
+    adult: { label:'Adult', scale:1.0,  headScale:1.0,  stoop:0 },
+    child: { label:'Kid',   scale:0.62, headScale:1.28, stoop:0 },
+    elder: { label:'Elderly', scale:0.97, headScale:0.97, stoop:0.16 }
+  };
+  let HEAD_R = BASE_GEOMETRY.headR, NECK_LEN = BASE_GEOMETRY.neckLen, TORSO_LEN = BASE_GEOMETRY.torsoLen,
+      UPPER_ARM = BASE_GEOMETRY.upperArm, FORE_ARM = BASE_GEOMETRY.foreArm,
+      UPPER_LEG = BASE_GEOMETRY.upperLeg, LOWER_LEG = BASE_GEOMETRY.lowerLeg,
+      LW = BASE_GEOMETRY.lw, HIP_HEIGHT = BASE_GEOMETRY.hipHeight;
+
+  function applyBodyScale(bodyType){
+    const preset = BODY_PRESETS[bodyType] || BODY_PRESETS.adult;
+    const s = preset.scale;
+    HEAD_R = BASE_GEOMETRY.headR * s * preset.headScale;
+    NECK_LEN = BASE_GEOMETRY.neckLen * s;
+    TORSO_LEN = BASE_GEOMETRY.torsoLen * s;
+    UPPER_ARM = BASE_GEOMETRY.upperArm * s;
+    FORE_ARM = BASE_GEOMETRY.foreArm * s;
+    UPPER_LEG = BASE_GEOMETRY.upperLeg * s;
+    LOWER_LEG = BASE_GEOMETRY.lowerLeg * s;
+    LW = Math.max(3, BASE_GEOMETRY.lw * (0.75 + 0.25*s));
+    HIP_HEIGHT = BASE_GEOMETRY.hipHeight * s;
+    return preset;
+  }
 
   // ---------- helpers (kept from v1) ----------
   function upPoint(origin, angle, len, faceDir){
@@ -364,11 +405,15 @@
     const eyeStyle = appearance.eyeStyle || 'dot';
     const accessory = appearance.accessory || 'none';
     const color = outfit; // kept for the female skirt tint below
+    const bodyPreset = applyBodyScale(appearance.bodyType); // sets HEAD_R/TORSO_LEN/etc for THIS character
+    const stoop = bodyPreset.stoop || 0;
+    const effTorsoLean = pose.torsoLean + stoop;
+    const effHeadTilt = pose.headTilt + stoop*0.5;
 
-    const hip = { x: x, y: GROUND_Y - 66 - pose.bounceY };
-    const shoulder = upPoint(hip, pose.torsoLean, TORSO_LEN, faceDir);
-    const neck = upPoint(shoulder, pose.headTilt, NECK_LEN, faceDir);
-    const head = upPoint(neck, pose.headTilt, HEAD_R*0.9, faceDir);
+    const hip = { x: x, y: GROUND_Y - HIP_HEIGHT - pose.bounceY };
+    const shoulder = upPoint(hip, effTorsoLean, TORSO_LEN, faceDir);
+    const neck = upPoint(shoulder, effHeadTilt, NECK_LEN, faceDir);
+    const head = upPoint(neck, effHeadTilt, HEAD_R*0.9, faceDir);
 
     const lKnee = downPoint(hip, pose.leftHipAngle, UPPER_LEG, faceDir);
     const lFoot = downPoint(lKnee, pose.leftHipAngle+pose.leftKneeBend, LOWER_LEG, faceDir);
@@ -824,6 +869,12 @@
     return /(sofa|couch)/.test(text) ? 'sofa' : 'chair';
   }
 
+  function detectBodyType(text){
+    if(/(kid|child|little (boy|girl)|young boy|young girl|toddler)/.test(text)) return 'child';
+    if(/(old man|old woman|elderly|grandpa|grandma|grandfather|grandmother|senior citizen)/.test(text)) return 'elder';
+    return 'adult';
+  }
+
   function detectTwoCharacters(text){
     return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen)/.test(text);
   }
@@ -842,6 +893,7 @@
     if(!seq.length) seq = ['idle'];
     const bg = detectBackground(text);
     const furniture = detectFurniture(text);
+    const bodyType = detectBodyType(text);
     const explicitDuration = detectDuration(rawText);
     const enableB = detectTwoCharacters(text);
     const quoted = extractQuotedLines(rawText);
@@ -865,7 +917,7 @@
     });
 
     return {
-      background: bg, furniture: furniture, enableB: enableB, timeline: timeline,
+      background: bg, furniture: furniture, bodyType: bodyType, enableB: enableB, timeline: timeline,
       summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
     };
   }
@@ -878,8 +930,8 @@
       customBgImage: null,
       furniture: 'chair',
       enableB: true,
-      charA: { name: 'Alex', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd', hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none' },
-      charB: { name: 'Sam', outfit: '#db2777', gender: 'female', skin: '#ffe0bd', hairStyle: 'long', hairColor: '#3a2317', eyeStyle: 'dot', accessory: 'none' },
+      charA: { name: 'Alex', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd', hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult' },
+      charB: { name: 'Sam', outfit: '#db2777', gender: 'female', skin: '#ffe0bd', hairStyle: 'long', hairColor: '#3a2317', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult' },
       timeline: PRESETS.talk.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }))
     }
   };
@@ -900,14 +952,18 @@
     const characters = [];
     const clipIdA = (active.actions && active.actions.A) || 'idle';
     const speakingA = clipIdA === 'talk' && active.dialogue && active.dialogue.slot === 'A';
-    characters.push({ slot:'A', x:ax, faceDir:aFace, appearance:scene.charA, clipId:clipIdA,
-      pose: (CLIPS[clipIdA]||CLIPS.idle).pose(localT, { speaking: speakingA, phase: 0 }) });
+    const presetA = applyBodyScale(scene.charA.bodyType); // must be active before the pose is computed (arm IK reads current geometry)
+    const poseA = (CLIPS[clipIdA]||CLIPS.idle).pose(localT, { speaking: speakingA, phase: 0 });
+    poseA.bounceY *= presetA.scale; // keep jump/idle/sit bounce proportional to body size
+    characters.push({ slot:'A', x:ax, faceDir:aFace, appearance:scene.charA, clipId:clipIdA, pose: poseA });
 
     if(scene.enableB){
       const clipIdB = (active.actions && active.actions.B) || 'idle';
       const speakingB = clipIdB === 'talk' && active.dialogue && active.dialogue.slot === 'B';
-      characters.push({ slot:'B', x:bx, faceDir:bFace, appearance:scene.charB, clipId:clipIdB,
-        pose: (CLIPS[clipIdB]||CLIPS.idle).pose(localT, { speaking: speakingB, phase: Math.PI }) });
+      const presetB = applyBodyScale(scene.charB.bodyType);
+      const poseB = (CLIPS[clipIdB]||CLIPS.idle).pose(localT, { speaking: speakingB, phase: Math.PI });
+      poseB.bounceY *= presetB.scale;
+      characters.push({ slot:'B', x:bx, faceDir:bFace, appearance:scene.charB, clipId:clipIdB, pose: poseB });
     }
 
     return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', localT: localT, totalDuration: total };
@@ -989,8 +1045,10 @@
     state.scene.furniture = result.furniture;
     state.scene.enableB = result.enableB;
     state.scene.timeline = result.timeline;
+    state.scene.charA.bodyType = result.bodyType;
     bgSelect.value = result.background;
     furnitureSelect.value = result.furniture;
+    document.getElementById('bodyTypeA').value = result.bodyType;
     enableBCheckbox.checked = result.enableB;
     updateVisibility();
     renderSegmentList();
@@ -1051,6 +1109,8 @@
   document.getElementById('hairColorB').addEventListener('input', e=> state.scene.charB.hairColor = e.target.value);
   document.getElementById('accessoryA').addEventListener('change', e=> state.scene.charA.accessory = e.target.value);
   document.getElementById('accessoryB').addEventListener('change', e=> state.scene.charB.accessory = e.target.value);
+  document.getElementById('bodyTypeA').addEventListener('change', e=> state.scene.charA.bodyType = e.target.value);
+  document.getElementById('bodyTypeB').addEventListener('change', e=> state.scene.charB.bodyType = e.target.value);
 
   // ---------- Character Library (saved to this browser via localStorage) ----------
   const LIB_KEY = 'stickmanCharacterLibrary';
@@ -1073,6 +1133,7 @@
       document.getElementById('hairStyle'+slot).value = c.hairStyle;
       document.getElementById('hairColor'+slot).value = c.hairColor;
       document.getElementById('accessory'+slot).value = c.accessory;
+      document.getElementById('bodyType'+slot).value = c.bodyType || 'adult';
       document.querySelectorAll('input[name=gender'+slot+']').forEach(r=> r.checked = (r.value === c.gender));
     });
   }
