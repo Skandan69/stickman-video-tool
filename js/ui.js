@@ -8,6 +8,12 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+// Forces an immediate repaint outside the rAF loop. Needed because rAF is throttled/paused by the
+// browser when the tab isn't focused/visible (and doesn't tick at all while playback is paused), so
+// changing a dropdown (Art Style, Background, Weather, Furniture, Food) or uploading a custom rig part
+// could otherwise sit invisibly in state until the next natural animation frame. Every listener that
+// mutates state.scene outside of normal playback should call this right after.
+function forceRedraw(){ renderFrame(evaluateScene(state.scene, elapsed)); }
 
 // ---------- Scene panel wiring ----------
 const promptInput = document.getElementById('promptInput');
@@ -73,11 +79,11 @@ styleSelect.innerHTML = STYLE_LIST.map(s=> '<option value="'+s.id+'">'+escapeHtm
 styleSelect.value = state.scene.style;
 weatherSelect.innerHTML = WEATHER_LIST.map(w=> '<option value="'+w.id+'">'+escapeHtml(w.label)+'</option>').join('');
 weatherSelect.value = state.scene.weather;
-styleSelect.addEventListener('change', ()=> { state.scene.style = styleSelect.value; });
-foodSelect.addEventListener('change', ()=> { state.scene.food = foodSelect.value; });
-bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
-weatherSelect.addEventListener('change', ()=> { state.scene.weather = weatherSelect.value; });
-furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });
+styleSelect.addEventListener('change', ()=> { state.scene.style = styleSelect.value; forceRedraw(); });
+foodSelect.addEventListener('change', ()=> { state.scene.food = foodSelect.value; forceRedraw(); });
+bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; forceRedraw(); });
+weatherSelect.addEventListener('change', ()=> { state.scene.weather = weatherSelect.value; forceRedraw(); });
+furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; forceRedraw(); });
 bgImageInput.addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
@@ -88,6 +94,7 @@ bgImageInput.addEventListener('change', (e)=>{
       state.scene.customBgImage = img;
       state.scene.background = 'custom';
       bgSelect.value = 'custom';
+      forceRedraw();
     };
     img.src = ev.target.result;
   };
@@ -240,6 +247,7 @@ function onRigPartUpload(e){
     if(!c.customRig) c.customRig = { head:null, torso:null, leftArm:null, rightArm:null, leftLeg:null, rightLeg:null };
     c.customRig[part] = ev.target.result; // data: URL — JSON/localStorage-safe, image lazily loaded at draw time
     renderCharacterList(); // re-render so the checkmark next to this part shows up
+    forceRedraw();
   };
   reader.readAsDataURL(file);
 }
@@ -267,6 +275,7 @@ function onCharacterFieldChange(e){
     renderCharacterList();
   }
   else { c[field] = e.target.value; }
+  forceRedraw();
 }
 
 function onCharacterAction(e){
@@ -283,6 +292,7 @@ function onCharacterAction(e){
     });
     renderCharacterList();
     renderSegmentList();
+    forceRedraw();
   } else if(act === 'save'){
     const list = loadLibrary();
     const appearance = Object.assign({}, c);
@@ -300,6 +310,7 @@ addCharacterBtn.addEventListener('click', ()=>{
   state.scene.timeline.forEach(seg=>{ if(seg.actions) seg.actions[newChar.id] = 'idle'; });
   renderCharacterList();
   renderSegmentList();
+  forceRedraw();
 });
 
 // ---------- Animals panel (decorative scene creatures, simpler than characters: no customizer) ----------
