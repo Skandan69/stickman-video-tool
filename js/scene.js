@@ -59,6 +59,13 @@ const ACTION_KEYWORDS = [
   { clipId:'shrug', words:['shrug','shrugs','shrugging'] },
   { clipId:'stretch',words:['stretch','stretches','stretching'] },
   { clipId:'fall',  words:['falls down','falling down','trips and falls','stumbles and falls'] },
+  { clipId:'pushup', words:['push-up','push up','pushups','push-ups','does push-ups'] },
+  { clipId:'cheer', words:['cheer','cheers','cheering'] },
+  { clipId:'drum',  words:['drum','drums','drumming','plays the drums'] },
+  { clipId:'cartwheel', words:['cartwheel','cartwheels'] },
+  { clipId:'paint', words:['paint','paints','painting'] },
+  { clipId:'write', words:['writ','writes','writing'] },
+  { clipId:'fish',  words:['fish','fishes','fishing'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }

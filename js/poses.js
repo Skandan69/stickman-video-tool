@@ -372,6 +372,87 @@ function poseFallDown(t){
   };
 }
 
+// Push-up: lying-anchored (like sleep/fall) with the whole body oscillating up/down as elbows bend.
+function posePushup(t){
+  const w = t*3;
+  const down = Math.max(0, Math.sin(w));
+  return {
+    lying: true,
+    torsoLean: 1.5, headTilt: 1.4, bounceY: -down*4,
+    leftShoulderAngle: -1.0, leftElbowBend: 0.3+1.2*down,
+    rightShoulderAngle: -1.0, rightElbowBend: 0.3+1.2*down,
+    leftHipAngle: -1.5, leftKneeBend: 0.1,
+    rightHipAngle: -1.5, rightKneeBend: 0.1,
+    mouthOpen: 0
+  };
+}
+function poseCheer(t){
+  const w = t*4;
+  return {
+    torsoLean: 0.05*Math.sin(w), headTilt: 0, bounceY: Math.abs(Math.sin(w))*5,
+    leftShoulderAngle: 2.7+0.15*Math.sin(w), leftElbowBend: 0.1,
+    rightShoulderAngle: -2.7-0.15*Math.sin(w), rightElbowBend: -0.1,
+    leftHipAngle: 0.1*Math.sin(w), leftKneeBend: 0.3*Math.abs(Math.sin(w)),
+    rightHipAngle: -0.1*Math.sin(w), rightKneeBend: 0.3*Math.abs(Math.sin(w)),
+    mouthOpen: Math.sin(w) > 0.3 ? 1 : 0
+  };
+}
+function poseDrum(t){
+  const w = t*10;
+  return {
+    torsoLean: 0.05*Math.sin(t*2), headTilt: 0.08*Math.sin(t*2.5), bounceY: Math.abs(Math.sin(t*2))*1.5,
+    leftShoulderAngle: 1.1+0.5*Math.sin(w), leftElbowBend: -0.8+0.3*Math.sin(w),
+    rightShoulderAngle: 1.1+0.5*Math.sin(w+Math.PI), rightElbowBend: -0.8+0.3*Math.sin(w+Math.PI),
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseCartwheel(t){
+  const cycle = 1.2;
+  const phase = ((t % cycle) / cycle) * Math.PI*2;
+  return {
+    torsoLean: Math.sin(phase)*1.4,
+    headTilt: Math.sin(phase)*1.2,
+    bounceY: -Math.abs(Math.sin(phase))*12,
+    leftShoulderAngle: 2.6+Math.sin(phase)*0.6, leftElbowBend: 0.1,
+    rightShoulderAngle: -2.6-Math.sin(phase)*0.6, rightElbowBend: -0.1,
+    leftHipAngle: Math.sin(phase)*1.3, leftKneeBend: 0.2,
+    rightHipAngle: -Math.sin(phase)*1.3, rightKneeBend: 0.2,
+    mouthOpen: 0
+  };
+}
+function posePaint(t){
+  const w = t*3;
+  return {
+    torsoLean: 0.08, headTilt: 0.1*Math.sin(w*0.5), bounceY: 0,
+    leftShoulderAngle: 0.4, leftElbowBend: -0.6,
+    rightShoulderAngle: 0.7+0.5*Math.sin(w), rightElbowBend: -0.3+0.3*Math.sin(w*1.3),
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseWrite(t){
+  const w = t*5;
+  return {
+    torsoLean: 0.3, headTilt: 0.4, bounceY: 0,
+    leftShoulderAngle: 0.6, leftElbowBend: -1.1,
+    rightShoulderAngle: 0.9, rightElbowBend: -1.0+0.15*Math.sin(w),
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseFish(t){
+  const w = t*1.4;
+  const tug = Math.sin(w*4) > 0.85 ? 1 : 0;
+  return {
+    torsoLean: 0.1+tug*0.15, headTilt: 0.05*Math.sin(w), bounceY: 0,
+    leftShoulderAngle: 0.9, leftElbowBend: -0.4,
+    rightShoulderAngle: 1.2-tug*0.4, rightElbowBend: -0.7,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t)=>poseIdle(t) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
@@ -402,7 +483,14 @@ const CLIPS = {
   salute:{ label:'Salute', pose:(t)=>poseSalute(t) },
   shrug:{ label:'Shrug', pose:(t)=>poseShrug(t) },
   stretch:{ label:'Stretch', pose:(t)=>poseStretch(t) },
-  fall: { label:'Fall Down', pose:(t)=>poseFallDown(t) }
+  fall: { label:'Fall Down', pose:(t)=>poseFallDown(t) },
+  pushup: { label:'Push-up', pose:(t)=>posePushup(t) },
+  cheer: { label:'Cheer', pose:(t)=>poseCheer(t) },
+  drum: { label:'Play Drums', pose:(t)=>poseDrum(t) },
+  cartwheel: { label:'Cartwheel', pose:(t)=>poseCartwheel(t) },
+  paint: { label:'Paint', pose:(t)=>posePaint(t) },
+  write: { label:'Write', pose:(t)=>poseWrite(t) },
+  fish: { label:'Fish', pose:(t)=>poseFish(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -413,9 +501,11 @@ const CLIP_LIST = [
   {id:'kick', label:'Kick'}, {id:'throw', label:'Throw'}, {id:'swim', label:'Swim'}, {id:'sleep', label:'Sleep'},
   {id:'read', label:'Read'}, {id:'clap', label:'Clap'}, {id:'bow', label:'Bow'},
   {id:'yoga', label:'Yoga'}, {id:'cry', label:'Cry'}, {id:'point', label:'Point'}, {id:'salute', label:'Salute'},
-  {id:'shrug', label:'Shrug'}, {id:'stretch', label:'Stretch'}, {id:'fall', label:'Fall Down'}
+  {id:'shrug', label:'Shrug'}, {id:'stretch', label:'Stretch'}, {id:'fall', label:'Fall Down'},
+  {id:'pushup', label:'Push-up'}, {id:'cheer', label:'Cheer'}, {id:'drum', label:'Play Drums'},
+  {id:'cartwheel', label:'Cartwheel'}, {id:'paint', label:'Paint'}, {id:'write', label:'Write'}, {id:'fish', label:'Fish'}
 ];
-const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true };
+const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
 // resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
 const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true };
