@@ -100,6 +100,12 @@ function detectBackground(text){
   if(/(underwater|under the sea|ocean floor)/.test(text)) return 'underwater';
   if(/(park|outside|outdoor|garden)/.test(text)) return 'sky';
   if(/(grid|graph paper)/.test(text)) return 'grid';
+  if(/(airport|terminal|runway)/.test(text)) return 'airport';
+  if(/(hospital|clinic|er room)/.test(text)) return 'hospital';
+  if(/(library|bookshelf)/.test(text)) return 'library';
+  if(/(jungle|rainforest)/.test(text)) return 'jungle';
+  if(/(volcano|lava)/.test(text)) return 'volcano';
+  if(/(carnival|fair|fairground|amusement park)/.test(text)) return 'carnival';
   return 'white';
 }
 
@@ -134,6 +140,10 @@ function detectFood(text){
   if(/(popcorn)/.test(text)) return 'popcorn';
   if(/(waffle)/.test(text)) return 'waffle';
   if(/(sandwich)/.test(text)) return 'sandwich';
+  if(/(watermelon)/.test(text)) return 'watermelon';
+  if(/(banana)/.test(text)) return 'banana';
+  if(/(cookie)/.test(text)) return 'cookie';
+  if(/(pretzel)/.test(text)) return 'pretzel';
   return null; // no explicit food mentioned -> leave whatever's already selected alone
 }
 

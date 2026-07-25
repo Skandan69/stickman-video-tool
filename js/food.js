@@ -154,6 +154,64 @@ const FOODS = {
       ctx.beginPath(); ctx.ellipse(hand.x, hand.y-8, 3, 1.6, 0, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
+  },
+  watermelon: {
+    label: 'Watermelon Slice',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#e0453f'; ctx.strokeStyle = '#a12e29'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hand.x, hand.y+2, 9, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f9fafb'; ctx.strokeStyle = '#d1d5db';
+      ctx.beginPath(); ctx.arc(hand.x, hand.y+2, 9, Math.PI*0.08, Math.PI*0.92); ctx.stroke();
+      ctx.fillStyle = '#16a34a'; ctx.lineWidth = 3; ctx.strokeStyle = '#16a34a';
+      ctx.beginPath(); ctx.arc(hand.x, hand.y+2, 9.5, Math.PI*0.05, Math.PI*0.95); ctx.stroke();
+      ctx.fillStyle = '#111';
+      [[-3,-2],[0,-4],[3,-2]].forEach(o=>{ ctx.beginPath(); ctx.ellipse(hand.x+o[0], hand.y+2+o[1], 0.8, 1.4, 0, 0, Math.PI*2); ctx.fill(); });
+      ctx.restore();
+    }
+  },
+  banana: {
+    label: 'Banana',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#fde047'; ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hand.x-8, hand.y+6);
+      ctx.quadraticCurveTo(hand.x-8, hand.y-8, hand.x+7, hand.y-9);
+      ctx.quadraticCurveTo(hand.x+2, hand.y-2, hand.x+2, hand.y+7);
+      ctx.quadraticCurveTo(hand.x-3, hand.y+9, hand.x-8, hand.y+6);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#a16207';
+      ctx.beginPath(); ctx.ellipse(hand.x+7, hand.y-9, 1.6, 1.2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  cookie: {
+    label: 'Cookie',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.fillStyle = '#c98a3a'; ctx.strokeStyle = '#8b5e2f'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hand.x, hand.y, 7.5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4b2e1a';
+      [[-3,-3],[2,-4],[4,1],[-4,2],[0,3],[1,-1]].forEach(o=>{ ctx.beginPath(); ctx.arc(hand.x+o[0], hand.y+o[1], 1, 0, Math.PI*2); ctx.fill(); });
+      ctx.restore();
+    }
+  },
+  pretzel: {
+    label: 'Pretzel',
+    draw: (hand)=>{
+      ctx.save();
+      ctx.strokeStyle = '#a97c3f'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hand.x-6, hand.y+8);
+      ctx.bezierCurveTo(hand.x-10, hand.y-4, hand.x-2, hand.y-2, hand.x, hand.y+2);
+      ctx.bezierCurveTo(hand.x+2, hand.y-2, hand.x+10, hand.y-4, hand.x+6, hand.y+8);
+      ctx.bezierCurveTo(hand.x+3, hand.y+3, hand.x-3, hand.y+3, hand.x-6, hand.y+8);
+      ctx.stroke();
+      ctx.fillStyle = '#e5c07b';
+      [[-4,3],[0,0],[4,3]].forEach(o=>{ ctx.beginPath(); ctx.arc(hand.x+o[0], hand.y+o[1], 0.9, 0, Math.PI*2); ctx.fill(); });
+      ctx.restore();
+    }
   }
 };
 const FOOD_LIST = Object.keys(FOODS).map(id => ({ id, label: FOODS[id].label }));
