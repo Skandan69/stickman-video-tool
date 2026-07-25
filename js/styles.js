@@ -82,9 +82,14 @@ const STYLES = {
       ctx.fillStyle = '#222';
       ctx.beginPath(); ctx.arc(sk.head.x+faceDir*6, sk.head.y-2, 2, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(sk.head.x-faceDir*2, sk.head.y-2, 2, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-      if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
+      ctx.strokeStyle = '#222'; ctx.fillStyle = '#222'; ctx.lineWidth = 2;
+      // mouth: talking (mouthOpen) always wins so dialogue reads clearly, same convention as the
+      // bold style's drawFace() — otherwise fall through to the emotion's mouth shape.
+      if(pose.mouthOpen > 0.5){ ctx.beginPath(); ctx.ellipse(sk.head.x, sk.head.y+7, 3.5, 3, 0, 0, Math.PI*2); ctx.fill(); }
+      else if(em.mouth === 'o'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+7, 2.5, 0, Math.PI*2); ctx.fill(); }
+      else if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
       else if(em.mouth === 'frown'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+12, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke(); }
+      else if(em.mouth === 'grimace'){ ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x-1, sk.head.y+9); ctx.lineTo(sk.head.x+2, sk.head.y+7); ctx.lineTo(sk.head.x+5, sk.head.y+9); ctx.stroke(); }
       else { ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x+4, sk.head.y+7); ctx.stroke(); }
       ctx.fillStyle = '#333'; ctx.font = '13px Arial, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
@@ -129,8 +134,13 @@ const STYLES = {
       ctx.fillStyle = '#333';
       ctx.beginPath(); ctx.arc(sk.head.x+faceDir*6, sk.head.y-2, 1.6, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(sk.head.x-faceDir*1, sk.head.y-2, 1.6, 0, Math.PI*2); ctx.fill();
-      if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
+      // mouth: talking (mouthOpen) always wins so dialogue reads clearly, same convention as the
+      // bold style's drawFace() — otherwise fall through to the emotion's mouth shape.
+      if(pose.mouthOpen > 0.5){ ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(sk.head.x, sk.head.y+7, 3, 2.6, 0, 0, Math.PI*2); ctx.fill(); }
+      else if(em.mouth === 'o'){ ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+7, 2.2, 0, Math.PI*2); ctx.fill(); }
+      else if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
       else if(em.mouth === 'frown'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+12, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke(); }
+      else if(em.mouth === 'grimace'){ ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x-1, sk.head.y+9); ctx.lineTo(sk.head.x+2, sk.head.y+7); ctx.lineTo(sk.head.x+5, sk.head.y+9); ctx.stroke(); }
       else { ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x+4, sk.head.y+7); ctx.stroke(); }
       [sk.lHand, sk.rHand].forEach(p=>{ ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.stroke(); });
       ctx.fillStyle = '#555'; ctx.font = 'italic 12px "Comic Sans MS", cursive'; ctx.textAlign = 'center';
