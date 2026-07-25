@@ -121,139 +121,20 @@
         <option value="sofa">Sofa</option>
       </select>
     </div>
-    <div class="checkbox-field"><input type="checkbox" id="enableB" checked> <label for="enableB">Enable Character B</label></div>
-
     <hr class="sep">
-    <h2>Character A</h2>
-    <div class="row">
-      <div class="field"><label>Name</label><input type="text" id="nameA" value="Alex"></div>
-      <div class="field"><label>Outfit</label>
-        <div class="color-row"><input type="color" id="colorA" value="#1d4ed8"></div>
-      </div>
-    </div>
-    <div class="field gender-toggle">
-      <label><input type="radio" name="genderA" value="male" checked> Male</label>
-      <label><input type="radio" name="genderA" value="female"> Female</label>
-    </div>
-    <div class="field"><label>Body type</label>
-      <select id="bodyTypeA">
-        <option value="child">Kid</option>
-        <option value="adult" selected>Adult</option>
-        <option value="elder">Elderly</option>
-      </select>
-    </div>
-    <div class="row">
-      <div class="field"><label>Skin tone</label>
-        <select id="skinA">
-          <option value="#ffe0bd">Light</option>
-          <option value="#e8b98a">Medium</option>
-          <option value="#c68642">Tan</option>
-          <option value="#8d5524">Deep</option>
-        </select>
-      </div>
-      <div class="field"><label>Eyes</label>
-        <select id="eyeStyleA">
-          <option value="dot">Dot</option>
-          <option value="round">Round</option>
-          <option value="happy">Happy</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div class="field"><label>Hairstyle</label>
-        <select id="hairStyleA">
-          <option value="none">Bald</option>
-          <option value="short" selected>Short</option>
-          <option value="long">Long</option>
-          <option value="ponytail">Ponytail</option>
-          <option value="mohawk">Mohawk</option>
-        </select>
-      </div>
-      <div class="field"><label>Hair color</label>
-        <div class="color-row"><input type="color" id="hairColorA" value="#2b1b12"></div>
-      </div>
-    </div>
-    <div class="field"><label>Accessory</label>
-      <select id="accessoryA">
-        <option value="none">None</option>
-        <option value="glasses">Glasses</option>
-        <option value="hat">Hat</option>
-        <option value="bag">Bag</option>
-      </select>
-    </div>
-
-    <div class="group-charB">
-      <hr class="sep">
-      <h2>Character B</h2>
-      <div class="row">
-        <div class="field"><label>Name</label><input type="text" id="nameB" value="Sam"></div>
-        <div class="field"><label>Outfit</label>
-          <div class="color-row"><input type="color" id="colorB" value="#db2777"></div>
-        </div>
-      </div>
-      <div class="field gender-toggle">
-        <label><input type="radio" name="genderB" value="male"> Male</label>
-        <label><input type="radio" name="genderB" value="female" checked> Female</label>
-      </div>
-      <div class="field"><label>Body type</label>
-        <select id="bodyTypeB">
-          <option value="child">Kid</option>
-          <option value="adult" selected>Adult</option>
-          <option value="elder">Elderly</option>
-        </select>
-      </div>
-      <div class="row">
-        <div class="field"><label>Skin tone</label>
-          <select id="skinB">
-            <option value="#ffe0bd">Light</option>
-            <option value="#e8b98a">Medium</option>
-            <option value="#c68642">Tan</option>
-            <option value="#8d5524">Deep</option>
-          </select>
-        </div>
-        <div class="field"><label>Eyes</label>
-          <select id="eyeStyleB">
-            <option value="dot">Dot</option>
-            <option value="round">Round</option>
-            <option value="happy">Happy</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Hairstyle</label>
-          <select id="hairStyleB">
-            <option value="none">Bald</option>
-            <option value="short">Short</option>
-            <option value="long" selected>Long</option>
-            <option value="ponytail">Ponytail</option>
-            <option value="mohawk">Mohawk</option>
-          </select>
-        </div>
-        <div class="field"><label>Hair color</label>
-          <div class="color-row"><input type="color" id="hairColorB" value="#3a2317"></div>
-        </div>
-      </div>
-      <div class="field"><label>Accessory</label>
-        <select id="accessoryB">
-          <option value="none">None</option>
-          <option value="glasses">Glasses</option>
-          <option value="hat">Hat</option>
-          <option value="bag">Bag</option>
-        </select>
-      </div>
-    </div>
+    <h2>Characters</h2>
+    <div id="characterList"></div>
+    <button type="button" id="addCharacterBtn" class="secondary small" style="width:100%;">+ Add character</button>
 
     <hr class="sep">
     <h2>Character Library</h2>
-    <div class="field"><label>Save Character A as</label><input type="text" id="saveCharName" placeholder="e.g. Ninja"></div>
-    <button type="button" id="saveCharBtn" class="secondary small" style="width:100%; margin-bottom:8px;">Save to Library</button>
+    <p style="font-size:11px; color:var(--muted); margin:0 0 8px; line-height:1.4;">Click &#9733; on any character above to save it here for reuse.</p>
     <div class="field">
       <label for="libSelect">Saved characters</label>
       <select id="libSelect"><option value="">(none saved yet)</option></select>
     </div>
     <div class="segment-actions-row" style="margin-top:6px;">
-      <button type="button" id="applyToABtn" class="secondary small">Apply to A</button>
-      <button type="button" id="applyToBBtn" class="secondary small">Apply to B</button>
+      <button type="button" id="addFromLibBtn" class="secondary small">Add to Scene</button>
       <button type="button" id="deleteLibBtn" class="icon-btn danger" style="width:auto; padding:0 10px;">Delete</button>
     </div>
   </div>
@@ -347,6 +228,27 @@
   }
   let uidCounter = 1;
   function uid(){ return 'seg' + (uidCounter++); }
+  let charUidCounter = 1;
+  function charUid(){ return 'char' + (charUidCounter++); }
+  const MAX_CHARACTERS = 6;
+
+  function makeCharacter(overrides){
+    return Object.assign({
+      id: charUid(), name: 'Stickman', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd',
+      hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult'
+    }, overrides || {});
+  }
+  const DEFAULT_CHARACTER_PALETTE = [
+    { name:'Alex', outfit:'#1d4ed8', gender:'male', hairStyle:'short', hairColor:'#2b1b12' },
+    { name:'Sam', outfit:'#db2777', gender:'female', hairStyle:'long', hairColor:'#3a2317' },
+    { name:'Jordan', outfit:'#16a34a', gender:'male', hairStyle:'mohawk', hairColor:'#111827' },
+    { name:'Riley', outfit:'#f59e0b', gender:'female', hairStyle:'ponytail', hairColor:'#5c3a21' },
+    { name:'Casey', outfit:'#7c3aed', gender:'male', hairStyle:'none', hairColor:'#000000' },
+    { name:'Morgan', outfit:'#e11d48', gender:'female', hairStyle:'long', hairColor:'#111111' }
+  ];
+  function makeDefaultCharacter(index){
+    return makeCharacter(DEFAULT_CHARACTER_PALETTE[index % DEFAULT_CHARACTER_PALETTE.length]);
+  }
 
   // ---------- background (kept from v1) ----------
   function drawBackground(bg){
@@ -808,17 +710,31 @@
   function makeSegment(duration, actions, dialogue){
     return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null };
   }
+  // Presets are templates: actions/speakers are keyed by CHARACTER INDEX (0,1,...), not by id,
+  // since the actual character list is open-ended now. resolveIndexedTimeline() below translates
+  // indices into whichever real character ids currently occupy those slots (growing the list if needed).
   const PRESETS = {
-    talk: { enableB:true, timeline:[
-      makeSegment(2.5, {A:'talk', B:'idle'}, {slot:'A', text:'Hi! Nice day, right?'}),
-      makeSegment(2.5, {A:'idle', B:'talk'}, {slot:'B', text:'It sure is! Coffee?'}),
-      makeSegment(2.5, {A:'talk', B:'idle'}, {slot:'A', text:"Sounds great, let's go!"})
+    talk: { charCount:2, timeline:[
+      { duration:2.5, actions:{0:'talk', 1:'idle'}, dialogue:{speakerIdx:0, text:'Hi! Nice day, right?'} },
+      { duration:2.5, actions:{0:'idle', 1:'talk'}, dialogue:{speakerIdx:1, text:'It sure is! Coffee?'} },
+      { duration:2.5, actions:{0:'talk', 1:'idle'}, dialogue:{speakerIdx:0, text:"Sounds great, let's go!"} }
     ]},
-    kite: { enableB:false, timeline:[ makeSegment(10, {A:'kite'}, null) ]},
-    walk: { enableB:false, timeline:[ makeSegment(8, {A:'walk'}, null) ]},
-    wave: { enableB:false, timeline:[ makeSegment(4, {A:'wave'}, null) ]},
-    dance:{ enableB:true, timeline:[ makeSegment(6, {A:'dance', B:'dance'}, null) ]}
+    kite: { charCount:1, timeline:[ { duration:10, actions:{0:'kite'}, dialogue:null } ]},
+    walk: { charCount:1, timeline:[ { duration:8, actions:{0:'walk'}, dialogue:null } ]},
+    wave: { charCount:1, timeline:[ { duration:4, actions:{0:'wave'}, dialogue:null } ]},
+    dance:{ charCount:2, timeline:[ { duration:6, actions:{0:'dance', 1:'dance'}, dialogue:null } ]}
   };
+
+  function resolveIndexedTimeline(indexedSegments, charCount){
+    while(state.scene.characters.length < charCount) state.scene.characters.push(makeDefaultCharacter(state.scene.characters.length));
+    const ids = state.scene.characters.map(c=>c.id);
+    return indexedSegments.map(s=>({
+      id: uid(),
+      duration: s.duration,
+      actions: Object.fromEntries(Object.entries(s.actions||{}).map(([idx,clip])=>[ids[idx], clip])),
+      dialogue: s.dialogue ? { speakerId: ids[s.dialogue.speakerIdx], text: s.dialogue.text } : null
+    }));
+  }
 
   // ---------- prompt -> scene understanding (rule-based keyword NLU, runs fully offline) ----------
   // Stems (e.g. 'walk') deliberately match inflections via substring ('walks','walking') —
@@ -907,19 +823,20 @@
     const perSeg = total / count;
 
     let quoteIdx = 0;
+    const charCount = enableB ? 2 : 1;
     const timeline = seq.map((clipId)=>{
       let dialogue = null;
       if(clipId === 'phone'){
-        dialogue = { slot:'A', text: quoted[quoteIdx] ? quoted[quoteIdx++] : "Hey! What's up?" };
+        dialogue = { speakerIdx:0, text: quoted[quoteIdx] ? quoted[quoteIdx++] : "Hey! What's up?" };
       } else if(clipId === 'talk'){
-        dialogue = { slot:'A', text: quoted[quoteIdx] ? quoted[quoteIdx++] : 'Hey, good to see you!' };
+        dialogue = { speakerIdx:0, text: quoted[quoteIdx] ? quoted[quoteIdx++] : 'Hey, good to see you!' };
       }
-      const actions = enableB ? { A: clipId, B: 'idle' } : { A: clipId };
-      return makeSegment(Math.round(perSeg*10)/10, actions, dialogue);
+      const actions = charCount === 2 ? { 0: clipId, 1: 'idle' } : { 0: clipId };
+      return { duration: Math.round(perSeg*10)/10, actions: actions, dialogue: dialogue };
     });
 
     return {
-      background: bg, furniture: furniture, bodyType: bodyType, enableB: enableB, timeline: timeline,
+      background: bg, furniture: furniture, bodyType: bodyType, charCount: charCount, timeline: timeline,
       summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
     };
   }
@@ -931,12 +848,27 @@
       background: 'white',
       customBgImage: null,
       furniture: 'chair',
-      enableB: true,
-      charA: { name: 'Alex', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd', hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult' },
-      charB: { name: 'Sam', outfit: '#db2777', gender: 'female', skin: '#ffe0bd', hairStyle: 'long', hairColor: '#3a2317', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult' },
-      timeline: PRESETS.talk.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }))
+      characters: [
+        makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[0])),
+        makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[1]))
+      ],
+      timeline: []
     }
   };
+  state.scene.timeline = resolveIndexedTimeline(PRESETS.talk.timeline, PRESETS.talk.charCount);
+
+  // Spread N characters evenly across the stage, left half facing right and right half facing left
+  // (so groups naturally face "inward" toward each other), shrinking spacing as the group grows.
+  function computePositions(n){
+    if(n <= 1) return [{ x: 400, faceDir: 1 }];
+    const spacing = Math.min(180, 620 / (n - 1));
+    const startX = 400 - (spacing * (n - 1)) / 2;
+    const positions = [];
+    for(let i=0;i<n;i++){
+      positions.push({ x: startX + spacing*i, faceDir: i < Math.ceil(n/2) ? 1 : -1 });
+    }
+    return positions;
+  }
 
   function evaluateScene(scene, t){
     const timeline = scene.timeline.length ? scene.timeline : [makeSegment(1, {}, null)];
@@ -948,25 +880,16 @@
       if(tt < acc + d){ active = seg; localT = tt - acc; break; }
       acc += d;
     }
-    const ax = scene.enableB ? 280 : 400, aFace = 1;
-    const bx = 520, bFace = -1;
+    const positions = computePositions(scene.characters.length);
 
-    const characters = [];
-    const clipIdA = (active.actions && active.actions.A) || 'idle';
-    const speakingA = clipIdA === 'talk' && active.dialogue && active.dialogue.slot === 'A';
-    const presetA = applyBodyScale(scene.charA.bodyType); // must be active before the pose is computed (arm IK reads current geometry)
-    const poseA = (CLIPS[clipIdA]||CLIPS.idle).pose(localT, { speaking: speakingA, phase: 0 });
-    poseA.bounceY *= presetA.scale; // keep jump/idle/sit bounce proportional to body size
-    characters.push({ slot:'A', x:ax, faceDir:aFace, appearance:scene.charA, clipId:clipIdA, pose: poseA });
-
-    if(scene.enableB){
-      const clipIdB = (active.actions && active.actions.B) || 'idle';
-      const speakingB = clipIdB === 'talk' && active.dialogue && active.dialogue.slot === 'B';
-      const presetB = applyBodyScale(scene.charB.bodyType);
-      const poseB = (CLIPS[clipIdB]||CLIPS.idle).pose(localT, { speaking: speakingB, phase: Math.PI });
-      poseB.bounceY *= presetB.scale;
-      characters.push({ slot:'B', x:bx, faceDir:bFace, appearance:scene.charB, clipId:clipIdB, pose: poseB });
-    }
+    const characters = scene.characters.map((appearance, i)=>{
+      const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
+      const speaking = clipId === 'talk' && active.dialogue && active.dialogue.speakerId === appearance.id;
+      const preset = applyBodyScale(appearance.bodyType); // must be active before the pose is computed (arm IK reads current geometry)
+      const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
+      pose.bounceY *= preset.scale; // keep jump/idle/sit bounce proportional to body size
+      return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
+    });
 
     return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', localT: localT, totalDuration: total };
   }
@@ -978,22 +901,25 @@
         if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
       }
     });
-    const handsBySlot = {};
+    const handsById = {};
     frame.characters.forEach(c=>{
       const res = drawStickman(c.x, c.faceDir, c.appearance, c.pose);
-      handsBySlot[c.slot] = res;
+      handsById[c.id] = res;
     });
     frame.characters.forEach(c=>{
       if(c.clipId === 'kite'){
-        const anchor = frame.characters.length > 1 ? { x: c.slot === 'A' ? 340 : 620, y: 90 } : { x: 560, y: 90 };
-        drawKiteProp(handsBySlot[c.slot].leftHand, frame.localT, anchor);
+        const anchor = { x: c.x + 220*c.faceDir, y: 90 };
+        drawKiteProp(handsById[c.id].leftHand, frame.localT, anchor);
       }
-      if(c.clipId === 'drink') drawCoffeeCupProp(handsBySlot[c.slot].rightHand);
-      if(c.clipId === 'phone') drawPhoneProp(handsBySlot[c.slot].rightHand);
+      if(c.clipId === 'drink') drawCoffeeCupProp(handsById[c.id].rightHand);
+      if(c.clipId === 'phone') drawPhoneProp(handsById[c.id].rightHand);
     });
     if(frame.dialogue){
-      const res = handsBySlot[frame.dialogue.slot];
-      if(res) drawSpeechBubble(res.head, frame.dialogue.text, frame.dialogue.slot === 'A' ? 1 : -1);
+      const res = handsById[frame.dialogue.speakerId];
+      if(res){
+        const speaker = frame.characters.find(c=>c.id===frame.dialogue.speakerId);
+        drawSpeechBubble(res.head, frame.dialogue.text, speaker ? speaker.faceDir : 1);
+      }
     }
   }
 
@@ -1013,7 +939,6 @@
   const generateStatus = document.getElementById('generateStatus');
   const presetSelect = document.getElementById('presetSelect');
   const bgSelect = document.getElementById('bgSelect');
-  const enableBCheckbox = document.getElementById('enableB');
   const speedRange = document.getElementById('speedRange');
   const speedLabel = document.getElementById('speedLabel');
   const playPauseBtn = document.getElementById('playPauseBtn');
@@ -1025,17 +950,11 @@
   const timelineTotal = document.getElementById('timelineTotal');
   const addSegmentBtn = document.getElementById('addSegmentBtn');
 
-  function updateVisibility(){
-    document.querySelectorAll('.group-charB').forEach(el => el.style.display = state.scene.enableB ? 'block' : 'none');
-  }
-
   function loadPreset(key){
     const p = PRESETS[key];
     if(!p) return;
-    state.scene.enableB = p.enableB;
-    state.scene.timeline = p.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }));
-    enableBCheckbox.checked = p.enableB;
-    updateVisibility();
+    state.scene.timeline = resolveIndexedTimeline(p.timeline, p.charCount);
+    renderCharacterList();
     renderSegmentList();
     elapsed = 0;
   }
@@ -1045,14 +964,11 @@
     const result = parsePromptToScene(text);
     state.scene.background = result.background;
     state.scene.furniture = result.furniture;
-    state.scene.enableB = result.enableB;
-    state.scene.timeline = result.timeline;
-    state.scene.charA.bodyType = result.bodyType;
+    state.scene.timeline = resolveIndexedTimeline(result.timeline, result.charCount);
+    if(state.scene.characters[0]) state.scene.characters[0].bodyType = result.bodyType;
     bgSelect.value = result.background;
     furnitureSelect.value = result.furniture;
-    document.getElementById('bodyTypeA').value = result.bodyType;
-    enableBCheckbox.checked = result.enableB;
-    updateVisibility();
+    renderCharacterList();
     renderSegmentList();
     elapsed = 0;
     generateStatus.textContent = 'Built ' + result.summary.actions.length + ' segment' + (result.summary.actions.length===1?'':'s') +
@@ -1078,14 +994,6 @@
     };
     reader.readAsDataURL(file);
   });
-  enableBCheckbox.addEventListener('change', ()=>{
-    state.scene.enableB = enableBCheckbox.checked;
-    if(!state.scene.enableB){
-      state.scene.timeline.forEach(seg=>{ if(seg.dialogue && seg.dialogue.slot === 'B') seg.dialogue.slot = 'A'; });
-    }
-    updateVisibility();
-    renderSegmentList();
-  });
   speedRange.addEventListener('input', ()=>{
     state.speed = parseFloat(speedRange.value); speedLabel.textContent = state.speed.toFixed(1)+'x';
   });
@@ -1095,24 +1003,117 @@
   });
   restartBtn.addEventListener('click', ()=>{ elapsed = 0; });
 
-  document.getElementById('nameA').addEventListener('input', e=> state.scene.charA.name = e.target.value || 'A');
-  document.getElementById('nameB').addEventListener('input', e=> state.scene.charB.name = e.target.value || 'B');
-  document.getElementById('colorA').addEventListener('input', e=> state.scene.charA.outfit = e.target.value);
-  document.getElementById('colorB').addEventListener('input', e=> state.scene.charB.outfit = e.target.value);
-  document.querySelectorAll('input[name=genderA]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charA.gender = e.target.value; }));
-  document.querySelectorAll('input[name=genderB]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charB.gender = e.target.value; }));
-  document.getElementById('skinA').addEventListener('change', e=> state.scene.charA.skin = e.target.value);
-  document.getElementById('skinB').addEventListener('change', e=> state.scene.charB.skin = e.target.value);
-  document.getElementById('eyeStyleA').addEventListener('change', e=> state.scene.charA.eyeStyle = e.target.value);
-  document.getElementById('eyeStyleB').addEventListener('change', e=> state.scene.charB.eyeStyle = e.target.value);
-  document.getElementById('hairStyleA').addEventListener('change', e=> state.scene.charA.hairStyle = e.target.value);
-  document.getElementById('hairStyleB').addEventListener('change', e=> state.scene.charB.hairStyle = e.target.value);
-  document.getElementById('hairColorA').addEventListener('input', e=> state.scene.charA.hairColor = e.target.value);
-  document.getElementById('hairColorB').addEventListener('input', e=> state.scene.charB.hairColor = e.target.value);
-  document.getElementById('accessoryA').addEventListener('change', e=> state.scene.charA.accessory = e.target.value);
-  document.getElementById('accessoryB').addEventListener('change', e=> state.scene.charB.accessory = e.target.value);
-  document.getElementById('bodyTypeA').addEventListener('change', e=> state.scene.charA.bodyType = e.target.value);
-  document.getElementById('bodyTypeB').addEventListener('change', e=> state.scene.charB.bodyType = e.target.value);
+  // ---------- Character panel (dynamic list, any number of characters) ----------
+  const characterList = document.getElementById('characterList');
+  const addCharacterBtn = document.getElementById('addCharacterBtn');
+
+  function skinOptionsHtml(sel){
+    return [['#ffe0bd','Light'],['#e8b98a','Medium'],['#c68642','Tan'],['#8d5524','Deep']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
+  function eyeOptionsHtml(sel){
+    return [['dot','Dot'],['round','Round'],['happy','Happy']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
+  function hairOptionsHtml(sel){
+    return [['none','Bald'],['short','Short'],['long','Long'],['ponytail','Ponytail'],['mohawk','Mohawk']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
+  function accessoryOptionsHtml(sel){
+    return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
+  function bodyTypeOptionsHtml(sel){
+    return [['child','Kid'],['adult','Adult'],['elder','Elderly']]
+      .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  }
+
+  function characterCardHtml(c, idx){
+    return (
+      '<div class="segment-card">' +
+        '<div class="segment-head">' +
+          '<strong>Character ' + (idx+1) + '</strong>' +
+          '<div class="segment-actions-row">' +
+            '<button type="button" class="icon-btn" data-cact="save" data-cid="'+c.id+'" title="Save to Library">&#9733;</button>' +
+            '<button type="button" class="icon-btn danger" data-cact="remove" data-cid="'+c.id+'" '+(state.scene.characters.length<=1?'disabled':'')+'>&times;</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="row">' +
+          '<div class="field"><label>Name</label><input type="text" data-cfield="name" data-cid="'+c.id+'" value="'+escapeHtml(c.name)+'"></div>' +
+          '<div class="field"><label>Outfit</label><div class="color-row"><input type="color" data-cfield="outfit" data-cid="'+c.id+'" value="'+c.outfit+'"></div></div>' +
+        '</div>' +
+        '<div class="field gender-toggle">' +
+          '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="male" '+(c.gender==='male'?'checked':'')+'> Male</label>' +
+          '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="female" '+(c.gender==='female'?'checked':'')+'> Female</label>' +
+        '</div>' +
+        '<div class="field"><label>Body type</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
+        '<div class="row">' +
+          '<div class="field"><label>Skin tone</label><select data-cfield="skin" data-cid="'+c.id+'">'+skinOptionsHtml(c.skin)+'</select></div>' +
+          '<div class="field"><label>Eyes</label><select data-cfield="eyeStyle" data-cid="'+c.id+'">'+eyeOptionsHtml(c.eyeStyle)+'</select></div>' +
+        '</div>' +
+        '<div class="row">' +
+          '<div class="field"><label>Hairstyle</label><select data-cfield="hairStyle" data-cid="'+c.id+'">'+hairOptionsHtml(c.hairStyle)+'</select></div>' +
+          '<div class="field"><label>Hair color</label><div class="color-row"><input type="color" data-cfield="hairColor" data-cid="'+c.id+'" value="'+c.hairColor+'"></div></div>' +
+        '</div>' +
+        '<div class="field"><label>Accessory</label><select data-cfield="accessory" data-cid="'+c.id+'">'+accessoryOptionsHtml(c.accessory)+'</select></div>' +
+      '</div>'
+    );
+  }
+
+  function findCharacter(id){ return state.scene.characters.find(c=> c.id === id); }
+
+  function renderCharacterList(){
+    characterList.innerHTML = state.scene.characters.map((c,idx)=> characterCardHtml(c, idx)).join('');
+    characterList.querySelectorAll('[data-cfield]').forEach(el=>{
+      const evt = (el.tagName === 'SELECT' || el.type === 'radio') ? 'change' : 'input';
+      el.addEventListener(evt, onCharacterFieldChange);
+    });
+    characterList.querySelectorAll('[data-cact]').forEach(btn=> btn.addEventListener('click', onCharacterAction));
+    addCharacterBtn.disabled = state.scene.characters.length >= MAX_CHARACTERS;
+  }
+
+  function onCharacterFieldChange(e){
+    const id = e.target.getAttribute('data-cid');
+    const field = e.target.getAttribute('data-cfield');
+    const c = findCharacter(id);
+    if(!c) return;
+    if(field === 'gender'){ if(e.target.checked) c.gender = e.target.value; }
+    else if(field === 'name'){ c.name = e.target.value || 'Stickman'; renderSegmentList(); }
+    else { c[field] = e.target.value; }
+  }
+
+  function onCharacterAction(e){
+    const id = e.currentTarget.getAttribute('data-cid');
+    const act = e.currentTarget.getAttribute('data-cact');
+    const c = findCharacter(id);
+    if(!c) return;
+    if(act === 'remove'){
+      if(state.scene.characters.length <= 1) return;
+      state.scene.characters = state.scene.characters.filter(ch=> ch.id !== id);
+      state.scene.timeline.forEach(seg=>{
+        if(seg.actions) delete seg.actions[id];
+        if(seg.dialogue && seg.dialogue.speakerId === id) seg.dialogue = null;
+      });
+      renderCharacterList();
+      renderSegmentList();
+    } else if(act === 'save'){
+      const list = loadLibrary();
+      const appearance = Object.assign({}, c);
+      delete appearance.id;
+      list.push({ label: c.name, appearance: appearance });
+      saveLibrary(list);
+      refreshLibSelect();
+    }
+  }
+
+  addCharacterBtn.addEventListener('click', ()=>{
+    if(state.scene.characters.length >= MAX_CHARACTERS) return;
+    const newChar = makeDefaultCharacter(state.scene.characters.length);
+    state.scene.characters.push(newChar);
+    state.scene.timeline.forEach(seg=>{ if(seg.actions) seg.actions[newChar.id] = 'idle'; });
+    renderCharacterList();
+    renderSegmentList();
+  });
 
   // ---------- Character Library (saved to this browser via localStorage) ----------
   const LIB_KEY = 'stickmanCharacterLibrary';
@@ -1125,43 +1126,17 @@
       ? list.map((c,i)=> '<option value="'+i+'">'+escapeHtml(c.label)+'</option>').join('')
       : '<option value="">(none saved yet)</option>';
   }
-  function syncCharacterFormFromState(){
-    ['A','B'].forEach(slot=>{
-      const c = slot === 'A' ? state.scene.charA : state.scene.charB;
-      document.getElementById('name'+slot).value = c.name;
-      document.getElementById('color'+slot).value = c.outfit;
-      document.getElementById('skin'+slot).value = c.skin;
-      document.getElementById('eyeStyle'+slot).value = c.eyeStyle;
-      document.getElementById('hairStyle'+slot).value = c.hairStyle;
-      document.getElementById('hairColor'+slot).value = c.hairColor;
-      document.getElementById('accessory'+slot).value = c.accessory;
-      document.getElementById('bodyType'+slot).value = c.bodyType || 'adult';
-      document.querySelectorAll('input[name=gender'+slot+']').forEach(r=> r.checked = (r.value === c.gender));
-    });
-  }
-  document.getElementById('saveCharBtn').addEventListener('click', ()=>{
-    const nameInput = document.getElementById('saveCharName');
-    const label = nameInput.value.trim() || state.scene.charA.name;
-    const list = loadLibrary();
-    const appearance = Object.assign({}, state.scene.charA);
-    list.push({ label: label, appearance: appearance });
-    saveLibrary(list);
-    refreshLibSelect();
-    nameInput.value = '';
-  });
-  function applyLibTo(slot){
+  document.getElementById('addFromLibBtn').addEventListener('click', ()=>{
     const list = loadLibrary();
     const idx = parseInt(libSelect.value, 10);
     if(isNaN(idx) || !list[idx]) return;
-    const appearance = Object.assign({}, list[idx].appearance);
-    const savedName = appearance.name;
-    delete appearance.name; // keep the slot's own name (Alex/Sam) unless the user renames it
-    const target = slot === 'A' ? state.scene.charA : state.scene.charB;
-    Object.assign(target, appearance);
-    syncCharacterFormFromState();
-  }
-  document.getElementById('applyToABtn').addEventListener('click', ()=> applyLibTo('A'));
-  document.getElementById('applyToBBtn').addEventListener('click', ()=> applyLibTo('B'));
+    if(state.scene.characters.length >= MAX_CHARACTERS){ alert('Scene already has the max of ' + MAX_CHARACTERS + ' characters.'); return; }
+    const appearance = Object.assign(makeCharacter(), list[idx].appearance, { id: charUid(), name: list[idx].label });
+    state.scene.characters.push(appearance);
+    state.scene.timeline.forEach(seg=>{ if(seg.actions) seg.actions[appearance.id] = 'idle'; });
+    renderCharacterList();
+    renderSegmentList();
+  });
   document.getElementById('deleteLibBtn').addEventListener('click', ()=>{
     const list = loadLibrary();
     const idx = parseInt(libSelect.value, 10);
@@ -1182,14 +1157,15 @@
     timelineTotal.textContent = 'Total: ' + total.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
 
     segmentList.innerHTML = state.scene.timeline.map((seg, idx)=>{
-      const bFieldHtml = state.scene.enableB
-        ? '<div class="field"><label>Character B</label><select data-field="actionB" data-id="'+seg.id+'">'+clipOptionsHtml(seg.actions.B||'idle')+'</select></div>'
-        : '';
-      const speakerOptions = '<option value="A"'+(seg.dialogue&&seg.dialogue.slot==='A'?' selected':'')+'>A</option>'
-        + (state.scene.enableB ? '<option value="B"'+(seg.dialogue&&seg.dialogue.slot==='B'?' selected':'')+'>B</option>' : '');
+      const actionFieldsHtml = state.scene.characters.map(c=>
+        '<div class="field"><label>' + escapeHtml(c.name) + '</label><select data-field="action_'+c.id+'" data-id="'+seg.id+'">'+clipOptionsHtml((seg.actions&&seg.actions[c.id])||'idle')+'</select></div>'
+      ).join('');
+      const speakerOptions = state.scene.characters.map(c=>
+        '<option value="'+c.id+'"'+(seg.dialogue&&seg.dialogue.speakerId===c.id?' selected':'')+'>'+escapeHtml(c.name)+'</option>'
+      ).join('');
       const dialogueHtml = seg.dialogue ? (
         '<div class="row">' +
-          '<div class="field" style="max-width:80px;"><label>Speaker</label><select data-field="dialogueSpeaker" data-id="'+seg.id+'">'+speakerOptions+'</select></div>' +
+          '<div class="field" style="max-width:100px;"><label>Speaker</label><select data-field="dialogueSpeaker" data-id="'+seg.id+'">'+speakerOptions+'</select></div>' +
           '<div class="field"><label>Line</label><input type="text" data-field="dialogueText" data-id="'+seg.id+'" value="'+escapeHtml(seg.dialogue.text)+'"></div>' +
         '</div>'
       ) : '';
@@ -1205,8 +1181,7 @@
           '</div>' +
           '<div class="row">' +
             '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
-            '<div class="field"><label>Character A</label><select data-field="actionA" data-id="'+seg.id+'">'+clipOptionsHtml(seg.actions.A||'idle')+'</select></div>' +
-            bFieldHtml +
+            actionFieldsHtml +
           '</div>' +
           '<div class="checkbox-field"><input type="checkbox" data-field="hasDialogue" data-id="'+seg.id+'" '+(seg.dialogue?'checked':'')+'> <label>Dialogue in this segment</label></div>' +
           dialogueHtml +
@@ -1246,22 +1221,25 @@
     if(field === 'duration'){
       seg.duration = Math.max(0.5, parseFloat(e.target.value) || 0.5);
       timelineTotal.textContent = 'Total: ' + evaluateScene(state.scene,0).totalDuration.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
-    } else if(field === 'actionA'){
-      seg.actions.A = e.target.value;
-    } else if(field === 'actionB'){
-      seg.actions.B = e.target.value;
+    } else if(field.indexOf('action_') === 0){
+      const charId = field.slice('action_'.length);
+      if(!seg.actions) seg.actions = {};
+      seg.actions[charId] = e.target.value;
     } else if(field === 'hasDialogue'){
-      seg.dialogue = e.target.checked ? { slot: 'A', text: 'New line' } : null;
+      const firstId = state.scene.characters[0] && state.scene.characters[0].id;
+      seg.dialogue = e.target.checked ? { speakerId: firstId, text: 'New line' } : null;
       renderSegmentList();
     } else if(field === 'dialogueSpeaker'){
-      if(seg.dialogue) seg.dialogue.slot = e.target.value;
+      if(seg.dialogue) seg.dialogue.speakerId = e.target.value;
     } else if(field === 'dialogueText'){
       if(seg.dialogue) seg.dialogue.text = e.target.value || ' ';
     }
   }
 
   addSegmentBtn.addEventListener('click', ()=>{
-    state.scene.timeline.push(makeSegment(2.5, { A:'idle', B:'idle' }, null));
+    const actions = {};
+    state.scene.characters.forEach(c=> actions[c.id] = 'idle');
+    state.scene.timeline.push(makeSegment(2.5, actions, null));
     renderSegmentList();
   });
 
@@ -1297,7 +1275,7 @@
   });
 
   // ---------- init ----------
-  updateVisibility();
+  renderCharacterList();
   renderSegmentList();
 })();
 </script>
