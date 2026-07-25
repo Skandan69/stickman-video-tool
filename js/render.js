@@ -61,6 +61,26 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
     ctx.bezierCurveTo(ex-hr*1.6, ey-hr*0.6, ex-hr*0.4, ey-hr*1.8, ex, ey-hr*0.3);
     ctx.bezierCurveTo(ex+hr*0.4, ey-hr*1.8, ex+hr*1.6, ey-hr*0.6, ex, ey+hr*1.3);
     ctx.closePath(); ctx.fill();
+  } else if(eyeStyle === 'wink'){
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(ex, ey, 3.2*wide*S, Math.PI, 0); ctx.stroke();
+    ctx.lineWidth = 1.2;
+    [1,2,3].forEach(i=>{ ctx.beginPath(); ctx.moveTo(ex+3*S+i*1.5*S, ey-1*S); ctx.lineTo(ex+4*S+i*1.5*S, ey-1*S); ctx.stroke(); });
+  } else if(eyeStyle === 'sleepy'){
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(ex, ey+1*S, 3.5*wide*S, Math.PI*1.05, Math.PI*1.95); ctx.stroke();
+  } else if(eyeStyle === 'angry'){
+    ctx.strokeStyle = INK; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ex-3.5*S, ey+2*S); ctx.lineTo(ex+3.5*S, ey-2*S); ctx.stroke();
+  } else if(eyeStyle === 'spiral'){
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    for(let a=0; a<=Math.PI*4.5; a+=0.3){
+      const r = a*0.55*S;
+      const px = ex + Math.cos(a)*r, py = ey + Math.sin(a)*r;
+      if(a===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
   } else {
     ctx.beginPath(); ctx.arc(ex, ey, 2.4*wide*S, 0, Math.PI*2); ctx.fill();
   }
@@ -336,6 +356,60 @@ function drawHair(head, faceDir, hairStyle, hairColor){
       ctx.lineTo(bx + i*1.5, head.y+18);
       ctx.stroke();
     }
+  } else if(hairStyle === 'undercut'){
+    for(let i=-3;i<=3;i++){
+      ctx.beginPath(); ctx.arc(head.x+i*5, head.y-HEAD_R+2, 1, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.moveTo(head.x-3, head.y-HEAD_R+2);
+    ctx.quadraticCurveTo(head.x+8, head.y-HEAD_R-10, head.x+HEAD_R-2, head.y-HEAD_R+6);
+    ctx.lineWidth = LW; ctx.lineCap='round'; ctx.stroke();
+  } else if(hairStyle === 'sidepart'){
+    ctx.beginPath();
+    for(let i=-2;i<=3;i++){
+      ctx.moveTo(head.x+i*6-4, head.y-HEAD_R+3);
+      ctx.lineTo(head.x+i*7-6, head.y-HEAD_R-6);
+    }
+    ctx.lineWidth = LW-2; ctx.stroke();
+  } else if(hairStyle === 'waves'){
+    ctx.lineWidth = LW-2; ctx.lineCap = 'round';
+    for(let i=-2;i<=2;i++){
+      const bx = head.x+i*7, by0 = head.y-HEAD_R+2;
+      ctx.beginPath();
+      ctx.moveTo(bx, by0);
+      ctx.quadraticCurveTo(bx+5, by0-6, bx, by0-11);
+      ctx.stroke();
+    }
+  } else if(hairStyle === 'halfup'){
+    ctx.beginPath();
+    ctx.moveTo(head.x-HEAD_R+2, head.y-4);
+    ctx.quadraticCurveTo(head.x-HEAD_R-6, head.y+18, head.x-HEAD_R+4, head.y+30);
+    ctx.moveTo(head.x+HEAD_R-2, head.y-4);
+    ctx.quadraticCurveTo(head.x+HEAD_R+6, head.y+18, head.x+HEAD_R-4, head.y+30);
+    ctx.lineWidth = LW-1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(head.x, head.y-HEAD_R-5, 5, 0, Math.PI*2); ctx.fill();
+  } else if(hairStyle === 'fauxhawk'){
+    ctx.beginPath();
+    for(let i=-1;i<=1;i++){
+      const spikeLen = 8 - Math.abs(i)*2;
+      ctx.moveTo(head.x+i*5-2, head.y-HEAD_R+2);
+      ctx.lineTo(head.x+i*4, head.y-HEAD_R-6-spikeLen*0.5);
+      ctx.lineTo(head.x+i*5+2, head.y-HEAD_R+2);
+    }
+    ctx.closePath(); ctx.fill();
+  } else if(hairStyle === 'cornrows'){
+    ctx.lineWidth = LW-2; ctx.lineCap = 'round';
+    for(let i=-3;i<=3;i++){
+      const bx = head.x+i*5;
+      ctx.beginPath();
+      ctx.moveTo(bx, head.y-HEAD_R+3);
+      ctx.lineTo(bx*0.3+head.x*0.7, head.y+2);
+      ctx.stroke();
+    }
+  } else if(hairStyle === 'bowlcut'){
+    ctx.beginPath(); ctx.arc(head.x, head.y-2, HEAD_R+2, Math.PI*1.05, Math.PI*1.95); ctx.fill();
+    ctx.strokeStyle = hairColor; ctx.lineWidth = LW-2;
+    ctx.beginPath(); ctx.moveTo(head.x-HEAD_R-1, head.y-HEAD_R*0.3); ctx.lineTo(head.x+HEAD_R+1, head.y-HEAD_R*0.3); ctx.stroke();
   } else {
     ctx.beginPath();
     ctx.moveTo(head.x-HEAD_R+2, head.y-4);

@@ -105,13 +105,16 @@ function skinOptionsHtml(sel){
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function eyeOptionsHtml(sel){
-  return [['dot','Dot'],['round','Round'],['happy','Happy'],['closed','Closed'],['star','Star'],['heart','Heart']]
+  return [['dot','Dot'],['round','Round'],['happy','Happy'],['closed','Closed'],['star','Star'],['heart','Heart'],
+          ['wink','Wink'],['sleepy','Sleepy'],['angry','Angry'],['spiral','Spiral (Dizzy)']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function hairOptionsHtml(sel){
   return [['none','Bald'],['short','Short'],['long','Long'],['ponytail','Ponytail'],['mohawk','Mohawk'],
           ['curly','Curly'],['afro','Afro'],['bun','Bun'],['braids','Braids'],
-          ['buzzcut','Buzzcut'],['spiky','Spiky'],['pigtails','Pigtails'],['dreadlocks','Dreadlocks']]
+          ['buzzcut','Buzzcut'],['spiky','Spiky'],['pigtails','Pigtails'],['dreadlocks','Dreadlocks'],
+          ['undercut','Undercut'],['sidepart','Side Part'],['waves','Waves'],['halfup','Half-Up'],
+          ['fauxhawk','Faux Hawk'],['cornrows','Cornrows'],['bowlcut','Bowl Cut']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function accessoryOptionsHtml(sel){
