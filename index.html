@@ -33,13 +33,8 @@
     </div>
     <div class="field">
       <label for="bgSelect">Background</label>
-      <select id="bgSelect">
-        <option value="white">Plain whiteboard</option>
-        <option value="sky">Sky / park</option>
-        <option value="grid">Graph paper</option>
-        <option value="cafe">Cafe (indoor)</option>
-        <option value="custom">Custom photo…</option>
-      </select>
+      <!-- options are populated from the BACKGROUNDS registry (js/backgrounds.js) at init -->
+      <select id="bgSelect"></select>
     </div>
     <div class="field">
       <label for="bgImageInput">Or upload your own background</label>
@@ -103,6 +98,7 @@
 <script src="js/helpers.js"></script>
 <script src="js/character.js"></script>
 <script src="js/emotions.js"></script>
+<script src="js/backgrounds.js"></script>
 <script src="js/render.js"></script>
 <script src="js/poses.js"></script>
 <script src="js/scene.js"></script>
