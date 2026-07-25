@@ -3,7 +3,11 @@ function makeCharacter(overrides){
   return Object.assign({
     id: charUid(), name: 'Stickman', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd',
     hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult',
-    sizeScale: 1, emotion: 'neutral', build: 'average'
+    sizeScale: 1, emotion: 'neutral', build: 'average',
+    // customRig: user-drawn/uploaded "paper doll" art for the "My Own Drawing" art style (js/styles.js).
+    // Each field is either null (not uploaded) or a data: URL string (JSON/localStorage-safe, unlike
+    // an Image object) — actual Image objects are lazily created + cached at draw time from these URLs.
+    customRig: { head: null, torso: null, leftArm: null, rightArm: null, leftLeg: null, rightLeg: null }
   }, overrides || {});
 }
 const DEFAULT_CHARACTER_PALETTE = [
