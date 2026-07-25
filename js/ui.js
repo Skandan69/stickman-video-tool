@@ -100,8 +100,12 @@ function hairOptionsHtml(sel){
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function accessoryOptionsHtml(sel){
-  return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag']]
+  return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag'],
+          ['chefhat','Chef Hat'],['police','Police Cap'],['headband','Headband'],['doctor','Stethoscope']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+}
+function costumeOptionsHtml(){
+  return COSTUME_LIST.map(c=> '<option value="'+c.id+'">'+c.label+'</option>').join('');
 }
 // These three read straight from the registries (js/humanTypes.js, js/emotions.js) so adding a new
 // age preset, build preset, or emotion there automatically shows up in the dropdown here.
@@ -139,6 +143,7 @@ function characterCardHtml(c, idx){
         '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="male" '+(c.gender==='male'?'checked':'')+'> Male</label>' +
         '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="female" '+(c.gender==='female'?'checked':'')+'> Female</label>' +
       '</div>' +
+      '<div class="field"><label>Costume (sets outfit + accessory)</label><select data-cfield="costume" data-cid="'+c.id+'">'+costumeOptionsHtml()+'</select></div>' +
       '<div class="row">' +
         '<div class="field"><label>Age</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
         '<div class="field"><label>Build</label><select data-cfield="build" data-cid="'+c.id+'">'+buildOptionsHtml(c.build)+'</select></div>' +
@@ -181,6 +186,16 @@ function onCharacterFieldChange(e){
     c.sizeScale = parseFloat(e.target.value) || 1;
     const label = characterList.querySelector('[data-sizeval="'+id+'"]');
     if(label) label.textContent = c.sizeScale.toFixed(2) + 'x';
+  }
+  else if(field === 'costume'){
+    // Costume is a one-shot shortcut (not a stored field): apply its outfit + accessory, then
+    // re-render so the Outfit swatch and Accessory dropdown reflect the change immediately.
+    const preset = COSTUMES[e.target.value];
+    if(preset && preset.outfit !== null){
+      c.outfit = preset.outfit;
+      c.accessory = preset.accessory;
+    }
+    renderCharacterList();
   }
   else { c[field] = e.target.value; }
 }

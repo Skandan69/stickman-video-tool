@@ -131,10 +131,14 @@ function drawStickman(x, faceDir, appearance, pose){
 
   drawHair(head, faceDir, hairStyle, hairColor);
   if(accessory === 'hat') drawHat(head, hairColor);
+  if(accessory === 'chefhat') drawChefHat(head);
+  if(accessory === 'police') drawPoliceCap(head);
+  if(accessory === 'headband') drawHeadband(head, outfit);
   ctx.strokeStyle = outfit; ctx.lineWidth = LW;
 
   drawFace(head, faceDir, eyeStyle, emotion, pose.mouthOpen);
   if(accessory === 'glasses') drawGlasses(head);
+  if(accessory === 'doctor') drawStethoscope(neck);
 
   ctx.fillStyle = '#444';
   ctx.font = '13px "Comic Sans MS", cursive, sans-serif';
@@ -255,6 +259,39 @@ function drawHat(head, color){
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R+3, HEAD_R+5, 5, 0, 0, Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.rect(head.x-HEAD_R*0.55, head.y-HEAD_R-13, HEAD_R*1.1, 14); ctx.fill();
+  ctx.restore();
+}
+
+// ---------- costume accessories (chef/police/athlete/doctor) — used by the COSTUMES registry (js/costumes.js) ----------
+function drawChefHat(head){
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R+2, HEAD_R+3, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(head.x-HEAD_R*0.5, head.y-HEAD_R-24, HEAD_R, 24); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R-24, HEAD_R*0.5, 6, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawPoliceCap(head){
+  ctx.save();
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R+2, HEAD_R+2, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.rect(head.x-HEAD_R*0.6, head.y-HEAD_R-10, HEAD_R*1.2, 12); ctx.fill();
+  ctx.fillStyle = '#facc15';
+  ctx.beginPath(); ctx.arc(head.x, head.y-HEAD_R-4, 3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawHeadband(head, color){
+  ctx.save();
+  ctx.strokeStyle = color || '#dc2626'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(head.x, head.y-2, HEAD_R-1, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+  ctx.restore();
+}
+function drawStethoscope(neck){
+  ctx.save();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(neck.x, neck.y+4, 6, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(neck.x-5, neck.y+8); ctx.lineTo(neck.x-5, neck.y+22); ctx.stroke();
+  ctx.beginPath(); ctx.arc(neck.x-5, neck.y+24, 3, 0, Math.PI*2); ctx.stroke();
   ctx.restore();
 }
 
