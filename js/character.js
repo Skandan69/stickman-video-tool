@@ -3,7 +3,7 @@ function makeCharacter(overrides){
   return Object.assign({
     id: charUid(), name: 'Stickman', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd',
     hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none', bodyType: 'adult',
-    sizeScale: 1, emotion: 'neutral'
+    sizeScale: 1, emotion: 'neutral', build: 'average'
   }, overrides || {});
 }
 const DEFAULT_CHARACTER_PALETTE = [

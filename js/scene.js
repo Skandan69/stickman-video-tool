@@ -177,7 +177,7 @@ function evaluateScene(scene, t){
   const characters = scene.characters.map((appearance, i)=>{
     const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
     const speaking = clipId === 'talk' && active.dialogue && active.dialogue.speakerId === appearance.id;
-    const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale); // must be active before the pose is computed (arm IK reads current geometry)
+    const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // must be active before the pose is computed (arm IK reads current geometry)
     const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
     pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
     return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };

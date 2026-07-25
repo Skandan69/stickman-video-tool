@@ -99,13 +99,22 @@ function accessoryOptionsHtml(sel){
   return [['none','None'],['glasses','Glasses'],['hat','Hat'],['bag','Bag']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
+// These three read straight from the registries (js/humanTypes.js, js/emotions.js) so adding a new
+// age preset, build preset, or emotion there automatically shows up in the dropdown here.
 function bodyTypeOptionsHtml(sel){
-  return [['child','Kid'],['adult','Adult'],['elder','Elderly']]
-    .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  return Object.keys(BODY_PRESETS).map(id=>
+    '<option value="'+id+'"'+(id===sel?' selected':'')+'>'+BODY_PRESETS[id].label+'</option>'
+  ).join('');
+}
+function buildOptionsHtml(sel){
+  return Object.keys(BUILD_PRESETS).map(id=>
+    '<option value="'+id+'"'+(id===sel?' selected':'')+'>'+BUILD_PRESETS[id].label+'</option>'
+  ).join('');
 }
 function emotionOptionsHtml(sel){
-  return [['neutral','Neutral'],['happy','Happy'],['sad','Sad'],['angry','Angry'],['surprised','Surprised']]
-    .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
+  return EMOTION_LIST.map(e=>
+    '<option value="'+e.id+'"'+(e.id===sel?' selected':'')+'>'+e.label+'</option>'
+  ).join('');
 }
 
 function characterCardHtml(c, idx){
@@ -127,9 +136,10 @@ function characterCardHtml(c, idx){
         '<label><input type="radio" name="gender_'+c.id+'" data-cfield="gender" data-cid="'+c.id+'" value="female" '+(c.gender==='female'?'checked':'')+'> Female</label>' +
       '</div>' +
       '<div class="row">' +
-        '<div class="field"><label>Body type</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
-        '<div class="field"><label>Size <span class="size-val" data-sizeval="'+c.id+'">'+(c.sizeScale||1).toFixed(2)+'x</span></label><input type="range" min="0.6" max="1.6" step="0.05" data-cfield="sizeScale" data-cid="'+c.id+'" value="'+(c.sizeScale||1)+'"></div>' +
+        '<div class="field"><label>Age</label><select data-cfield="bodyType" data-cid="'+c.id+'">'+bodyTypeOptionsHtml(c.bodyType)+'</select></div>' +
+        '<div class="field"><label>Build</label><select data-cfield="build" data-cid="'+c.id+'">'+buildOptionsHtml(c.build)+'</select></div>' +
       '</div>' +
+      '<div class="field"><label>Height <span class="size-val" data-sizeval="'+c.id+'">'+(c.sizeScale||1).toFixed(2)+'x</span></label><input type="range" min="0.6" max="1.6" step="0.05" data-cfield="sizeScale" data-cid="'+c.id+'" value="'+(c.sizeScale||1)+'"></div>' +
       '<div class="row">' +
         '<div class="field"><label>Skin tone</label><select data-cfield="skin" data-cid="'+c.id+'">'+skinOptionsHtml(c.skin)+'</select></div>' +
         '<div class="field"><label>Eyes</label><select data-cfield="eyeStyle" data-cid="'+c.id+'">'+eyeOptionsHtml(c.eyeStyle)+'</select></div>' +

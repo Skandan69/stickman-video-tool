@@ -52,27 +52,21 @@ function drawBackground(bg){
 }
 
 // ---------- face: eyebrows + eyes + mouth, driven by eyeStyle (shape) and emotion (expression) ----------
+// Emotion shapes/angles come from the EMOTIONS registry (js/emotions.js) — this function just draws
+// whatever that registry says, so adding a new emotion never requires touching this code.
 function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
+  const em = EMOTIONS[emotion] || EMOTIONS.neutral;
   const ex = head.x + faceDir*7, ey = head.y - 3;
-  const wide = emotion === 'surprised' ? 1.3 : 1;
+  const wide = em.eyeScale || 1;
 
   // eyebrow: angle communicates the emotion even though the eye shape stays the same
   ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
   ctx.beginPath();
-  if(emotion === 'angry'){
-    ctx.moveTo(ex - faceDir*5, ey-11); ctx.lineTo(ex + faceDir*5, ey-6);
-  } else if(emotion === 'sad'){
-    ctx.moveTo(ex - faceDir*5, ey-6); ctx.lineTo(ex + faceDir*5, ey-11);
-  } else if(emotion === 'surprised'){
-    ctx.moveTo(ex - faceDir*5, ey-14); ctx.lineTo(ex + faceDir*5, ey-14);
-  } else if(emotion === 'happy'){
-    ctx.moveTo(ex - faceDir*5, ey-10); ctx.lineTo(ex + faceDir*5, ey-11);
-  } else {
-    ctx.moveTo(ex - faceDir*5, ey-9); ctx.lineTo(ex + faceDir*5, ey-9);
-  }
+  ctx.moveTo(ex - faceDir*5, ey + em.browLeftY);
+  ctx.lineTo(ex + faceDir*5, ey + em.browRightY);
   ctx.stroke();
 
-  // eye (shape controlled by eyeStyle, size bumped up for surprised)
+  // eye (shape controlled by eyeStyle, size bumped up for wide-eyed emotions like surprise)
   ctx.fillStyle = '#222';
   if(eyeStyle === 'round'){
     ctx.beginPath(); ctx.arc(ex, ey, 3*wide, 0, Math.PI*2); ctx.fill();
@@ -83,18 +77,18 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
     ctx.beginPath(); ctx.arc(ex, ey, 2*wide, 0, Math.PI*2); ctx.fill();
   }
 
-  // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise emotion picks the shape
+  // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise the emotion's shape applies
   const mx = head.x + faceDir*6, my = head.y + 8;
   ctx.strokeStyle = '#222'; ctx.fillStyle = '#222'; ctx.lineWidth = 2;
   if(mouthOpen > 0.5){
     ctx.beginPath(); ctx.ellipse(mx, my, 3.5, 3, 0, 0, Math.PI*2); ctx.fill();
-  } else if(emotion === 'surprised'){
+  } else if(em.mouth === 'o'){
     ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI*2); ctx.fill();
-  } else if(emotion === 'happy'){
+  } else if(em.mouth === 'smile'){
     ctx.beginPath(); ctx.arc(mx - faceDir*2, my-2, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
-  } else if(emotion === 'sad'){
+  } else if(em.mouth === 'frown'){
     ctx.beginPath(); ctx.arc(mx - faceDir*2, my+5, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
-  } else if(emotion === 'angry'){
+  } else if(em.mouth === 'grimace'){
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+9); ctx.lineTo(head.x+faceDir*10, head.y+7); ctx.stroke();
   } else {
@@ -115,7 +109,7 @@ function drawStickman(x, faceDir, appearance, pose){
   const emotion = appearance.emotion || 'neutral';
   const accessory = appearance.accessory || 'none';
   const color = outfit; // kept for the female skirt tint below
-  const bodyPreset = applyBodyScale(appearance.bodyType, appearance.sizeScale); // sets HEAD_R/TORSO_LEN/etc for THIS character
+  const bodyPreset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // sets HEAD_R/TORSO_LEN/etc for THIS character
   const stoop = bodyPreset.stoop || 0;
   const effTorsoLean = pose.torsoLean + stoop;
   const effHeadTilt = pose.headTilt + stoop*0.5;
