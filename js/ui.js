@@ -45,6 +45,8 @@ generateBtn.addEventListener('click', ()=>{
   bgSelect.value = result.background;
   furnitureSelect.value = result.furniture;
   if(result.food){ state.scene.food = result.food; foodSelect.value = result.food; }
+  state.scene.animals = result.animals || [];
+  renderAnimalList();
   renderCharacterList();
   renderSegmentList();
   elapsed = 0;
@@ -238,6 +240,62 @@ addCharacterBtn.addEventListener('click', ()=>{
   renderSegmentList();
 });
 
+// ---------- Animals panel (decorative scene creatures, simpler than characters: no customizer) ----------
+const animalList = document.getElementById('animalList');
+const animalTypeSelect = document.getElementById('animalTypeSelect');
+const addAnimalBtn = document.getElementById('addAnimalBtn');
+// Options come from the ANIMALS registry (js/animals.js) — add a new animal there and it shows up here.
+animalTypeSelect.innerHTML = ANIMAL_LIST.map(a=> '<option value="'+a.id+'">'+escapeHtml(a.label)+'</option>').join('');
+
+function animalCardHtml(a, idx){
+  const label = (ANIMALS[a.type] && ANIMALS[a.type].label) || a.type;
+  return (
+    '<div class="segment-card">' +
+      '<div class="segment-head">' +
+        '<strong>' + escapeHtml(label) + ' ' + (idx+1) + '</strong>' +
+        '<div class="segment-actions-row">' +
+          '<button type="button" class="icon-btn danger" data-aact="remove" data-aid="'+a.id+'">&times;</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label>Size <span class="size-val" data-asizeval="'+a.id+'">'+(a.sizeScale||1).toFixed(2)+'x</span></label><input type="range" min="0.5" max="1.8" step="0.05" data-afield="sizeScale" data-aid="'+a.id+'" value="'+(a.sizeScale||1)+'"></div>' +
+    '</div>'
+  );
+}
+
+function findAnimal(id){ return state.scene.animals.find(a=> a.id === id); }
+
+function renderAnimalList(){
+  animalList.innerHTML = state.scene.animals.map((a,idx)=> animalCardHtml(a, idx)).join('');
+  animalList.querySelectorAll('[data-afield]').forEach(el=> el.addEventListener('input', onAnimalFieldChange));
+  animalList.querySelectorAll('[data-aact]').forEach(btn=> btn.addEventListener('click', onAnimalAction));
+}
+
+function onAnimalFieldChange(e){
+  const id = e.target.getAttribute('data-aid');
+  const field = e.target.getAttribute('data-afield');
+  const a = findAnimal(id);
+  if(!a) return;
+  if(field === 'sizeScale'){
+    a.sizeScale = parseFloat(e.target.value) || 1;
+    const label = animalList.querySelector('[data-asizeval="'+id+'"]');
+    if(label) label.textContent = a.sizeScale.toFixed(2) + 'x';
+  }
+}
+
+function onAnimalAction(e){
+  const id = e.currentTarget.getAttribute('data-aid');
+  const act = e.currentTarget.getAttribute('data-aact');
+  if(act === 'remove'){
+    state.scene.animals = state.scene.animals.filter(a=> a.id !== id);
+    renderAnimalList();
+  }
+}
+
+addAnimalBtn.addEventListener('click', ()=>{
+  state.scene.animals.push({ id: uid(), type: animalTypeSelect.value, sizeScale: 1 });
+  renderAnimalList();
+});
+
 // ---------- Character Library (saved to this browser via localStorage) ----------
 const LIB_KEY = 'stickmanCharacterLibrary';
 const libSelect = document.getElementById('libSelect');
@@ -399,4 +457,5 @@ exportBtn.addEventListener('click', ()=>{
 
 // ---------- init ----------
 renderCharacterList();
+renderAnimalList();
 renderSegmentList();

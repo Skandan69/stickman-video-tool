@@ -107,6 +107,21 @@ function detectTwoCharacters(text){
   return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen|fight|argue|hug|high five|high-five)/.test(text);
 }
 
+// ---------- animals: decorative scene creatures, detected independently of the character count ----------
+const ANIMAL_KEYWORDS = [
+  { type:'dog',    words:['dog','puppy','puppies'] },
+  { type:'cat',    words:['cat','kitten'] },
+  { type:'bird',   words:['bird','parrot','pigeon'] },
+  { type:'rabbit', words:['rabbit','bunny'] }
+];
+function detectAnimals(text){
+  const found = [];
+  ANIMAL_KEYWORDS.forEach(entry=>{
+    if(entry.words.some(w=> text.indexOf(w) !== -1)) found.push({ id: uid(), type: entry.type, sizeScale: 1 });
+  });
+  return found;
+}
+
 function extractQuotedLines(text){
   const lines = [];
   const re = /"([^"]+)"/g;
@@ -125,6 +140,7 @@ function parsePromptToScene(rawText){
   const bodyType = detectBodyType(text);
   const explicitDuration = detectDuration(rawText);
   const enableB = detectTwoCharacters(text);
+  const animals = detectAnimals(text);
   const quoted = extractQuotedLines(rawText);
 
   const minPerSeg = 1.5;
@@ -151,6 +167,7 @@ function parsePromptToScene(rawText){
 
   return {
     background: bg, furniture: furniture, food: food, bodyType: bodyType, charCount: charCount, timeline: timeline,
+    animals: animals,
     summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
   };
 }
@@ -163,6 +180,7 @@ const state = {
     customBgImage: null,
     furniture: 'chair',
     food: 'sandwich',
+    animals: [],
     characters: [
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[0])),
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[1]))
@@ -182,6 +200,17 @@ function computePositions(n){
   for(let i=0;i<n;i++){
     positions.push({ x: startX + spacing*i, faceDir: i < Math.ceil(n/2) ? 1 : -1 });
   }
+  return positions;
+}
+
+// Animals are spread out lower-priority than characters — smaller stage footprint, no facing-inward
+// logic needed since they're decorative rather than conversational.
+function computeAnimalPositions(n){
+  if(n <= 0) return [];
+  const spacing = Math.min(120, 500 / Math.max(1, n));
+  const startX = 400 - (spacing * (n - 1)) / 2;
+  const positions = [];
+  for(let i=0;i<n;i++){ positions.push({ x: startX + spacing*i, faceDir: i % 2 === 0 ? 1 : -1 }); }
   return positions;
 }
 
@@ -206,11 +235,15 @@ function evaluateScene(scene, t){
     return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
-  return { characters: characters, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
+  const animalPositions = computeAnimalPositions((scene.animals || []).length);
+  const animals = (scene.animals || []).map((a, i)=> ({ id: a.id, type: a.type, x: animalPositions[i].x, faceDir: animalPositions[i].faceDir, sizeScale: a.sizeScale || 1 }));
+
+  return { characters: characters, animals: animals, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
   drawBackground(frame.background);
+  frame.animals.forEach(a=> drawAnimalProp(a.x, a.faceDir, a.type, frame.localT, a.sizeScale));
   frame.characters.forEach(c=>{
     if(SEATED_CLIPS[c.clipId]){
       if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
