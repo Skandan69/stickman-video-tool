@@ -180,7 +180,13 @@ const ANIMAL_KEYWORDS = [
   { type:'deer',     words:['deer'] },
   { type:'bear',     words:['bear'] },
   { type:'penguin',  words:['penguin'] },
-  { type:'owl',      words:['owl'] }
+  { type:'owl',      words:['owl'] },
+  { type:'giraffe',  words:['giraffe'] },
+  { type:'zebra',    words:['zebra'] },
+  { type:'kangaroo', words:['kangaroo'] },
+  { type:'panda',    words:['panda'] },
+  { type:'fox',      words:['fox'] },
+  { type:'wolf',     words:['wolf'] }
 ];
 function detectAnimals(text){
   const found = [];
