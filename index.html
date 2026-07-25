@@ -82,7 +82,14 @@
   <div class="panel">
     <h2>Scene</h2>
     <div class="field">
-      <label for="presetSelect">Load preset (replaces the timeline below)</label>
+      <label for="promptInput">Describe your video</label>
+      <textarea id="promptInput" rows="3" placeholder="e.g. A stickman walks into a cafe, sits down, drinks coffee, then talks on the phone for 2 minutes" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+    </div>
+    <button type="button" id="generateBtn" style="width:100%; margin-bottom:4px;">Generate from description</button>
+    <p id="generateStatus" style="font-size:11px; color:var(--muted); margin:0 0 10px; min-height:14px; line-height:1.4;"></p>
+    <hr class="sep">
+    <div class="field">
+      <label for="presetSelect">Or load a preset (replaces the timeline below)</label>
       <select id="presetSelect">
         <option value="talk">Talking Duo</option>
         <option value="kite">Flying a Kite</option>
@@ -97,6 +104,7 @@
         <option value="white">Plain whiteboard</option>
         <option value="sky">Sky / park</option>
         <option value="grid">Graph paper</option>
+        <option value="cafe">Cafe (indoor)</option>
       </select>
     </div>
     <div class="checkbox-field"><input type="checkbox" id="enableB" checked> <label for="enableB">Enable Character B</label></div>
@@ -157,7 +165,7 @@
 
 </div>
 
-<p class="note">This runs entirely in your browser — no AI credits used. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
+<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance and fly a kite, plus a duration like "2 minutes" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <script>
 (function(){
@@ -211,6 +219,19 @@
       ctx.strokeStyle = '#e5e9f2'; ctx.lineWidth = 1;
       for(let x=0;x<=W;x+=25){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
       for(let y=0;y<=H;y+=25){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    } else if(bg === 'cafe'){
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#f3e0c8'); g.addColorStop(1,'#f8ecd9');
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#cfe8f0'; ctx.fillRect(60,50,150,110);
+      ctx.strokeStyle = '#8b5e3c'; ctx.lineWidth = 6; ctx.strokeRect(60,50,150,110);
+      ctx.strokeStyle = '#8b5e3c'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(135,50); ctx.lineTo(135,160); ctx.moveTo(60,105); ctx.lineTo(210,105); ctx.stroke();
+      ctx.strokeStyle = '#6b4a30'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(650,0); ctx.lineTo(650,36); ctx.stroke();
+      ctx.fillStyle = '#3a2a1a';
+      ctx.beginPath(); ctx.moveTo(628,36); ctx.lineTo(672,36); ctx.lineTo(662,62); ctx.lineTo(638,62); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c9a877'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
     } else {
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
     }
@@ -360,6 +381,36 @@
     ctx.restore();
   }
 
+  function drawChairProp(x, groundY){
+    const seatY = groundY - 20;
+    ctx.strokeStyle = '#8b5e3c'; ctx.fillStyle = '#a97c50'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x-24, groundY); ctx.lineTo(x-24, seatY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+24, groundY); ctx.lineTo(x+24, seatY); ctx.stroke();
+    ctx.fillRect(x-26, seatY-6, 52, 8);
+    ctx.strokeRect(x-26, seatY-6, 52, 8);
+    ctx.beginPath(); ctx.moveTo(x-24, seatY-6); ctx.lineTo(x-24, seatY-46); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x-24, seatY-46); ctx.lineTo(x+24, seatY-46); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+24, seatY-46); ctx.lineTo(x+24, seatY-6); ctx.stroke();
+  }
+
+  function drawCoffeeCupProp(hand){
+    ctx.save();
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#7c5a3a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.rect(hand.x-6, hand.y-4, 12, 10); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hand.x+9, hand.y+1, 4, -Math.PI/2, Math.PI/2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(150,150,150,0.6)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(hand.x-2, hand.y-6); ctx.quadraticCurveTo(hand.x-6, hand.y-14, hand.x-1, hand.y-20); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPhoneProp(hand){
+    ctx.save();
+    ctx.fillStyle = '#222';
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(hand.x-5, hand.y-9, 10, 18, 2); ctx.fill(); }
+    else { ctx.fillRect(hand.x-5, hand.y-9, 10, 18); }
+    ctx.restore();
+  }
+
   // ---------- animation clips: pure functions of (localT, opts) -> BonePose ----------
   function poseIdle(t){
     return { torsoLean:0.02*Math.sin(t*1.2), headTilt:0.04*Math.sin(t*1.1), bounceY:Math.sin(t*2)*1.5,
@@ -418,18 +469,52 @@
     };
   }
 
+  function poseSit(t){
+    return {
+      torsoLean: 0.03*Math.sin(t*1.1), headTilt: 0.05*Math.sin(t*1.3),
+      bounceY: -22 + Math.sin(t*1.5)*0.8,
+      leftShoulderAngle: 0.15*Math.sin(t*1.2), leftElbowBend: 0.3,
+      rightShoulderAngle: 0.15*Math.sin(t*1.2+1), rightElbowBend: 0.3,
+      leftHipAngle: 1.3, leftKneeBend: -1.3, rightHipAngle: 1.3, rightKneeBend: -1.3,
+      mouthOpen: 0
+    };
+  }
+  function poseDrinkCoffee(t){
+    const cycle = t % 4;
+    const liftPhase = cycle < 1.2 ? Math.sin((cycle/1.2)*Math.PI) : 0;
+    const base = poseSit(t);
+    base.rightShoulderAngle = 0.3 + 1.0*liftPhase;
+    base.rightElbowBend = -0.3 - 1.6*liftPhase;
+    base.headTilt = base.headTilt + 0.08*liftPhase;
+    base.mouthOpen = liftPhase > 0.6 ? 1 : 0;
+    return base;
+  }
+  function posePhoneCall(t){
+    const base = poseIdle(t);
+    base.headTilt = base.headTilt + 0.22;
+    base.rightShoulderAngle = 1.9;
+    base.rightElbowBend = -1.9 + 0.08*Math.sin(t*2);
+    base.mouthOpen = Math.sin(t*9) > 0.2 ? 1 : 0.15;
+    return base;
+  }
+
   const CLIPS = {
     idle: { label:'Idle', pose:(t)=>poseIdle(t) },
     talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
     walk: { label:'Walk', pose:(t)=>poseWalk(t) },
     wave: { label:'Wave', pose:(t)=>poseWave(t) },
     dance:{ label:'Dance', pose:(t,opts)=>poseDance(t, opts&&opts.phase) },
-    kite: { label:'Fly Kite', pose:(t)=>poseKite(t) }
+    kite: { label:'Fly Kite', pose:(t)=>poseKite(t) },
+    sit:  { label:'Sit (chair)', pose:(t)=>poseSit(t) },
+    drink:{ label:'Drink Coffee', pose:(t)=>poseDrinkCoffee(t) },
+    phone:{ label:'Talk on Phone', pose:(t)=>posePhoneCall(t) }
   };
   const CLIP_LIST = [
     {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
-    {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'}
+    {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'},
+    {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'}
   ];
+  const SEATED_CLIPS = { sit:true, drink:true, phone:false };
 
   // ---------- scene / timeline domain model ----------
   function makeSegment(duration, actions, dialogue){
@@ -446,6 +531,97 @@
     wave: { enableB:false, timeline:[ makeSegment(4, {A:'wave'}, null) ]},
     dance:{ enableB:true, timeline:[ makeSegment(6, {A:'dance', B:'dance'}, null) ]}
   };
+
+  // ---------- prompt -> scene understanding (rule-based keyword NLU, runs fully offline) ----------
+  // Stems (e.g. 'walk') deliberately match inflections via substring ('walks','walking') —
+  // multi-word phrases are used where a bare stem would be ambiguous (e.g. 'call' alone is too generic).
+  const ACTION_KEYWORDS = [
+    { clipId:'sit',   words:['sit','take a seat','takes a seat'] },
+    { clipId:'drink', words:['drink','sip'] },
+    { clipId:'phone', words:['on the phone','on a call','phone call','answers the phone','makes a call','calling','phone'] },
+    { clipId:'wave',  words:['wav','says hello','says hi'] },
+    { clipId:'dance', words:['danc'] },
+    { clipId:'kite',  words:['kite'] },
+    { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
+    { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
+    { clipId:'idle',  words:['stand','wait','relax'] }
+  ];
+
+  function findActionSequence(text){
+    const found = [];
+    ACTION_KEYWORDS.forEach(entry=>{
+      let bestIdx = -1;
+      entry.words.forEach(w=>{
+        const idx = text.indexOf(w);
+        if(idx !== -1 && (bestIdx === -1 || idx < bestIdx)) bestIdx = idx;
+      });
+      if(bestIdx !== -1) found.push({ clipId: entry.clipId, idx: bestIdx });
+    });
+    found.sort((a,b)=> a.idx - b.idx);
+    const seq = [];
+    found.forEach(f=>{ if(!seq.length || seq[seq.length-1] !== f.clipId) seq.push(f.clipId); });
+    return seq;
+  }
+
+  function detectBackground(text){
+    if(/(cafe|café|coffee shop|coffeeshop)/.test(text)) return 'cafe';
+    if(/(park|outside|outdoor|garden|street)/.test(text)) return 'sky';
+    if(/(grid|graph paper)/.test(text)) return 'grid';
+    return 'white';
+  }
+
+  function detectDuration(text){
+    const m = text.match(/(\d+(\.\d+)?)\s*(minute|min|second|sec)s?/i);
+    if(!m) return null;
+    const n = parseFloat(m[1]);
+    const seconds = /^min/i.test(m[3]) ? n*60 : n;
+    return Math.max(2, Math.min(300, seconds));
+  }
+
+  function detectTwoCharacters(text){
+    return /(two stickmen|another stickman|his friend|her friend|each other|a friend|duo|both stickmen)/.test(text);
+  }
+
+  function extractQuotedLines(text){
+    const lines = [];
+    const re = /"([^"]+)"/g;
+    let m;
+    while((m = re.exec(text))){ lines.push(m[1]); }
+    return lines;
+  }
+
+  function parsePromptToScene(rawText){
+    const text = rawText.toLowerCase();
+    let seq = findActionSequence(text);
+    if(!seq.length) seq = ['idle'];
+    const bg = detectBackground(text);
+    const explicitDuration = detectDuration(rawText);
+    const enableB = detectTwoCharacters(text);
+    const quoted = extractQuotedLines(rawText);
+
+    const minPerSeg = 1.5;
+    const count = seq.length;
+    let total = explicitDuration || Math.max(count*4, 6);
+    total = Math.max(total, count*minPerSeg);
+    const perSeg = total / count;
+
+    let quoteIdx = 0;
+    const timeline = seq.map((clipId)=>{
+      let dialogue = null;
+      if(clipId === 'phone'){
+        dialogue = { slot:'A', text: quoted[quoteIdx] ? quoted[quoteIdx++] : "Hey! What's up?" };
+      } else if(clipId === 'talk'){
+        dialogue = { slot:'A', text: quoted[quoteIdx] ? quoted[quoteIdx++] : 'Hey, good to see you!' };
+      }
+      const actions = enableB ? { A: clipId, B: 'idle' } : { A: clipId };
+      return makeSegment(Math.round(perSeg*10)/10, actions, dialogue);
+    });
+
+    return {
+      background: bg, enableB: enableB, timeline: timeline,
+      summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
+    };
+  }
 
   const state = {
     playing: true,
@@ -490,6 +666,9 @@
 
   function renderFrame(frame){
     drawBackground(frame.background);
+    frame.characters.forEach(c=>{
+      if(SEATED_CLIPS[c.clipId]) drawChairProp(c.x, GROUND_Y);
+    });
     const handsBySlot = {};
     frame.characters.forEach(c=>{
       const res = drawStickman(c.x, c.faceDir, c.appearance.color, c.appearance.gender, c.appearance.name, c.pose);
@@ -500,6 +679,8 @@
         const anchor = frame.characters.length > 1 ? { x: c.slot === 'A' ? 340 : 620, y: 90 } : { x: 560, y: 90 };
         drawKiteProp(handsBySlot[c.slot].leftHand, frame.localT, anchor);
       }
+      if(c.clipId === 'drink') drawCoffeeCupProp(handsBySlot[c.slot].rightHand);
+      if(c.clipId === 'phone') drawPhoneProp(handsBySlot[c.slot].rightHand);
     });
     if(frame.dialogue){
       const res = handsBySlot[frame.dialogue.slot];
@@ -518,6 +699,9 @@
   requestAnimationFrame(loop);
 
   // ---------- Scene panel wiring ----------
+  const promptInput = document.getElementById('promptInput');
+  const generateBtn = document.getElementById('generateBtn');
+  const generateStatus = document.getElementById('generateStatus');
   const presetSelect = document.getElementById('presetSelect');
   const bgSelect = document.getElementById('bgSelect');
   const enableBCheckbox = document.getElementById('enableB');
@@ -546,6 +730,21 @@
     renderSegmentList();
     elapsed = 0;
   }
+  generateBtn.addEventListener('click', ()=>{
+    const text = promptInput.value.trim();
+    if(!text){ generateStatus.textContent = 'Type a description first.'; return; }
+    const result = parsePromptToScene(text);
+    state.scene.background = result.background;
+    state.scene.enableB = result.enableB;
+    state.scene.timeline = result.timeline;
+    bgSelect.value = result.background;
+    enableBCheckbox.checked = result.enableB;
+    updateVisibility();
+    renderSegmentList();
+    elapsed = 0;
+    generateStatus.textContent = 'Built ' + result.summary.actions.length + ' segment' + (result.summary.actions.length===1?'':'s') +
+      ' (' + result.summary.actions.join(' → ') + '), ' + result.summary.totalDuration.toFixed(1) + 's total. Fine-tune in the Timeline panel.';
+  });
   presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
   bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
   enableBCheckbox.addEventListener('change', ()=>{
