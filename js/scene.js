@@ -156,7 +156,13 @@ const ANIMAL_KEYWORDS = [
   { type:'chicken',  words:['chicken','hen','rooster'] },
   { type:'pig',      words:['pig','piglet'] },
   { type:'monkey',   words:['monkey'] },
-  { type:'lion',     words:['lion'] }
+  { type:'lion',     words:['lion'] },
+  { type:'turtle',   words:['turtle','tortoise'] },
+  { type:'frog',     words:['frog'] },
+  { type:'deer',     words:['deer'] },
+  { type:'bear',     words:['bear'] },
+  { type:'penguin',  words:['penguin'] },
+  { type:'owl',      words:['owl'] }
 ];
 function detectAnimals(text){
   const found = [];
@@ -177,7 +183,11 @@ const VEHICLE_KEYWORDS = [
   { type:'airplane',   words:['airplane','plane','jet'] },
   { type:'boat',       words:['boat','ship','sailboat'] },
   { type:'helicopter', words:['helicopter','chopper'] },
-  { type:'scooter',    words:['scooter'] }
+  { type:'scooter',    words:['scooter'] },
+  { type:'tractor',    words:['tractor'] },
+  { type:'ambulance',  words:['ambulance'] },
+  { type:'submarine',  words:['submarine'] },
+  { type:'hotairballoon', words:['hot air balloon','hotairballoon','balloon'] }
 ];
 function detectVehicles(text){
   const found = [];

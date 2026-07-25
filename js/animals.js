@@ -412,6 +412,160 @@ const ANIMALS = {
       ctx.beginPath(); ctx.arc(hx+faceDir*4*s, hy-3*s, 1.4*s, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
+  },
+  turtle: {
+    label: 'Turtle',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.abs(Math.sin(t*2))*1.5*s;
+      const bx = x, by = gy - 11*s - bob;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      [[-10,4],[10,4],[-8,-3],[8,-3]].forEach(([ox,oy])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+6*s); ctx.lineTo(bx+ox*s+oy*s*0.3, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath(); ctx.ellipse(bx, by, 18*s, 11*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#065f46'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(bx, by-8*s); ctx.lineTo(bx, by+8*s); ctx.moveTo(bx-9*s, by); ctx.lineTo(bx+9*s, by); ctx.stroke();
+      ctx.fillStyle = '#4ade80';
+      const hx = bx+faceDir*17*s, hy = by+3*s;
+      ctx.beginPath(); ctx.ellipse(hx, hy, 6*s, 4.5*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*3*s, hy-1*s, 1.2*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  frog: {
+    label: 'Frog',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const hop = Math.abs(Math.sin(t*3))*10*s;
+      const bx = x, by = gy - 12*s - hop;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      [[-10,4],[10,4]].forEach(([ox])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+7*s); ctx.lineTo(bx+ox*s, gy-hop*0.4); ctx.stroke();
+      });
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath(); ctx.ellipse(bx, by, 15*s, 11*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      [-7,7].forEach(ox=>{
+        ctx.beginPath(); ctx.arc(bx+ox*s, by-9*s, 4*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(bx+ox*s, by-9*s, 1.4*s, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#4ade80';
+      });
+      ctx.restore();
+    }
+  },
+  deer: {
+    label: 'Deer',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*3)*1.2*s;
+      const bx = x, by = gy - 30*s - bob;
+      const swing = Math.sin(t*5)*5*s;
+      ctx.save();
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+      [[-13,swing],[6,-swing],[-6,-swing],[13,swing]].forEach(([ox,sw])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+13*s); ctx.lineTo(bx+ox*s+sw*0.3, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(bx-faceDir*24*s, by+2*s, 4*s, 5*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#a5714a';
+      ctx.beginPath(); ctx.ellipse(bx, by, 20*s, 12*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      const neckX = bx+faceDir*20*s, neckY = by-14*s;
+      ctx.beginPath(); ctx.moveTo(bx+faceDir*14*s, by-6*s); ctx.lineTo(neckX, neckY); ctx.lineTo(neckX-faceDir*8*s, by-4*s); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const hx = neckX+faceDir*5*s, hy = neckY-4*s;
+      ctx.beginPath(); ctx.ellipse(hx, hy, 7*s, 6*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#7c4a2d'; ctx.lineWidth = 2;
+      [-1,1].forEach(side=>{
+        ctx.beginPath();
+        ctx.moveTo(hx+side*3*s, hy-5*s);
+        ctx.lineTo(hx+side*8*s, hy-14*s);
+        ctx.lineTo(hx+side*4*s, hy-11*s);
+        ctx.stroke();
+      });
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*3*s, hy-1*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  bear: {
+    label: 'Bear',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*2)*1.5*s;
+      const bx = x, by = gy - 24*s - bob;
+      const swing = Math.sin(t*3.5)*4*s;
+      ctx.save();
+      ctx.lineWidth = 3.5; ctx.strokeStyle = INK;
+      [[-14,swing],[6,-swing],[-6,-swing],[14,swing]].forEach(([ox,sw])=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+14*s); ctx.lineTo(bx+ox*s+sw*0.3, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#6b4a30';
+      ctx.beginPath(); ctx.ellipse(bx, by, 24*s, 15*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      const hx = bx+faceDir*20*s, hy = by-8*s;
+      ctx.beginPath(); ctx.arc(hx, hy, 12*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx-6*s, hy-9*s, 4*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx+6*s, hy-9*s, 4*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#a5714a';
+      ctx.beginPath(); ctx.ellipse(hx+faceDir*8*s, hy+4*s, 5*s, 4*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*10*s, hy+4*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx+faceDir*4*s, hy-2*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  penguin: {
+    label: 'Penguin',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const waddle = Math.sin(t*6)*3*s;
+      const bx = x + waddle*0.3, by = gy - 20*s;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#f97316';
+      [-4,4].forEach(ox=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+16*s); ctx.lineTo(bx+ox*s+faceDir*4*s, gy); ctx.lineTo(bx+ox*s-faceDir*2*s, gy); ctx.closePath(); ctx.fill(); ctx.stroke();
+      });
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath(); ctx.ellipse(bx, by, 13*s, 18*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(bx+faceDir*2*s, by+4*s, 8*s, 13*s, 0, 0, Math.PI*2); ctx.fill();
+      const hx = bx+faceDir*3*s, hy = by-16*s;
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath(); ctx.moveTo(hx+faceDir*4*s, hy); ctx.lineTo(hx+faceDir*11*s, hy+2*s); ctx.lineTo(hx+faceDir*4*s, hy+4*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(hx+faceDir*2*s, hy-2*s, 1.4*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
+  owl: {
+    label: 'Owl',
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bob = Math.sin(t*2.5)*1.5*s;
+      const bx = x, by = gy - 22*s - bob;
+      ctx.save();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      ctx.fillStyle = '#92400e';
+      [-4,4].forEach(ox=>{
+        ctx.beginPath(); ctx.moveTo(bx+ox*s, by+14*s); ctx.lineTo(bx+ox*s, gy); ctx.stroke();
+      });
+      ctx.fillStyle = '#a5714a';
+      ctx.beginPath(); ctx.ellipse(bx, by, 15*s, 17*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      const flap = Math.sin(t*3)*3*s;
+      ctx.fillStyle = '#7c4a2d';
+      ctx.beginPath(); ctx.ellipse(bx-faceDir*13*s, by+2*s+flap, 6*s, 11*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fbbf24';
+      [-6,6].forEach(ox=>{
+        ctx.beginPath(); ctx.arc(bx+ox*s, by-6*s, 5*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      });
+      ctx.fillStyle = INK;
+      [-6,6].forEach(ox=>{ ctx.beginPath(); ctx.arc(bx+ox*s, by-6*s, 2*s, 0, Math.PI*2); ctx.fill(); });
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath(); ctx.moveTo(bx-2*s, by-2*s); ctx.lineTo(bx+2*s, by-2*s); ctx.lineTo(bx, by+3*s); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
   }
 };
 const ANIMAL_LIST = Object.keys(ANIMALS).map(id => ({ id, label: ANIMALS[id].label }));
