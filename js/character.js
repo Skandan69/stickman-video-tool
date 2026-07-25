@@ -12,7 +12,9 @@ const DEFAULT_CHARACTER_PALETTE = [
   { name:'Jordan', outfit:'#16a34a', gender:'male', hairStyle:'mohawk', hairColor:'#111827' },
   { name:'Riley', outfit:'#f59e0b', gender:'female', hairStyle:'ponytail', hairColor:'#5c3a21' },
   { name:'Casey', outfit:'#7c3aed', gender:'male', hairStyle:'none', hairColor:'#000000' },
-  { name:'Morgan', outfit:'#e11d48', gender:'female', hairStyle:'long', hairColor:'#111111' }
+  { name:'Morgan', outfit:'#e11d48', gender:'female', hairStyle:'long', hairColor:'#111111' },
+  { name:'Taylor', outfit:'#0891b2', gender:'male', hairStyle:'curly', hairColor:'#2b1b12' },
+  { name:'Drew', outfit:'#a16207', gender:'female', hairStyle:'braids', hairColor:'#111827' }
 ];
 function makeDefaultCharacter(index){
   return makeCharacter(DEFAULT_CHARACTER_PALETTE[index % DEFAULT_CHARACTER_PALETTE.length]);

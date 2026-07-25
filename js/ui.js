@@ -101,7 +101,7 @@ const characterList = document.getElementById('characterList');
 const addCharacterBtn = document.getElementById('addCharacterBtn');
 
 function skinOptionsHtml(sel){
-  return [['#ffe0bd','Light'],['#e8b98a','Medium'],['#c68642','Tan'],['#8d5524','Deep']]
+  return [['#ffe9dc','Porcelain'],['#ffe0bd','Light'],['#e8b98a','Medium'],['#c68642','Tan'],['#8d5524','Deep'],['#5c3a21','Ebony']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function eyeOptionsHtml(sel){

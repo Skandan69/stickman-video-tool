@@ -25,4 +25,4 @@ let uidCounter = 1;
 function uid(){ return 'seg' + (uidCounter++); }
 let charUidCounter = 1;
 function charUid(){ return 'char' + (charUidCounter++); }
-const MAX_CHARACTERS = 6;
+const MAX_CHARACTERS = 8;
