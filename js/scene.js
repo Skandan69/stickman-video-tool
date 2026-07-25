@@ -45,6 +45,13 @@ const ACTION_KEYWORDS = [
   { clipId:'argue', words:['argue','argues','arguing','yell at','yells at','shout at'] },
   { clipId:'hug',   words:['hug','hugs','hugging','embrace','embraces'] },
   { clipId:'highfive', words:['high five','high-five','high fives'] },
+  { clipId:'kick',  words:['kick','kicks','kicking'] },
+  { clipId:'throw', words:['throw','throws','throwing','pitches'] },
+  { clipId:'swim',  words:['swim','swims','swimming'] },
+  { clipId:'sleep', words:['sleep','sleeps','sleeping','naps','takes a nap','dozes off'] },
+  { clipId:'read',  words:['read','reads','reading a book','reads a book'] },
+  { clipId:'clap',  words:['clap','claps','clapping','applause'] },
+  { clipId:'bow',   words:['bows','bowing','takes a bow'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -312,6 +319,8 @@ function renderFrame(frame){
     if(c.clipId === 'drink') drawCoffeeCupProp(handsById[c.id].rightHand);
     if(c.clipId === 'phone') drawPhoneProp(handsById[c.id].rightHand);
     if(c.clipId === 'eat') drawFoodProp(handsById[c.id].rightHand, frame.food);
+    if(c.clipId === 'read') drawBookProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
+    if(c.clipId === 'sleep') drawSleepZzz(handsById[c.id].head, frame.localT);
   });
   if(frame.dialogue){
     const res = handsById[frame.dialogue.speakerId];

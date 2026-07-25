@@ -203,6 +203,86 @@ function poseJump(t){
   };
 }
 
+function poseKick(t){
+  const w = t*4;
+  const kick = Math.max(0, Math.sin(w));
+  return {
+    torsoLean: 0.1, headTilt: 0.05*Math.sin(w), bounceY: Math.abs(Math.sin(w*2))*3,
+    leftShoulderAngle: 0.3*Math.sin(w), leftElbowBend: 0.4,
+    rightShoulderAngle: -0.2*Math.sin(w), rightElbowBend: 0.4,
+    leftHipAngle: -1.3*kick, leftKneeBend: 1.1*kick + 0.2,
+    rightHipAngle: 0.15, rightKneeBend: 0.2,
+    mouthOpen: 0
+  };
+}
+function poseThrow(t){
+  const w = t*3;
+  const wind = Math.sin(w);
+  return {
+    torsoLean: 0.15 + 0.15*Math.max(0,-wind), headTilt: 0.05*wind, bounceY: Math.abs(Math.sin(w*2))*2,
+    leftShoulderAngle: 0.2, leftElbowBend: 0.3,
+    rightShoulderAngle: -1.6*Math.max(0,wind) + 0.6*Math.max(0,-wind), rightElbowBend: -1.2*Math.max(0,wind) - 0.2,
+    leftHipAngle: 0.1, leftKneeBend: 0.2, rightHipAngle: -0.1, rightKneeBend: 0.15,
+    mouthOpen: 0
+  };
+}
+function poseSwim(t){
+  const w = t*5;
+  return {
+    torsoLean: 0.55, headTilt: 0.4, bounceY: 3+Math.sin(w*2)*2,
+    leftShoulderAngle: 1.6*Math.sin(w), leftElbowBend: -0.6-0.4*Math.max(0,Math.sin(w)),
+    rightShoulderAngle: 1.6*Math.sin(w+Math.PI), rightElbowBend: -0.6-0.4*Math.max(0,Math.sin(w+Math.PI)),
+    leftHipAngle: 0.1*Math.sin(w*2), leftKneeBend: 0.5+0.3*Math.max(0,Math.sin(w*2)),
+    rightHipAngle: 0.1*Math.sin(w*2+Math.PI), rightKneeBend: 0.5+0.3*Math.max(0,Math.sin(w*2+Math.PI)),
+    mouthOpen: 0
+  };
+}
+// "Sleep" is a drowsy standing pose (head drooping, gentle sway) rather than lying flat — the
+// skeleton always anchors the hip at standing HIP_HEIGHT above the ground, so a fully horizontal
+// lying pose would appear to float; pairing this with the 'sleepy' emotion (js/emotions.js) and the
+// Zzz prop below reads clearly as sleeping without needing a lying-down anchor scheme.
+function poseSleep(t){
+  const nod = Math.sin(t*1.2);
+  return {
+    torsoLean: 0.15, headTilt: 0.55 + 0.1*Math.max(0,nod), bounceY: Math.sin(t*1.5)*1.5,
+    leftShoulderAngle: 0.05, leftElbowBend: 0.1,
+    rightShoulderAngle: -0.05, rightElbowBend: 0.1,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseRead(t){
+  const turn = Math.sin(t*1.5)*0.15;
+  return {
+    torsoLean: 0.05, headTilt: 0.35, bounceY: Math.sin(t*2)*1,
+    leftShoulderAngle: 0.75+turn, leftElbowBend: -1.0,
+    rightShoulderAngle: 0.75-turn, rightElbowBend: -1.0,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseClap(t){
+  const w = t*6;
+  return {
+    torsoLean: 0.05, headTilt: 0.05*Math.sin(w*0.5), bounceY: Math.abs(Math.sin(w*0.5))*2,
+    leftShoulderAngle: 0.6+0.35*Math.sin(w), leftElbowBend: -0.9,
+    rightShoulderAngle: 0.6-0.35*Math.sin(w), rightElbowBend: -0.9,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+function poseBow(t){
+  const w = t*1.8;
+  const bend = Math.max(0, Math.sin(w));
+  return {
+    torsoLean: 0.9*bend, headTilt: 0.9*bend, bounceY: 0,
+    leftShoulderAngle: 0.1, leftElbowBend: 0.15,
+    rightShoulderAngle: -0.1, rightElbowBend: 0.15,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t)=>poseIdle(t) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
@@ -219,16 +299,25 @@ const CLIPS = {
   fight:{ label:'Fight', pose:(t,opts)=>poseFight(t, opts&&opts.phase) },
   argue:{ label:'Argue', pose:(t,opts)=>poseArgue(t, opts&&opts.phase) },
   hug:  { label:'Hug', pose:(t)=>poseHug(t) },
-  highfive: { label:'High Five', pose:(t)=>poseHighFive(t) }
+  highfive: { label:'High Five', pose:(t)=>poseHighFive(t) },
+  kick: { label:'Kick', pose:(t)=>poseKick(t) },
+  throw:{ label:'Throw', pose:(t)=>poseThrow(t) },
+  swim: { label:'Swim', pose:(t)=>poseSwim(t) },
+  sleep:{ label:'Sleep', pose:(t)=>poseSleep(t) },
+  read: { label:'Read', pose:(t)=>poseRead(t) },
+  clap: { label:'Clap', pose:(t)=>poseClap(t) },
+  bow:  { label:'Bow', pose:(t)=>poseBow(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
   {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'},
   {id:'sit', label:'Sit (chair)'}, {id:'drink', label:'Drink Coffee'}, {id:'phone', label:'Talk on Phone'},
   {id:'jump', label:'Jump'}, {id:'eat', label:'Eat'}, {id:'run', label:'Run'},
-  {id:'fight', label:'Fight'}, {id:'argue', label:'Argue'}, {id:'hug', label:'Hug'}, {id:'highfive', label:'High Five'}
+  {id:'fight', label:'Fight'}, {id:'argue', label:'Argue'}, {id:'hug', label:'Hug'}, {id:'highfive', label:'High Five'},
+  {id:'kick', label:'Kick'}, {id:'throw', label:'Throw'}, {id:'swim', label:'Swim'}, {id:'sleep', label:'Sleep'},
+  {id:'read', label:'Read'}, {id:'clap', label:'Clap'}, {id:'bow', label:'Bow'}
 ];
-const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true };
+const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
 // resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
 const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true };

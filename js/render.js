@@ -374,3 +374,30 @@ function drawPhoneProp(hand){
   else { ctx.fillRect(hand.x-5, hand.y-9, 10, 18); }
   ctx.restore();
 }
+
+// ---------- props for the newer action library (kick/throw/swim/sleep/read/clap/bow) ----------
+function drawBookProp(leftHand, rightHand){
+  ctx.save();
+  const mx = (leftHand.x+rightHand.x)/2, my = (leftHand.y+rightHand.y)/2;
+  ctx.fillStyle = '#e0453f'; ctx.strokeStyle = '#8b2f2a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(mx-11, my-8, 22, 15); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mx, my-8); ctx.lineTo(mx, my+7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mx-8, my-4); ctx.lineTo(mx-2, my-4); ctx.moveTo(mx-8, my); ctx.lineTo(mx-2, my);
+  ctx.moveTo(mx+2, my-4); ctx.lineTo(mx+8, my-4); ctx.moveTo(mx+2, my); ctx.lineTo(mx+8, my); ctx.stroke();
+  ctx.restore();
+}
+function drawSleepZzz(head, t){
+  ctx.save();
+  ctx.fillStyle = '#7c7c7c'; ctx.font = 'bold 13px "Comic Sans MS", cursive, sans-serif'; ctx.textAlign = 'left';
+  const drift = (t % 2)/2;
+  ['z','Z','Z'].forEach((ch,i)=>{
+    const lift = drift*14 - i*8;
+    ctx.globalAlpha = Math.max(0, 1 - (lift+i*8)/22);
+    ctx.font = (11+i*3) + 'px "Comic Sans MS", cursive, sans-serif';
+    ctx.fillText(ch, head.x + 12 + i*6, head.y - HEAD_R - 6 - lift);
+  });
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
