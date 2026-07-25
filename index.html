@@ -18,13 +18,13 @@
   .layout{display:flex; gap:20px; flex-wrap:wrap; justify-content:center; width:100%; max-width:1100px;}
   .panel{
     background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px;
-    width:300px; flex-shrink:0;
+    width:320px; flex-shrink:0;
   }
   .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 10px;}
   .field{margin-bottom:12px;}
   .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
-  select, input[type=text], input[type=range]{width:100%;}
-  select, input[type=text]{
+  select, input[type=text], input[type=number], input[type=range]{width:100%;}
+  select, input[type=text], input[type=number]{
     padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff;
   }
   .row{display:flex; gap:10px;}
@@ -33,6 +33,7 @@
   .gender-toggle label{display:flex; align-items:center; gap:4px; font-weight:normal; color:var(--text);}
   input[type=color]{width:42px; height:28px; border:1px solid var(--border); border-radius:6px; padding:2px; background:#fff;}
   .color-row{display:flex; align-items:center; gap:10px;}
+  .checkbox-field{display:flex; align-items:center; gap:6px; font-size:13px; margin:8px 0;}
   .stage-wrap{
     background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px;
     display:flex; flex-direction:column; align-items:center; gap:12px;
@@ -46,7 +47,8 @@
   button:hover{background:var(--accent-hover);}
   button.secondary{background:#eef0f4; color:var(--text);}
   button.secondary:hover{background:#e2e4e9;}
-  button:disabled{opacity:.6; cursor:not-allowed;}
+  button.small{padding:6px 10px; font-size:12px;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
   .speed-wrap{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted);}
   .export-box{width:100%; text-align:center;}
   video{max-width:100%; border-radius:8px; margin-top:8px; display:none; border:1px solid var(--border);}
@@ -57,25 +59,36 @@
     font-size:12px; color:var(--muted); max-width:1100px; margin-top:18px; text-align:center; line-height:1.5;
   }
   hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
+
+  .segment-card{border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px; background:#fafbfc;}
+  .segment-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .segment-head strong{font-size:12px; color:var(--text);}
+  .segment-actions-row{display:flex; gap:4px;}
+  .icon-btn{width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; padding:0; color:var(--text); font-weight:600;}
+  .icon-btn:hover{background:#f1f2f5;}
+  .icon-btn.danger{color:#dc2626; border-color:#fecdd3;}
+  .icon-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .timeline-total{font-size:12px; color:var(--muted); margin:0 0 10px;}
+  #addSegmentBtn{width:100%;}
 </style>
 </head>
 <body>
 
 <h1>Stickman Video Studio — Prototype</h1>
-<p class="subtitle">A free, no-credits stick-figure animation demo. Pick a scene, customize the characters, and export a real .webm video clip.</p>
+<p class="subtitle">A free, no-credits stick-figure animation tool. Build a timeline out of segments — each with an action per character and an optional line of dialogue — then export a real .webm video.</p>
 
 <div class="layout">
 
   <div class="panel">
     <h2>Scene</h2>
     <div class="field">
-      <label for="sceneSelect">Template</label>
-      <select id="sceneSelect">
-        <option value="talk">Talking Duo (2 characters)</option>
-        <option value="kite">Flying a Kite (1 character)</option>
-        <option value="walk">Walking (1 character)</option>
-        <option value="wave">Waving Hello (1 character)</option>
-        <option value="dance">Dance Party (2 characters)</option>
+      <label for="presetSelect">Load preset (replaces the timeline below)</label>
+      <select id="presetSelect">
+        <option value="talk">Talking Duo</option>
+        <option value="kite">Flying a Kite</option>
+        <option value="walk">Walking</option>
+        <option value="wave">Waving Hello</option>
+        <option value="dance">Dance Party</option>
       </select>
     </div>
     <div class="field">
@@ -86,6 +99,7 @@
         <option value="grid">Graph paper</option>
       </select>
     </div>
+    <div class="checkbox-field"><input type="checkbox" id="enableB" checked> <label for="enableB">Enable Character B</label></div>
 
     <hr class="sep">
     <h2>Character A</h2>
@@ -114,14 +128,6 @@
         <label><input type="radio" name="genderB" value="female" checked> Female</label>
       </div>
     </div>
-
-    <div class="group-dialogue">
-      <hr class="sep">
-      <h2>Dialogue</h2>
-      <div class="field"><label>Line 1 (Character A)</label><input type="text" id="line1" value="Hi! Nice day, right?"></div>
-      <div class="field"><label>Line 2 (Character B)</label><input type="text" id="line2" value="It sure is! Coffee?"></div>
-      <div class="field"><label>Line 3 (Character A)</label><input type="text" id="line3" value="Sounds great, let's go!"></div>
-    </div>
   </div>
 
   <div class="stage-wrap">
@@ -142,9 +148,16 @@
     </div>
   </div>
 
+  <div class="panel">
+    <h2>Timeline</h2>
+    <p class="timeline-total" id="timelineTotal">Total: 0.0s</p>
+    <div id="segmentList"></div>
+    <button type="button" id="addSegmentBtn" class="secondary small">+ Add segment</button>
+  </div>
+
 </div>
 
-<p class="note">This runs entirely in your browser — no AI credits used. It's a lightweight procedural prototype so you can validate the concept (character picker, action templates, speech/action scenes, video export) before scaling up to photoreal/stylized AI-generated video later.</p>
+<p class="note">This runs entirely in your browser — no AI credits used. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <script>
 (function(){
@@ -154,23 +167,7 @@
   const GROUND_Y = 380;
   const HEAD_R = 18, NECK_LEN = 8, TORSO_LEN = 60, UPPER_ARM = 28, FORE_ARM = 26, UPPER_LEG = 38, LOWER_LEG = 38, LW = 5;
 
-  const DURATIONS = { talk: 7.5, kite: 10, walk: 12, wave: 4, dance: 4 };
-
-  const state = {
-    scene: 'talk',
-    background: 'white',
-    speed: 1,
-    playing: true,
-    charA: { name: 'Alex', color: '#1d4ed8', gender: 'male' },
-    charB: { name: 'Sam', color: '#db2777', gender: 'female' },
-    dialogue: [
-      { speaker: 'A', text: 'Hi! Nice day, right?' },
-      { speaker: 'B', text: 'It sure is! Coffee?' },
-      { speaker: 'A', text: "Sounds great, let's go!" }
-    ]
-  };
-
-  // ---------- helpers ----------
+  // ---------- helpers (kept from v1) ----------
   function upPoint(origin, angle, len, faceDir){
     return { x: origin.x + Math.sin(angle)*len*faceDir, y: origin.y - Math.cos(angle)*len };
   }
@@ -190,11 +187,16 @@
     if(line) lines.push(line);
     return lines;
   }
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  let uidCounter = 1;
+  function uid(){ return 'seg' + (uidCounter++); }
 
-  // ---------- background ----------
-  function drawBackground(){
+  // ---------- background (kept from v1) ----------
+  function drawBackground(bg){
     ctx.clearRect(0,0,W,H);
-    if(state.background === 'sky'){
+    if(bg === 'sky'){
       const g = ctx.createLinearGradient(0,0,0,H);
       g.addColorStop(0,'#bfe3ff'); g.addColorStop(1,'#eaf7ff');
       ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
@@ -204,7 +206,7 @@
         ctx.beginPath(); ctx.arc(c[0],c[1],c[2],0,Math.PI*2); ctx.fill();
       });
       ctx.fillStyle = '#cdeccb'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
-    } else if(state.background === 'grid'){
+    } else if(bg === 'grid'){
       ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
       ctx.strokeStyle = '#e5e9f2'; ctx.lineWidth = 1;
       for(let x=0;x<=W;x+=25){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
@@ -216,7 +218,8 @@
     ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
   }
 
-  // ---------- stickman ----------
+  // ---------- stickman renderer (kept from v1, appearance + skeleton still fused —
+  // splitting Character/Skeleton is Sprint 2, out of scope here) ----------
   function drawStickman(x, faceDir, color, gender, name, pose){
     const hip = { x: x, y: GROUND_Y - 66 - pose.bounceY };
     const shoulder = upPoint(hip, pose.torsoLean, TORSO_LEN, faceDir);
@@ -236,12 +239,10 @@
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.strokeStyle = color; ctx.lineWidth = LW;
 
-    // legs
     [[hip,lKnee,lFoot],[hip,rKnee,rFoot]].forEach(seg=>{
       ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
     });
 
-    // skirt for female
     if(gender === 'female'){
       ctx.beginPath();
       ctx.moveTo(hip.x-15, hip.y+4);
@@ -253,19 +254,15 @@
       ctx.stroke();
     }
 
-    // torso
     ctx.beginPath(); ctx.moveTo(hip.x,hip.y); ctx.lineTo(shoulder.x,shoulder.y); ctx.stroke();
 
-    // arms
     [[shoulder,lElbow,lHand],[shoulder,rElbow,rHand]].forEach(seg=>{
       ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
     });
 
-    // head
     ctx.beginPath(); ctx.arc(head.x, head.y, HEAD_R, 0, Math.PI*2);
     ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
 
-    // hair
     ctx.beginPath();
     if(gender === 'female'){
       ctx.moveTo(head.x-HEAD_R+2, head.y-4);
@@ -273,7 +270,6 @@
       ctx.moveTo(head.x+HEAD_R-2, head.y-4);
       ctx.quadraticCurveTo(head.x+HEAD_R+6, head.y+18, head.x+HEAD_R-4, head.y+30);
       ctx.lineWidth = LW-1.5; ctx.stroke();
-      // bow
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.moveTo(head.x-2, head.y-HEAD_R-2);
@@ -294,7 +290,6 @@
     }
     ctx.lineWidth = LW;
 
-    // face
     ctx.fillStyle = '#222';
     ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 2, 0, Math.PI*2); ctx.fill();
     if(pose.mouthOpen > 0.5){
@@ -305,7 +300,6 @@
       ctx.lineWidth = LW;
     }
 
-    // name label
     ctx.fillStyle = '#444';
     ctx.font = '13px "Comic Sans MS", cursive, sans-serif';
     ctx.textAlign = 'center';
@@ -344,15 +338,41 @@
     lines.forEach((l,i)=> ctx.fillText(l, bx+boxW/2, by+22+i*lineH));
   }
 
-  // ---------- poses ----------
-  function poseTalk(t, speaking, offset){
-    offset = offset || 0;
+  function drawKiteProp(hand, t, anchor){
+    const kx = anchor.x + 50*Math.sin(2*Math.PI*t/5) + 15*Math.sin(2*Math.PI*t/1.7);
+    const ky = anchor.y + 25*Math.cos(2*Math.PI*t/4);
+    const ctrl = { x: (hand.x+kx)/2 + 20*Math.sin(t*1.3), y: (hand.y+ky)/2 + 30 };
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.quadraticCurveTo(ctrl.x, ctrl.y, kx, ky); ctx.stroke();
+    for(let i=1;i<=4;i++){
+      const dt = t - i*0.25;
+      const tx = anchor.x + 50*Math.sin(2*Math.PI*dt/5) + 15*Math.sin(2*Math.PI*dt/1.7);
+      const ty = anchor.y + 25*Math.cos(2*Math.PI*dt/4) + i*14;
+      ctx.fillStyle = i % 2 === 0 ? '#f97316' : '#22c55e';
+      ctx.beginPath(); ctx.moveTo(tx-5,ty); ctx.lineTo(tx+5,ty); ctx.lineTo(tx,ty+8); ctx.closePath(); ctx.fill();
+    }
+    ctx.save(); ctx.translate(kx,ky);
+    ctx.strokeStyle = '#e11d48'; ctx.fillStyle = 'rgba(225,29,72,0.25)'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0,-26); ctx.lineTo(20,0); ctx.lineTo(0,32); ctx.lineTo(-20,0); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-26); ctx.lineTo(0,32); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------- animation clips: pure functions of (localT, opts) -> BonePose ----------
+  function poseIdle(t){
+    return { torsoLean:0.02*Math.sin(t*1.2), headTilt:0.04*Math.sin(t*1.1), bounceY:Math.sin(t*2)*1.5,
+      leftShoulderAngle:0.05*Math.sin(t*1.1), leftElbowBend:0.15, rightShoulderAngle:0.05*Math.sin(t*1.1+1), rightElbowBend:0.15,
+      leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0 };
+  }
+  function poseTalk(t, speaking){
     return {
-      torsoLean: 0.03*Math.sin(t*1.1+offset),
-      headTilt: speaking ? 0.15*Math.sin(t*5) : 0.05*Math.sin(t*1.5+offset),
-      bounceY: Math.sin(t*2+offset)*1.5,
-      leftShoulderAngle: 0.1*Math.sin(t*1.3+offset+1), leftElbowBend: 0.15,
-      rightShoulderAngle: speaking ? 1.3+0.4*Math.sin(t*6) : 0.15*Math.sin(t*1.2+offset),
+      torsoLean: 0.03*Math.sin(t*1.1),
+      headTilt: speaking ? 0.15*Math.sin(t*5) : 0.05*Math.sin(t*1.5),
+      bounceY: Math.sin(t*2)*1.5,
+      leftShoulderAngle: 0.1*Math.sin(t*1.3+1), leftElbowBend: 0.15,
+      rightShoulderAngle: speaking ? 1.3+0.4*Math.sin(t*6) : 0.15*Math.sin(t*1.2),
       rightElbowBend: speaking ? -0.6+0.3*Math.sin(t*6+0.5) : 0.2,
       leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
       mouthOpen: speaking ? (Math.sin(t*10) > 0 ? 1 : 0.2) : 0
@@ -373,11 +393,8 @@
   function poseWalk(t){
     const w = t*6;
     return {
-      torsoLean: 0.05*Math.sin(w),
-      headTilt: 0.03*Math.sin(w),
-      bounceY: Math.abs(Math.sin(w))*4,
-      leftShoulderAngle: -0.5*Math.sin(w), leftElbowBend: 0.3,
-      rightShoulderAngle: 0.5*Math.sin(w), rightElbowBend: 0.3,
+      torsoLean: 0.05*Math.sin(w), headTilt: 0.03*Math.sin(w), bounceY: Math.abs(Math.sin(w))*4,
+      leftShoulderAngle: -0.5*Math.sin(w), leftElbowBend: 0.3, rightShoulderAngle: 0.5*Math.sin(w), rightElbowBend: 0.3,
       leftHipAngle: 0.6*Math.sin(w), leftKneeBend: 0.9*Math.max(0, Math.sin(w+Math.PI)),
       rightHipAngle: -0.6*Math.sin(w), rightKneeBend: 0.9*Math.max(0, Math.sin(w)),
       mouthOpen: 0
@@ -385,123 +402,125 @@
   }
   function poseWave(t){
     return {
-      torsoLean: 0.02*Math.sin(t*1.3),
-      headTilt: 0.05*Math.sin(t*1.3),
-      bounceY: Math.abs(Math.sin(t*2))*1.5,
-      leftShoulderAngle: 0.1*Math.sin(t*1.3), leftElbowBend: 0.15,
-      rightShoulderAngle: 2.6+0.5*Math.sin(t*8), rightElbowBend: -0.3,
+      torsoLean: 0.02*Math.sin(t*1.3), headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
+      leftShoulderAngle: 0.1*Math.sin(t*1.3), leftElbowBend: 0.15, rightShoulderAngle: 2.6+0.5*Math.sin(t*8), rightElbowBend: -0.3,
       leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
       mouthOpen: 0
     };
   }
   function poseDance(t, offset){
-    const w = t*5+offset;
+    const w = t*5+(offset||0);
     return {
-      torsoLean: 0.15*Math.sin(w),
-      headTilt: 0.1*Math.sin(w+1),
-      bounceY: Math.abs(Math.sin(w*2))*5,
-      leftShoulderAngle: 1.2+0.8*Math.sin(w), leftElbowBend: -0.3,
-      rightShoulderAngle: 1.2-0.8*Math.sin(w), rightElbowBend: -0.3,
-      leftHipAngle: 0.4*Math.sin(w), leftKneeBend: 0.3,
-      rightHipAngle: -0.4*Math.sin(w), rightKneeBend: 0.3,
+      torsoLean: 0.15*Math.sin(w), headTilt: 0.1*Math.sin(w+1), bounceY: Math.abs(Math.sin(w*2))*5,
+      leftShoulderAngle: 1.2+0.8*Math.sin(w), leftElbowBend: -0.3, rightShoulderAngle: 1.2-0.8*Math.sin(w), rightElbowBend: -0.3,
+      leftHipAngle: 0.4*Math.sin(w), leftKneeBend: 0.3, rightHipAngle: -0.4*Math.sin(w), rightKneeBend: 0.3,
       mouthOpen: 0
     };
   }
 
-  // ---------- scenes ----------
-  function renderTalk(t){
-    const segs = state.dialogue;
-    const segDur = DURATIONS.talk / segs.length;
-    const idx = Math.min(segs.length-1, Math.floor(t/segDur));
-    const activeSpeaker = segs[idx].speaker;
+  const CLIPS = {
+    idle: { label:'Idle', pose:(t)=>poseIdle(t) },
+    talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
+    walk: { label:'Walk', pose:(t)=>poseWalk(t) },
+    wave: { label:'Wave', pose:(t)=>poseWave(t) },
+    dance:{ label:'Dance', pose:(t,opts)=>poseDance(t, opts&&opts.phase) },
+    kite: { label:'Fly Kite', pose:(t)=>poseKite(t) }
+  };
+  const CLIP_LIST = [
+    {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
+    {id:'wave', label:'Wave'}, {id:'dance', label:'Dance'}, {id:'kite', label:'Fly Kite'}
+  ];
 
-    const poseA = poseTalk(t, activeSpeaker === 'A', 0);
-    const poseB = poseTalk(t, activeSpeaker === 'B', 1);
-    const resA = drawStickman(280, 1, state.charA.color, state.charA.gender, state.charA.name, poseA);
-    const resB = drawStickman(520, -1, state.charB.color, state.charB.gender, state.charB.name, poseB);
-
-    const activeRes = activeSpeaker === 'A' ? resA : resB;
-    drawSpeechBubble(activeRes.head, segs[idx].text, activeSpeaker === 'A' ? 1 : -1);
+  // ---------- scene / timeline domain model ----------
+  function makeSegment(duration, actions, dialogue){
+    return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null };
   }
+  const PRESETS = {
+    talk: { enableB:true, timeline:[
+      makeSegment(2.5, {A:'talk', B:'idle'}, {slot:'A', text:'Hi! Nice day, right?'}),
+      makeSegment(2.5, {A:'idle', B:'talk'}, {slot:'B', text:'It sure is! Coffee?'}),
+      makeSegment(2.5, {A:'talk', B:'idle'}, {slot:'A', text:"Sounds great, let's go!"})
+    ]},
+    kite: { enableB:false, timeline:[ makeSegment(10, {A:'kite'}, null) ]},
+    walk: { enableB:false, timeline:[ makeSegment(8, {A:'walk'}, null) ]},
+    wave: { enableB:false, timeline:[ makeSegment(4, {A:'wave'}, null) ]},
+    dance:{ enableB:true, timeline:[ makeSegment(6, {A:'dance', B:'dance'}, null) ]}
+  };
 
-  function renderKite(t){
-    const pose = poseKite(t);
-    const res = drawStickman(180, 1, state.charA.color, state.charA.gender, state.charA.name, pose);
+  const state = {
+    playing: true,
+    speed: 1,
+    scene: {
+      background: 'white',
+      enableB: true,
+      charA: { name: 'Alex', color: '#1d4ed8', gender: 'male' },
+      charB: { name: 'Sam', color: '#db2777', gender: 'female' },
+      timeline: PRESETS.talk.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }))
+    }
+  };
 
-    const anchor = { x: 560, y: 95 };
-    const kx = anchor.x + 50*Math.sin(2*Math.PI*t/5) + 15*Math.sin(2*Math.PI*t/1.7);
-    const ky = anchor.y + 25*Math.cos(2*Math.PI*t/4);
+  function evaluateScene(scene, t){
+    const timeline = scene.timeline.length ? scene.timeline : [makeSegment(1, {}, null)];
+    const total = timeline.reduce((s,seg)=> s + Math.max(0.1, seg.duration), 0);
+    const tt = ((t % total) + total) % total;
+    let acc = 0, active = timeline[0], localT = 0;
+    for(const seg of timeline){
+      const d = Math.max(0.1, seg.duration);
+      if(tt < acc + d){ active = seg; localT = tt - acc; break; }
+      acc += d;
+    }
+    const ax = scene.enableB ? 280 : 400, aFace = 1;
+    const bx = 520, bFace = -1;
 
-    const ctrl = { x: (res.leftHand.x+kx)/2 + 20*Math.sin(t*1.3), y: (res.leftHand.y+ky)/2 + 30 };
-    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(res.leftHand.x, res.leftHand.y);
-    ctx.quadraticCurveTo(ctrl.x, ctrl.y, kx, ky); ctx.stroke();
+    const characters = [];
+    const clipIdA = (active.actions && active.actions.A) || 'idle';
+    const speakingA = clipIdA === 'talk' && active.dialogue && active.dialogue.slot === 'A';
+    characters.push({ slot:'A', x:ax, faceDir:aFace, appearance:scene.charA, clipId:clipIdA,
+      pose: (CLIPS[clipIdA]||CLIPS.idle).pose(localT, { speaking: speakingA, phase: 0 }) });
 
-    // tail ribbons
-    for(let i=1;i<=4;i++){
-      const dt = t - i*0.25;
-      const tx = anchor.x + 50*Math.sin(2*Math.PI*dt/5) + 15*Math.sin(2*Math.PI*dt/1.7);
-      const ty = anchor.y + 25*Math.cos(2*Math.PI*dt/4) + i*14;
-      ctx.fillStyle = i % 2 === 0 ? '#f97316' : '#22c55e';
-      ctx.beginPath(); ctx.moveTo(tx-5,ty); ctx.lineTo(tx+5,ty); ctx.lineTo(tx,ty+8); ctx.closePath(); ctx.fill();
+    if(scene.enableB){
+      const clipIdB = (active.actions && active.actions.B) || 'idle';
+      const speakingB = clipIdB === 'talk' && active.dialogue && active.dialogue.slot === 'B';
+      characters.push({ slot:'B', x:bx, faceDir:bFace, appearance:scene.charB, clipId:clipIdB,
+        pose: (CLIPS[clipIdB]||CLIPS.idle).pose(localT, { speaking: speakingB, phase: Math.PI }) });
     }
 
-    // kite diamond
-    ctx.save();
-    ctx.translate(kx,ky);
-    ctx.strokeStyle = '#e11d48'; ctx.fillStyle = 'rgba(225,29,72,0.25)'; ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0,-26); ctx.lineTo(20,0); ctx.lineTo(0,32); ctx.lineTo(-20,0); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0,-26); ctx.lineTo(0,32); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.stroke();
-    ctx.restore();
+    return { characters: characters, dialogue: active.dialogue, background: scene.background, localT: localT, totalDuration: total };
   }
 
-  function renderWalk(t){
-    const half = DURATIONS.walk/2;
-    let x, faceDir, localT;
-    if(t < half){ faceDir = 1; localT = t; x = 100 + (t/half)*600; }
-    else { faceDir = -1; localT = t-half; x = 700 - (localT/half)*600; }
-    const pose = poseWalk(localT);
-    drawStickman(x, faceDir, state.charA.color, state.charA.gender, state.charA.name, pose);
+  function renderFrame(frame){
+    drawBackground(frame.background);
+    const handsBySlot = {};
+    frame.characters.forEach(c=>{
+      const res = drawStickman(c.x, c.faceDir, c.appearance.color, c.appearance.gender, c.appearance.name, c.pose);
+      handsBySlot[c.slot] = res;
+    });
+    frame.characters.forEach(c=>{
+      if(c.clipId === 'kite'){
+        const anchor = frame.characters.length > 1 ? { x: c.slot === 'A' ? 340 : 620, y: 90 } : { x: 560, y: 90 };
+        drawKiteProp(handsBySlot[c.slot].leftHand, frame.localT, anchor);
+      }
+    });
+    if(frame.dialogue){
+      const res = handsBySlot[frame.dialogue.slot];
+      if(res) drawSpeechBubble(res.head, frame.dialogue.text, frame.dialogue.slot === 'A' ? 1 : -1);
+    }
   }
 
-  function renderWave(t){
-    const pose = poseWave(t);
-    drawStickman(400, 1, state.charA.color, state.charA.gender, state.charA.name, pose);
-  }
-
-  function renderDance(t){
-    const poseA = poseDance(t, 0);
-    const poseB = poseDance(t, Math.PI);
-    drawStickman(300, 1, state.charA.color, state.charA.gender, state.charA.name, poseA);
-    drawStickman(500, 1, state.charB.color, state.charB.gender, state.charB.name, poseB);
-  }
-
-  function render(t){
-    drawBackground();
-    if(state.scene === 'talk') renderTalk(t);
-    else if(state.scene === 'kite') renderKite(t);
-    else if(state.scene === 'walk') renderWalk(t);
-    else if(state.scene === 'wave') renderWave(t);
-    else if(state.scene === 'dance') renderDance(t);
-  }
-
-  // ---------- loop ----------
   let elapsed = 0, lastNow = performance.now();
   function loop(now){
     const dt = (now - lastNow)/1000;
     lastNow = now;
     if(state.playing) elapsed += dt*state.speed;
-    const dur = DURATIONS[state.scene];
-    render(elapsed % dur);
+    renderFrame(evaluateScene(state.scene, elapsed));
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
-  // ---------- UI wiring ----------
-  const sceneSelect = document.getElementById('sceneSelect');
+  // ---------- Scene panel wiring ----------
+  const presetSelect = document.getElementById('presetSelect');
   const bgSelect = document.getElementById('bgSelect');
+  const enableBCheckbox = document.getElementById('enableB');
   const speedRange = document.getElementById('speedRange');
   const speedLabel = document.getElementById('speedLabel');
   const playPauseBtn = document.getElementById('playPauseBtn');
@@ -509,40 +528,150 @@
   const exportBtn = document.getElementById('exportBtn');
   const previewVideo = document.getElementById('previewVideo');
   const downloadLink = document.getElementById('downloadLink');
+  const segmentList = document.getElementById('segmentList');
+  const timelineTotal = document.getElementById('timelineTotal');
+  const addSegmentBtn = document.getElementById('addSegmentBtn');
 
   function updateVisibility(){
-    const twoChar = state.scene === 'talk' || state.scene === 'dance';
-    document.querySelectorAll('.group-charB').forEach(el => el.style.display = twoChar ? 'block' : 'none');
-    document.querySelectorAll('.group-dialogue').forEach(el => el.style.display = state.scene === 'talk' ? 'block' : 'none');
+    document.querySelectorAll('.group-charB').forEach(el => el.style.display = state.scene.enableB ? 'block' : 'none');
   }
-  updateVisibility();
 
-  sceneSelect.addEventListener('change', ()=>{ state.scene = sceneSelect.value; elapsed = 0; updateVisibility(); });
-  bgSelect.addEventListener('change', ()=>{ state.background = bgSelect.value; });
-  speedRange.addEventListener('input', ()=>{ state.speed = parseFloat(speedRange.value); speedLabel.textContent = state.speed.toFixed(1)+'x'; });
+  function loadPreset(key){
+    const p = PRESETS[key];
+    if(!p) return;
+    state.scene.enableB = p.enableB;
+    state.scene.timeline = p.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }));
+    enableBCheckbox.checked = p.enableB;
+    updateVisibility();
+    renderSegmentList();
+    elapsed = 0;
+  }
+  presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
+  bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
+  enableBCheckbox.addEventListener('change', ()=>{
+    state.scene.enableB = enableBCheckbox.checked;
+    if(!state.scene.enableB){
+      state.scene.timeline.forEach(seg=>{ if(seg.dialogue && seg.dialogue.slot === 'B') seg.dialogue.slot = 'A'; });
+    }
+    updateVisibility();
+    renderSegmentList();
+  });
+  speedRange.addEventListener('input', ()=>{
+    state.speed = parseFloat(speedRange.value); speedLabel.textContent = state.speed.toFixed(1)+'x';
+  });
   playPauseBtn.addEventListener('click', ()=>{
     state.playing = !state.playing;
     playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
   });
   restartBtn.addEventListener('click', ()=>{ elapsed = 0; });
 
-  document.getElementById('nameA').addEventListener('input', e=> state.charA.name = e.target.value || 'A');
-  document.getElementById('nameB').addEventListener('input', e=> state.charB.name = e.target.value || 'B');
-  document.getElementById('colorA').addEventListener('input', e=> state.charA.color = e.target.value);
-  document.getElementById('colorB').addEventListener('input', e=> state.charB.color = e.target.value);
-  document.querySelectorAll('input[name=genderA]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.charA.gender = e.target.value; }));
-  document.querySelectorAll('input[name=genderB]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.charB.gender = e.target.value; }));
+  document.getElementById('nameA').addEventListener('input', e=> state.scene.charA.name = e.target.value || 'A');
+  document.getElementById('nameB').addEventListener('input', e=> state.scene.charB.name = e.target.value || 'B');
+  document.getElementById('colorA').addEventListener('input', e=> state.scene.charA.color = e.target.value);
+  document.getElementById('colorB').addEventListener('input', e=> state.scene.charB.color = e.target.value);
+  document.querySelectorAll('input[name=genderA]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charA.gender = e.target.value; }));
+  document.querySelectorAll('input[name=genderB]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charB.gender = e.target.value; }));
 
-  ['line1','line2','line3'].forEach((id,i)=>{
-    document.getElementById(id).addEventListener('input', e=> state.dialogue[i].text = e.target.value || ' ');
+  // ---------- Timeline / segment editor ----------
+  function clipOptionsHtml(selected){
+    return CLIP_LIST.map(c=> `<option value="${c.id}" ${c.id===selected?'selected':''}>${c.label}</option>`).join('');
+  }
+
+  function renderSegmentList(){
+    const total = evaluateScene(state.scene, 0).totalDuration;
+    timelineTotal.textContent = 'Total: ' + total.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
+
+    segmentList.innerHTML = state.scene.timeline.map((seg, idx)=>{
+      const bFieldHtml = state.scene.enableB
+        ? '<div class="field"><label>Character B</label><select data-field="actionB" data-id="'+seg.id+'">'+clipOptionsHtml(seg.actions.B||'idle')+'</select></div>'
+        : '';
+      const speakerOptions = '<option value="A"'+(seg.dialogue&&seg.dialogue.slot==='A'?' selected':'')+'>A</option>'
+        + (state.scene.enableB ? '<option value="B"'+(seg.dialogue&&seg.dialogue.slot==='B'?' selected':'')+'>B</option>' : '');
+      const dialogueHtml = seg.dialogue ? (
+        '<div class="row">' +
+          '<div class="field" style="max-width:80px;"><label>Speaker</label><select data-field="dialogueSpeaker" data-id="'+seg.id+'">'+speakerOptions+'</select></div>' +
+          '<div class="field"><label>Line</label><input type="text" data-field="dialogueText" data-id="'+seg.id+'" value="'+escapeHtml(seg.dialogue.text)+'"></div>' +
+        '</div>'
+      ) : '';
+      return (
+        '<div class="segment-card">' +
+          '<div class="segment-head">' +
+            '<strong>Segment ' + (idx+1) + '</strong>' +
+            '<div class="segment-actions-row">' +
+              '<button type="button" class="icon-btn" data-act="up" data-id="'+seg.id+'" '+(idx===0?'disabled':'')+'>&uarr;</button>' +
+              '<button type="button" class="icon-btn" data-act="down" data-id="'+seg.id+'" '+(idx===state.scene.timeline.length-1?'disabled':'')+'>&darr;</button>' +
+              '<button type="button" class="icon-btn danger" data-act="remove" data-id="'+seg.id+'" '+(state.scene.timeline.length<=1?'disabled':'')+'>&times;</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="row">' +
+            '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
+            '<div class="field"><label>Character A</label><select data-field="actionA" data-id="'+seg.id+'">'+clipOptionsHtml(seg.actions.A||'idle')+'</select></div>' +
+            bFieldHtml +
+          '</div>' +
+          '<div class="checkbox-field"><input type="checkbox" data-field="hasDialogue" data-id="'+seg.id+'" '+(seg.dialogue?'checked':'')+'> <label>Dialogue in this segment</label></div>' +
+          dialogueHtml +
+        '</div>'
+      );
+    }).join('');
+
+    segmentList.querySelectorAll('[data-act]').forEach(btn=> btn.addEventListener('click', onSegmentAction));
+    segmentList.querySelectorAll('select[data-field]').forEach(el=> el.addEventListener('change', onSegmentFieldChange));
+    segmentList.querySelectorAll('input[data-field]').forEach(el=>{
+      el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', onSegmentFieldChange);
+    });
+  }
+
+  function findSegment(id){ return state.scene.timeline.find(s=> s.id === id); }
+
+  function onSegmentAction(e){
+    const id = e.currentTarget.getAttribute('data-id');
+    const act = e.currentTarget.getAttribute('data-act');
+    const idx = state.scene.timeline.findIndex(s=> s.id === id);
+    if(idx === -1) return;
+    if(act === 'remove'){
+      if(state.scene.timeline.length > 1) state.scene.timeline.splice(idx, 1);
+    } else if(act === 'up' && idx > 0){
+      const tmp = state.scene.timeline[idx-1]; state.scene.timeline[idx-1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
+    } else if(act === 'down' && idx < state.scene.timeline.length-1){
+      const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
+    }
+    renderSegmentList();
+  }
+
+  function onSegmentFieldChange(e){
+    const id = e.target.getAttribute('data-id');
+    const field = e.target.getAttribute('data-field');
+    const seg = findSegment(id);
+    if(!seg) return;
+    if(field === 'duration'){
+      seg.duration = Math.max(0.5, parseFloat(e.target.value) || 0.5);
+      timelineTotal.textContent = 'Total: ' + evaluateScene(state.scene,0).totalDuration.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
+    } else if(field === 'actionA'){
+      seg.actions.A = e.target.value;
+    } else if(field === 'actionB'){
+      seg.actions.B = e.target.value;
+    } else if(field === 'hasDialogue'){
+      seg.dialogue = e.target.checked ? { slot: 'A', text: 'New line' } : null;
+      renderSegmentList();
+    } else if(field === 'dialogueSpeaker'){
+      if(seg.dialogue) seg.dialogue.slot = e.target.value;
+    } else if(field === 'dialogueText'){
+      if(seg.dialogue) seg.dialogue.text = e.target.value || ' ';
+    }
+  }
+
+  addSegmentBtn.addEventListener('click', ()=>{
+    state.scene.timeline.push(makeSegment(2.5, { A:'idle', B:'idle' }, null));
+    renderSegmentList();
   });
 
+  // ---------- export ----------
   exportBtn.addEventListener('click', ()=>{
     if(!canvas.captureStream || !window.MediaRecorder){
       alert('Video export needs a Chrome/Edge browser (MediaRecorder API). Playback still works everywhere.');
       return;
     }
-    const dur = DURATIONS[state.scene];
+    const totalDur = evaluateScene(state.scene, 0).totalDuration;
     elapsed = 0;
     state.playing = true;
 
@@ -557,15 +686,19 @@
       const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       previewVideo.src = url; previewVideo.style.display = 'block';
-      downloadLink.href = url; downloadLink.download = 'stickman_' + state.scene + '.webm';
+      downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
       downloadLink.style.display = 'inline-block';
-      downloadLink.textContent = 'Download stickman_' + state.scene + '.webm';
+      downloadLink.textContent = 'Download stickman_video.webm';
       exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
     };
     exportBtn.disabled = true; exportBtn.textContent = 'Recording…';
     recorder.start();
-    setTimeout(()=> recorder.stop(), dur*1000/state.speed + 250);
+    setTimeout(()=> recorder.stop(), totalDur*1000/state.speed + 250);
   });
+
+  // ---------- init ----------
+  updateVisibility();
+  renderSegmentList();
 })();
 </script>
 </body>
