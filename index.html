@@ -58,6 +58,17 @@
     <button type="button" id="addCharacterBtn" class="secondary small" style="width:100%;">+ Add character</button>
 
     <hr class="sep">
+    <h2>Animals</h2>
+    <p style="font-size:11px; color:var(--muted); margin:0 0 8px; line-height:1.4;">Decorative creatures placed in the scene (dog, cat, bird, rabbit) — described in your prompt or added manually.</p>
+    <div id="animalList"></div>
+    <div class="field">
+      <label for="animalTypeSelect">Add an animal</label>
+      <!-- options are populated from the ANIMALS registry (js/animals.js) at init -->
+      <select id="animalTypeSelect"></select>
+    </div>
+    <button type="button" id="addAnimalBtn" class="secondary small" style="width:100%;">+ Add animal</button>
+
+    <hr class="sep">
     <h2>Character Library</h2>
     <p style="font-size:11px; color:var(--muted); margin:0 0 8px; line-height:1.4;">Click &#9733; on any character above to save it here for reuse.</p>
     <div class="field">
@@ -97,7 +108,7 @@
 
 </div>
 
-<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes" and seating like "sofa" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
+<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes", seating like "sofa", and animals like "dog" or "cat" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <script src="js/humanTypes.js"></script>
 <script src="js/helpers.js"></script>
@@ -106,6 +117,7 @@
 <script src="js/backgrounds.js"></script>
 <script src="js/costumes.js"></script>
 <script src="js/food.js"></script>
+<script src="js/animals.js"></script>
 <script src="js/render.js"></script>
 <script src="js/poses.js"></script>
 <script src="js/scene.js"></script>
