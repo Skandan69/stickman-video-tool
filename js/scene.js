@@ -62,7 +62,11 @@ function findActionSequence(text){
 
 function detectBackground(text){
   if(/(cafe|café|coffee shop|coffeeshop)/.test(text)) return 'cafe';
-  if(/(park|outside|outdoor|garden|street)/.test(text)) return 'sky';
+  if(/(office|desk|workplace|cubicle)/.test(text)) return 'office';
+  if(/(bedroom|bed room)/.test(text)) return 'bedroom';
+  if(/(street|sidewalk|city)/.test(text)) return 'street';
+  if(/(beach|seaside|ocean|sea shore|shoreline)/.test(text)) return 'beach';
+  if(/(park|outside|outdoor|garden)/.test(text)) return 'sky';
   if(/(grid|graph paper)/.test(text)) return 'grid';
   return 'white';
 }

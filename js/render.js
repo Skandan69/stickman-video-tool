@@ -5,48 +5,12 @@ const W = canvas.width, H = canvas.height;
 const GROUND_Y = 380;
 
 // ---------- background ----------
+// Actual scenery lives in the BACKGROUNDS registry (js/backgrounds.js) — this just clears the
+// canvas, delegates to the selected entry's draw(), then draws the shared ground line on top.
 function drawBackground(bg){
   ctx.clearRect(0,0,W,H);
-  if(bg === 'sky'){
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#bfe3ff'); g.addColorStop(1,'#eaf7ff');
-    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(700,70,32,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    [[120,70,26],[160,80,20],[95,85,18],[400,50,22],[440,60,18]].forEach(c=>{
-      ctx.beginPath(); ctx.arc(c[0],c[1],c[2],0,Math.PI*2); ctx.fill();
-    });
-    ctx.fillStyle = '#cdeccb'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
-  } else if(bg === 'grid'){
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle = '#e5e9f2'; ctx.lineWidth = 1;
-    for(let x=0;x<=W;x+=25){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(let y=0;y<=H;y+=25){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-  } else if(bg === 'cafe'){
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#f3e0c8'); g.addColorStop(1,'#f8ecd9');
-    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#cfe8f0'; ctx.fillRect(60,50,150,110);
-    ctx.strokeStyle = '#8b5e3c'; ctx.lineWidth = 6; ctx.strokeRect(60,50,150,110);
-    ctx.strokeStyle = '#8b5e3c'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(135,50); ctx.lineTo(135,160); ctx.moveTo(60,105); ctx.lineTo(210,105); ctx.stroke();
-    ctx.strokeStyle = '#6b4a30'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(650,0); ctx.lineTo(650,36); ctx.stroke();
-    ctx.fillStyle = '#3a2a1a';
-    ctx.beginPath(); ctx.moveTo(628,36); ctx.lineTo(672,36); ctx.lineTo(662,62); ctx.lineTo(638,62); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#c9a877'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
-  } else if(bg === 'custom'){
-    if(state.scene.customBgImage){
-      ctx.drawImage(state.scene.customBgImage, 0, 0, W, H);
-    } else {
-      ctx.fillStyle = '#f4f5f7'; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle = '#9aa1ad'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('Upload a background image to see it here', W/2, H/2);
-      ctx.textAlign = 'left';
-    }
-  } else {
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
-  }
+  const entry = BACKGROUNDS[bg] || BACKGROUNDS.white;
+  entry.draw();
   ctx.strokeStyle = '#9aa1ad'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
 }

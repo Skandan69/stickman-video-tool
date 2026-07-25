@@ -53,6 +53,10 @@ generateBtn.addEventListener('click', ()=>{
 presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
 const bgImageInput = document.getElementById('bgImageInput');
 const furnitureSelect = document.getElementById('furnitureSelect');
+// Populate the Background dropdown from the BACKGROUNDS registry (js/backgrounds.js) — adding a new
+// background there is enough for it to show up here, no HTML edits needed.
+bgSelect.innerHTML = BACKGROUND_LIST.map(b=> '<option value="'+b.id+'">'+escapeHtml(b.label)+'</option>').join('');
+bgSelect.value = state.scene.background;
 bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
 furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });
 bgImageInput.addEventListener('change', (e)=>{
