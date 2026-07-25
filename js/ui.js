@@ -59,12 +59,16 @@ presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
 const bgImageInput = document.getElementById('bgImageInput');
 const furnitureSelect = document.getElementById('furnitureSelect');
 const foodSelect = document.getElementById('foodSelect');
-// Populate the Background/Food dropdowns from their registries (js/backgrounds.js, js/food.js) —
-// adding a new entry there is enough for it to show up here, no HTML edits needed.
+const styleSelect = document.getElementById('styleSelect');
+// Populate the Background/Food/Style dropdowns from their registries (js/backgrounds.js, js/food.js,
+// js/styles.js) — adding a new entry there is enough for it to show up here, no HTML edits needed.
 bgSelect.innerHTML = BACKGROUND_LIST.map(b=> '<option value="'+b.id+'">'+escapeHtml(b.label)+'</option>').join('');
 bgSelect.value = state.scene.background;
 foodSelect.innerHTML = FOOD_LIST.map(f=> '<option value="'+f.id+'">'+escapeHtml(f.label)+'</option>').join('');
 foodSelect.value = state.scene.food;
+styleSelect.innerHTML = STYLE_LIST.map(s=> '<option value="'+s.id+'">'+escapeHtml(s.label)+'</option>').join('');
+styleSelect.value = state.scene.style;
+styleSelect.addEventListener('change', ()=> { state.scene.style = styleSelect.value; });
 foodSelect.addEventListener('change', ()=> { state.scene.food = foodSelect.value; });
 bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
 furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });

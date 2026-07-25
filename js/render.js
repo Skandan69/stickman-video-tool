@@ -65,8 +65,10 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
   ctx.lineWidth = LW;
 }
 
-// ---------- stickman renderer (appearance + skeleton still fused into one draw call) ----------
-function drawStickman(x, faceDir, appearance, pose){
+// ---------- skeleton math: shared by every art style so poses/IK stay identical no matter how the
+// figure is rendered. Also resolves appearance defaults (outfit/skin/hair/etc) in one place so each
+// style's draw function can just read sk.* instead of repeating the same fallback logic.
+function computeSkeleton(x, faceDir, appearance, pose){
   const outfit = appearance.outfit || appearance.color || '#1d4ed8';
   const gender = appearance.gender || 'male';
   const name = appearance.name || '';
@@ -76,7 +78,6 @@ function drawStickman(x, faceDir, appearance, pose){
   const eyeStyle = appearance.eyeStyle || 'dot';
   const emotion = appearance.emotion || 'neutral';
   const accessory = appearance.accessory || 'none';
-  const color = outfit; // kept for the female skirt tint below
   const bodyPreset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // sets HEAD_R/TORSO_LEN/etc for THIS character
   const stoop = bodyPreset.stoop || 0;
   const effTorsoLean = pose.torsoLean + stoop;
@@ -96,6 +97,20 @@ function drawStickman(x, faceDir, appearance, pose){
   const lHand = downPoint(lElbow, pose.leftShoulderAngle+pose.leftElbowBend, FORE_ARM, faceDir);
   const rElbow = downPoint(shoulder, pose.rightShoulderAngle, UPPER_ARM, faceDir);
   const rHand = downPoint(rElbow, pose.rightShoulderAngle+pose.rightElbowBend, FORE_ARM, faceDir);
+
+  return { outfit, gender, name, skin, hairStyle, hairColor, eyeStyle, emotion, accessory, bodyPreset,
+    hip, shoulder, neck, head, lKnee, lFoot, rKnee, rFoot, lElbow, lHand, rElbow, rHand };
+}
+
+// ---------- "Bold Cartoon" stickman renderer (the default/original style) ----------
+function drawStickman(x, faceDir, appearance, pose){
+  const sk = computeSkeleton(x, faceDir, appearance, pose);
+  const outfit = sk.outfit, gender = sk.gender, name = sk.name, skin = sk.skin,
+    hairStyle = sk.hairStyle, hairColor = sk.hairColor, eyeStyle = sk.eyeStyle,
+    emotion = sk.emotion, accessory = sk.accessory, color = outfit;
+  const hip = sk.hip, shoulder = sk.shoulder, neck = sk.neck, head = sk.head,
+    lKnee = sk.lKnee, lFoot = sk.lFoot, rKnee = sk.rKnee, rFoot = sk.rFoot,
+    lElbow = sk.lElbow, lHand = sk.lHand, rElbow = sk.rElbow, rHand = sk.rHand;
 
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.strokeStyle = color; ctx.lineWidth = LW;

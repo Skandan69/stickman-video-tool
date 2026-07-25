@@ -198,6 +198,7 @@ const state = {
     food: 'sandwich',
     animals: [],
     vehicles: [],
+    style: 'bold',
     characters: [
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[0])),
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[1]))
@@ -268,7 +269,7 @@ function evaluateScene(scene, t){
   const vehiclePositions = computeVehiclePositions((scene.vehicles || []).length);
   const vehicles = (scene.vehicles || []).map((v, i)=> ({ id: v.id, type: v.type, x: vehiclePositions[i].x, faceDir: vehiclePositions[i].faceDir, sizeScale: v.sizeScale || 1 }));
 
-  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
@@ -280,9 +281,10 @@ function renderFrame(frame){
       if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
     }
   });
+  const activeStyle = STYLES[frame.style] || STYLES.bold;
   const handsById = {};
   frame.characters.forEach(c=>{
-    const res = drawStickman(c.x, c.faceDir, c.appearance, c.pose);
+    const res = activeStyle.drawStickman(c.x, c.faceDir, c.appearance, c.pose);
     handsById[c.id] = res;
   });
   frame.characters.forEach(c=>{
