@@ -62,8 +62,9 @@ const STYLES = {
       [sk.lHand, sk.rHand].forEach(p=>{
         ctx.fillStyle = sk.skin; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2); ctx.fill();
       });
-      // businessman tie accent (GraphicMama-style clipart reference) — skipped for female appearances
-      if(sk.gender !== 'female'){
+      // businessman tie accent (GraphicMama-style clipart reference, purely decorative default look)
+      // — skipped for female appearances, and layered UNDER the necktie/bowtie accessory if selected.
+      if(sk.gender !== 'female' && sk.accessory !== 'necktie' && sk.accessory !== 'bowtie'){
         ctx.fillStyle = '#c0392b';
         ctx.beginPath();
         ctx.moveTo(sk.shoulder.x, sk.shoulder.y+2);
@@ -72,25 +73,36 @@ const STYLES = {
         ctx.lineTo(sk.shoulder.x+4, sk.shoulder.y+10);
         ctx.closePath(); ctx.fill();
       }
-      ctx.fillStyle = sk.skin;
-      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R, 0, Math.PI*2); ctx.fill();
-      if(sk.hairStyle !== 'none'){
-        ctx.fillStyle = sk.hairColor;
-        ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y-2, HEAD_R*0.95, Math.PI, 0); ctx.fill();
+      // Body-worn accessories, shared with the bold style's drawStickman (js/render.js) so every
+      // accessory works identically no matter which art style is selected.
+      if(sk.accessory === 'bag'){
+        const bagAnchor = faceDir > 0 ? sk.lHand : sk.rHand;
+        ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(sk.shoulder.x - faceDir*4, sk.shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
       }
-      const em = EMOTIONS[sk.emotion] || EMOTIONS.neutral;
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(sk.head.x+faceDir*6, sk.head.y-2, 2, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(sk.head.x-faceDir*2, sk.head.y-2, 2, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#222'; ctx.fillStyle = '#222'; ctx.lineWidth = 2;
-      // mouth: talking (mouthOpen) always wins so dialogue reads clearly, same convention as the
-      // bold style's drawFace() — otherwise fall through to the emotion's mouth shape.
-      if(pose.mouthOpen > 0.5){ ctx.beginPath(); ctx.ellipse(sk.head.x, sk.head.y+7, 3.5, 3, 0, 0, Math.PI*2); ctx.fill(); }
-      else if(em.mouth === 'o'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+7, 2.5, 0, Math.PI*2); ctx.fill(); }
-      else if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
-      else if(em.mouth === 'frown'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+12, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke(); }
-      else if(em.mouth === 'grimace'){ ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x-1, sk.head.y+9); ctx.lineTo(sk.head.x+2, sk.head.y+7); ctx.lineTo(sk.head.x+5, sk.head.y+9); ctx.stroke(); }
-      else { ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x+4, sk.head.y+7); ctx.stroke(); }
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      ctx.fillStyle = sk.skin; ctx.strokeStyle = '#2b2f38'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+      drawFace(sk.head, faceDir, sk.eyeStyle, sk.emotion, pose.mouthOpen);
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
       ctx.fillStyle = '#333'; ctx.font = '13px Arial, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
       ctx.restore();
@@ -130,18 +142,40 @@ const STYLES = {
         if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
       }
       ctx.stroke();
-      const em = EMOTIONS[sk.emotion] || EMOTIONS.neutral;
-      ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(sk.head.x+faceDir*6, sk.head.y-2, 1.6, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(sk.head.x-faceDir*1, sk.head.y-2, 1.6, 0, Math.PI*2); ctx.fill();
-      // mouth: talking (mouthOpen) always wins so dialogue reads clearly, same convention as the
-      // bold style's drawFace() — otherwise fall through to the emotion's mouth shape.
-      if(pose.mouthOpen > 0.5){ ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(sk.head.x, sk.head.y+7, 3, 2.6, 0, 0, Math.PI*2); ctx.fill(); }
-      else if(em.mouth === 'o'){ ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+7, 2.2, 0, Math.PI*2); ctx.fill(); }
-      else if(em.mouth === 'smile'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+6, 5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
-      else if(em.mouth === 'frown'){ ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y+12, 5, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke(); }
-      else if(em.mouth === 'grimace'){ ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x-1, sk.head.y+9); ctx.lineTo(sk.head.x+2, sk.head.y+7); ctx.lineTo(sk.head.x+5, sk.head.y+9); ctx.stroke(); }
-      else { ctx.beginPath(); ctx.moveTo(sk.head.x-4, sk.head.y+7); ctx.lineTo(sk.head.x+4, sk.head.y+7); ctx.stroke(); }
+      // Fill the head with skin tone (a sketch is still a person, not just an outline) before the
+      // shared drawHair/drawFace/accessory functions add hair, face, and accessories on top — this
+      // gives full parity with the bold style for every customization option (skin/hair/eyes/accessory).
+      ctx.fillStyle = sk.skin; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R-1, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+      // Body-worn accessories, shared with the bold style's drawStickman (js/render.js).
+      if(sk.accessory === 'bag'){
+        const bagAnchor = faceDir > 0 ? sk.lHand : sk.rHand;
+        ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(sk.shoulder.x - faceDir*4, sk.shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
+      }
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+      drawFace(sk.head, faceDir, sk.eyeStyle, sk.emotion, pose.mouthOpen);
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 1.8;
       [sk.lHand, sk.rHand].forEach(p=>{ ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.stroke(); });
       ctx.fillStyle = '#555'; ctx.font = 'italic 12px "Comic Sans MS", cursive'; ctx.textAlign = 'center';
       ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
