@@ -122,6 +122,15 @@ function detectBackground(text){
   return 'white';
 }
 
+function detectWeather(text){
+  if(/(rain|raining|rainy|downpour|storm)/.test(text)) return 'rain';
+  if(/(snow|snowing|snowy|blizzard)/.test(text)) return 'snow';
+  if(/(fog|foggy|misty|haze)/.test(text)) return 'fog';
+  if(/(sunny|sunshine|sun rays|bright sun)/.test(text)) return 'sunny';
+  if(/(autumn|fall leaves|falling leaves)/.test(text)) return 'autumn';
+  return null; // no explicit weather mentioned -> leave whatever's already selected alone
+}
+
 function detectDuration(text){
   const m = text.match(/(\d+(\.\d+)?)\s*(minute|min|second|sec)s?/i);
   if(!m) return null;
@@ -239,6 +248,7 @@ function parsePromptToScene(rawText){
   let seq = findActionSequence(text);
   if(!seq.length) seq = ['idle'];
   const bg = detectBackground(text);
+  const weather = detectWeather(text);
   const furniture = detectFurniture(text);
   const food = detectFood(text);
   const bodyType = detectBodyType(text);
@@ -271,7 +281,7 @@ function parsePromptToScene(rawText){
   });
 
   return {
-    background: bg, furniture: furniture, food: food, bodyType: bodyType, charCount: charCount, timeline: timeline,
+    background: bg, weather: weather, furniture: furniture, food: food, bodyType: bodyType, charCount: charCount, timeline: timeline,
     animals: animals,
     vehicles: vehicles,
     summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
@@ -283,6 +293,7 @@ const state = {
   speed: 1,
   scene: {
     background: 'white',
+    weather: 'none',
     customBgImage: null,
     furniture: 'chair',
     food: 'sandwich',
@@ -359,11 +370,12 @@ function evaluateScene(scene, t){
   const vehiclePositions = computeVehiclePositions((scene.vehicles || []).length);
   const vehicles = (scene.vehicles || []).map((v, i)=> ({ id: v.id, type: v.type, x: vehiclePositions[i].x, faceDir: vehiclePositions[i].faceDir, sizeScale: v.sizeScale || 1 }));
 
-  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, weather: scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
   drawBackground(frame.background);
+  drawWeatherOverlay(frame.weather, frame.localT);
   frame.vehicles.forEach(v=> drawVehicleProp(v.x, v.faceDir, v.type, frame.localT, v.sizeScale));
   frame.animals.forEach(a=> drawAnimalProp(a.x, a.faceDir, a.type, frame.localT, a.sizeScale));
   frame.characters.forEach(c=>{

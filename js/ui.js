@@ -45,6 +45,7 @@ generateBtn.addEventListener('click', ()=>{
   bgSelect.value = result.background;
   furnitureSelect.value = result.furniture;
   if(result.food){ state.scene.food = result.food; foodSelect.value = result.food; }
+  if(result.weather){ state.scene.weather = result.weather; weatherSelect.value = result.weather; }
   state.scene.animals = result.animals || [];
   state.scene.vehicles = result.vehicles || [];
   renderAnimalList();
@@ -60,17 +61,22 @@ const bgImageInput = document.getElementById('bgImageInput');
 const furnitureSelect = document.getElementById('furnitureSelect');
 const foodSelect = document.getElementById('foodSelect');
 const styleSelect = document.getElementById('styleSelect');
-// Populate the Background/Food/Style dropdowns from their registries (js/backgrounds.js, js/food.js,
-// js/styles.js) — adding a new entry there is enough for it to show up here, no HTML edits needed.
+const weatherSelect = document.getElementById('weatherSelect');
+// Populate the Background/Food/Style/Weather dropdowns from their registries (js/backgrounds.js,
+// js/food.js, js/styles.js, js/weather.js) — adding a new entry there is enough for it to show up
+// here, no HTML edits needed.
 bgSelect.innerHTML = BACKGROUND_LIST.map(b=> '<option value="'+b.id+'">'+escapeHtml(b.label)+'</option>').join('');
 bgSelect.value = state.scene.background;
 foodSelect.innerHTML = FOOD_LIST.map(f=> '<option value="'+f.id+'">'+escapeHtml(f.label)+'</option>').join('');
 foodSelect.value = state.scene.food;
 styleSelect.innerHTML = STYLE_LIST.map(s=> '<option value="'+s.id+'">'+escapeHtml(s.label)+'</option>').join('');
 styleSelect.value = state.scene.style;
+weatherSelect.innerHTML = WEATHER_LIST.map(w=> '<option value="'+w.id+'">'+escapeHtml(w.label)+'</option>').join('');
+weatherSelect.value = state.scene.weather;
 styleSelect.addEventListener('change', ()=> { state.scene.style = styleSelect.value; });
 foodSelect.addEventListener('change', ()=> { state.scene.food = foodSelect.value; });
 bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
+weatherSelect.addEventListener('change', ()=> { state.scene.weather = weatherSelect.value; });
 furnitureSelect.addEventListener('change', ()=> { state.scene.furniture = furnitureSelect.value; });
 bgImageInput.addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
