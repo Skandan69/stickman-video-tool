@@ -118,7 +118,7 @@
     <h2>Character A</h2>
     <div class="row">
       <div class="field"><label>Name</label><input type="text" id="nameA" value="Alex"></div>
-      <div class="field"><label>Color</label>
+      <div class="field"><label>Outfit</label>
         <div class="color-row"><input type="color" id="colorA" value="#1d4ed8"></div>
       </div>
     </div>
@@ -126,13 +126,52 @@
       <label><input type="radio" name="genderA" value="male" checked> Male</label>
       <label><input type="radio" name="genderA" value="female"> Female</label>
     </div>
+    <div class="row">
+      <div class="field"><label>Skin tone</label>
+        <select id="skinA">
+          <option value="#ffe0bd">Light</option>
+          <option value="#e8b98a">Medium</option>
+          <option value="#c68642">Tan</option>
+          <option value="#8d5524">Deep</option>
+        </select>
+      </div>
+      <div class="field"><label>Eyes</label>
+        <select id="eyeStyleA">
+          <option value="dot">Dot</option>
+          <option value="round">Round</option>
+          <option value="happy">Happy</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Hairstyle</label>
+        <select id="hairStyleA">
+          <option value="none">Bald</option>
+          <option value="short" selected>Short</option>
+          <option value="long">Long</option>
+          <option value="ponytail">Ponytail</option>
+          <option value="mohawk">Mohawk</option>
+        </select>
+      </div>
+      <div class="field"><label>Hair color</label>
+        <div class="color-row"><input type="color" id="hairColorA" value="#2b1b12"></div>
+      </div>
+    </div>
+    <div class="field"><label>Accessory</label>
+      <select id="accessoryA">
+        <option value="none">None</option>
+        <option value="glasses">Glasses</option>
+        <option value="hat">Hat</option>
+        <option value="bag">Bag</option>
+      </select>
+    </div>
 
     <div class="group-charB">
       <hr class="sep">
       <h2>Character B</h2>
       <div class="row">
         <div class="field"><label>Name</label><input type="text" id="nameB" value="Sam"></div>
-        <div class="field"><label>Color</label>
+        <div class="field"><label>Outfit</label>
           <div class="color-row"><input type="color" id="colorB" value="#db2777"></div>
         </div>
       </div>
@@ -140,6 +179,59 @@
         <label><input type="radio" name="genderB" value="male"> Male</label>
         <label><input type="radio" name="genderB" value="female" checked> Female</label>
       </div>
+      <div class="row">
+        <div class="field"><label>Skin tone</label>
+          <select id="skinB">
+            <option value="#ffe0bd">Light</option>
+            <option value="#e8b98a">Medium</option>
+            <option value="#c68642">Tan</option>
+            <option value="#8d5524">Deep</option>
+          </select>
+        </div>
+        <div class="field"><label>Eyes</label>
+          <select id="eyeStyleB">
+            <option value="dot">Dot</option>
+            <option value="round">Round</option>
+            <option value="happy">Happy</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Hairstyle</label>
+          <select id="hairStyleB">
+            <option value="none">Bald</option>
+            <option value="short">Short</option>
+            <option value="long" selected>Long</option>
+            <option value="ponytail">Ponytail</option>
+            <option value="mohawk">Mohawk</option>
+          </select>
+        </div>
+        <div class="field"><label>Hair color</label>
+          <div class="color-row"><input type="color" id="hairColorB" value="#3a2317"></div>
+        </div>
+      </div>
+      <div class="field"><label>Accessory</label>
+        <select id="accessoryB">
+          <option value="none">None</option>
+          <option value="glasses">Glasses</option>
+          <option value="hat">Hat</option>
+          <option value="bag">Bag</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="sep">
+    <h2>Character Library</h2>
+    <div class="field"><label>Save Character A as</label><input type="text" id="saveCharName" placeholder="e.g. Ninja"></div>
+    <button type="button" id="saveCharBtn" class="secondary small" style="width:100%; margin-bottom:8px;">Save to Library</button>
+    <div class="field">
+      <label for="libSelect">Saved characters</label>
+      <select id="libSelect"><option value="">(none saved yet)</option></select>
+    </div>
+    <div class="segment-actions-row" style="margin-top:6px;">
+      <button type="button" id="applyToABtn" class="secondary small">Apply to A</button>
+      <button type="button" id="applyToBBtn" class="secondary small">Apply to B</button>
+      <button type="button" id="deleteLibBtn" class="icon-btn danger" style="width:auto; padding:0 10px;">Delete</button>
     </div>
   </div>
 
@@ -255,7 +347,17 @@
 
   // ---------- stickman renderer (kept from v1, appearance + skeleton still fused —
   // splitting Character/Skeleton is Sprint 2, out of scope here) ----------
-  function drawStickman(x, faceDir, color, gender, name, pose){
+  function drawStickman(x, faceDir, appearance, pose){
+    const outfit = appearance.outfit || appearance.color || '#1d4ed8';
+    const gender = appearance.gender || 'male';
+    const name = appearance.name || '';
+    const skin = appearance.skin || '#ffe0bd';
+    const hairStyle = appearance.hairStyle || (gender === 'female' ? 'long' : 'short');
+    const hairColor = appearance.hairColor || '#2b1b12';
+    const eyeStyle = appearance.eyeStyle || 'dot';
+    const accessory = appearance.accessory || 'none';
+    const color = outfit; // kept for the female skirt tint below
+
     const hip = { x: x, y: GROUND_Y - 66 - pose.bounceY };
     const shoulder = upPoint(hip, pose.torsoLean, TORSO_LEN, faceDir);
     const neck = upPoint(shoulder, pose.headTilt, NECK_LEN, faceDir);
@@ -295,45 +397,41 @@
       ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
     });
 
-    ctx.beginPath(); ctx.arc(head.x, head.y, HEAD_R, 0, Math.PI*2);
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-
-    ctx.beginPath();
-    if(gender === 'female'){
-      ctx.moveTo(head.x-HEAD_R+2, head.y-4);
-      ctx.quadraticCurveTo(head.x-HEAD_R-6, head.y+18, head.x-HEAD_R+4, head.y+30);
-      ctx.moveTo(head.x+HEAD_R-2, head.y-4);
-      ctx.quadraticCurveTo(head.x+HEAD_R+6, head.y+18, head.x+HEAD_R-4, head.y+30);
-      ctx.lineWidth = LW-1.5; ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(head.x-2, head.y-HEAD_R-2);
-      ctx.lineTo(head.x-10, head.y-HEAD_R-9);
-      ctx.lineTo(head.x-10, head.y-HEAD_R+5);
-      ctx.closePath(); ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(head.x+2, head.y-HEAD_R-2);
-      ctx.lineTo(head.x+10, head.y-HEAD_R-9);
-      ctx.lineTo(head.x+10, head.y-HEAD_R+5);
-      ctx.closePath(); ctx.fill();
-    } else {
-      for(let i=-2;i<=2;i++){
-        ctx.moveTo(head.x+i*7, head.y-HEAD_R+3);
-        ctx.lineTo(head.x+i*8, head.y-HEAD_R-6);
-      }
-      ctx.lineWidth = LW-2; ctx.stroke();
+    if(accessory === 'bag'){
+      const bagAnchor = faceDir > 0 ? lHand : rHand;
+      ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(shoulder.x - faceDir*4, shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+      ctx.fillStyle = outfit; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = LW;
     }
-    ctx.lineWidth = LW;
+
+    ctx.beginPath(); ctx.arc(head.x, head.y, HEAD_R, 0, Math.PI*2);
+    ctx.fillStyle = skin; ctx.fill(); ctx.strokeStyle = outfit; ctx.stroke();
+
+    drawHair(head, faceDir, hairStyle, hairColor);
+    if(accessory === 'hat') drawHat(head, hairColor);
+    ctx.strokeStyle = outfit; ctx.lineWidth = LW;
 
     ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 2, 0, Math.PI*2); ctx.fill();
+    if(eyeStyle === 'round'){
+      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 3, 0, Math.PI*2); ctx.fill();
+    } else if(eyeStyle === 'happy'){
+      ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 3, Math.PI, 0); ctx.stroke();
+      ctx.lineWidth = LW;
+    } else {
+      ctx.beginPath(); ctx.arc(head.x+faceDir*7, head.y-3, 2, 0, Math.PI*2); ctx.fill();
+    }
     if(pose.mouthOpen > 0.5){
+      ctx.fillStyle = '#222';
       ctx.beginPath(); ctx.ellipse(head.x+faceDir*6, head.y+8, 3.5, 3, 0, 0, Math.PI*2); ctx.fill();
     } else {
       ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(head.x+faceDir*2, head.y+8); ctx.lineTo(head.x+faceDir*10, head.y+8); ctx.stroke();
       ctx.lineWidth = LW;
     }
+    if(accessory === 'glasses') drawGlasses(head);
 
     ctx.fillStyle = '#444';
     ctx.font = '13px "Comic Sans MS", cursive, sans-serif';
@@ -392,6 +490,68 @@
     ctx.moveTo(0,-26); ctx.lineTo(20,0); ctx.lineTo(0,32); ctx.lineTo(-20,0); ctx.closePath();
     ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,-26); ctx.lineTo(0,32); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHair(head, faceDir, hairStyle, hairColor){
+    if(hairStyle === 'none') return;
+    ctx.save();
+    ctx.strokeStyle = hairColor; ctx.fillStyle = hairColor;
+    if(hairStyle === 'short'){
+      ctx.beginPath();
+      for(let i=-2;i<=2;i++){
+        ctx.moveTo(head.x+i*7, head.y-HEAD_R+3);
+        ctx.lineTo(head.x+i*8, head.y-HEAD_R-6);
+      }
+      ctx.lineWidth = LW-2; ctx.stroke();
+    } else if(hairStyle === 'mohawk'){
+      ctx.beginPath();
+      for(let i=-1;i<=1;i++){
+        ctx.moveTo(head.x+i*4, head.y-HEAD_R+2);
+        ctx.lineTo(head.x+i*3, head.y-HEAD_R-12);
+      }
+      ctx.lineWidth = LW-1; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(head.x-HEAD_R+2, head.y-4);
+      ctx.quadraticCurveTo(head.x-HEAD_R-6, head.y+18, head.x-HEAD_R+4, head.y+30);
+      ctx.moveTo(head.x+HEAD_R-2, head.y-4);
+      ctx.quadraticCurveTo(head.x+HEAD_R+6, head.y+18, head.x+HEAD_R-4, head.y+30);
+      ctx.lineWidth = LW-1.5; ctx.stroke();
+      if(hairStyle === 'ponytail'){
+        ctx.beginPath();
+        ctx.moveTo(head.x - faceDir*HEAD_R*0.6, head.y-6);
+        ctx.quadraticCurveTo(head.x - faceDir*HEAD_R*1.7, head.y+8, head.x - faceDir*HEAD_R*1.3, head.y+30);
+        ctx.lineWidth = LW-1; ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(head.x-2, head.y-HEAD_R-2);
+      ctx.lineTo(head.x-10, head.y-HEAD_R-9);
+      ctx.lineTo(head.x-10, head.y-HEAD_R+5);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(head.x+2, head.y-HEAD_R-2);
+      ctx.lineTo(head.x+10, head.y-HEAD_R-9);
+      ctx.lineTo(head.x+10, head.y-HEAD_R+5);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawGlasses(head){
+    ctx.save();
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(head.x-6, head.y-2, 5, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(head.x+6, head.y-2, 5, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(head.x-1, head.y-2); ctx.lineTo(head.x+1, head.y-2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHat(head, color){
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.ellipse(head.x, head.y-HEAD_R+3, HEAD_R+5, 5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.rect(head.x-HEAD_R*0.55, head.y-HEAD_R-13, HEAD_R*1.1, 14); ctx.fill();
     ctx.restore();
   }
 
@@ -674,8 +834,8 @@
       background: 'white',
       customBgImage: null,
       enableB: true,
-      charA: { name: 'Alex', color: '#1d4ed8', gender: 'male' },
-      charB: { name: 'Sam', color: '#db2777', gender: 'female' },
+      charA: { name: 'Alex', outfit: '#1d4ed8', gender: 'male', skin: '#ffe0bd', hairStyle: 'short', hairColor: '#2b1b12', eyeStyle: 'dot', accessory: 'none' },
+      charB: { name: 'Sam', outfit: '#db2777', gender: 'female', skin: '#ffe0bd', hairStyle: 'long', hairColor: '#3a2317', eyeStyle: 'dot', accessory: 'none' },
       timeline: PRESETS.talk.timeline.map(s => ({ id: uid(), duration: s.duration, actions: Object.assign({}, s.actions), dialogue: s.dialogue ? Object.assign({}, s.dialogue) : null }))
     }
   };
@@ -716,7 +876,7 @@
     });
     const handsBySlot = {};
     frame.characters.forEach(c=>{
-      const res = drawStickman(c.x, c.faceDir, c.appearance.color, c.appearance.gender, c.appearance.name, c.pose);
+      const res = drawStickman(c.x, c.faceDir, c.appearance, c.pose);
       handsBySlot[c.slot] = res;
     });
     frame.characters.forEach(c=>{
@@ -827,10 +987,77 @@
 
   document.getElementById('nameA').addEventListener('input', e=> state.scene.charA.name = e.target.value || 'A');
   document.getElementById('nameB').addEventListener('input', e=> state.scene.charB.name = e.target.value || 'B');
-  document.getElementById('colorA').addEventListener('input', e=> state.scene.charA.color = e.target.value);
-  document.getElementById('colorB').addEventListener('input', e=> state.scene.charB.color = e.target.value);
+  document.getElementById('colorA').addEventListener('input', e=> state.scene.charA.outfit = e.target.value);
+  document.getElementById('colorB').addEventListener('input', e=> state.scene.charB.outfit = e.target.value);
   document.querySelectorAll('input[name=genderA]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charA.gender = e.target.value; }));
   document.querySelectorAll('input[name=genderB]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked) state.scene.charB.gender = e.target.value; }));
+  document.getElementById('skinA').addEventListener('change', e=> state.scene.charA.skin = e.target.value);
+  document.getElementById('skinB').addEventListener('change', e=> state.scene.charB.skin = e.target.value);
+  document.getElementById('eyeStyleA').addEventListener('change', e=> state.scene.charA.eyeStyle = e.target.value);
+  document.getElementById('eyeStyleB').addEventListener('change', e=> state.scene.charB.eyeStyle = e.target.value);
+  document.getElementById('hairStyleA').addEventListener('change', e=> state.scene.charA.hairStyle = e.target.value);
+  document.getElementById('hairStyleB').addEventListener('change', e=> state.scene.charB.hairStyle = e.target.value);
+  document.getElementById('hairColorA').addEventListener('input', e=> state.scene.charA.hairColor = e.target.value);
+  document.getElementById('hairColorB').addEventListener('input', e=> state.scene.charB.hairColor = e.target.value);
+  document.getElementById('accessoryA').addEventListener('change', e=> state.scene.charA.accessory = e.target.value);
+  document.getElementById('accessoryB').addEventListener('change', e=> state.scene.charB.accessory = e.target.value);
+
+  // ---------- Character Library (saved to this browser via localStorage) ----------
+  const LIB_KEY = 'stickmanCharacterLibrary';
+  const libSelect = document.getElementById('libSelect');
+  function loadLibrary(){ try { return JSON.parse(localStorage.getItem(LIB_KEY) || '[]'); } catch(e){ return []; } }
+  function saveLibrary(list){ try { localStorage.setItem(LIB_KEY, JSON.stringify(list)); } catch(e){} }
+  function refreshLibSelect(){
+    const list = loadLibrary();
+    libSelect.innerHTML = list.length
+      ? list.map((c,i)=> '<option value="'+i+'">'+escapeHtml(c.label)+'</option>').join('')
+      : '<option value="">(none saved yet)</option>';
+  }
+  function syncCharacterFormFromState(){
+    ['A','B'].forEach(slot=>{
+      const c = slot === 'A' ? state.scene.charA : state.scene.charB;
+      document.getElementById('name'+slot).value = c.name;
+      document.getElementById('color'+slot).value = c.outfit;
+      document.getElementById('skin'+slot).value = c.skin;
+      document.getElementById('eyeStyle'+slot).value = c.eyeStyle;
+      document.getElementById('hairStyle'+slot).value = c.hairStyle;
+      document.getElementById('hairColor'+slot).value = c.hairColor;
+      document.getElementById('accessory'+slot).value = c.accessory;
+      document.querySelectorAll('input[name=gender'+slot+']').forEach(r=> r.checked = (r.value === c.gender));
+    });
+  }
+  document.getElementById('saveCharBtn').addEventListener('click', ()=>{
+    const nameInput = document.getElementById('saveCharName');
+    const label = nameInput.value.trim() || state.scene.charA.name;
+    const list = loadLibrary();
+    const appearance = Object.assign({}, state.scene.charA);
+    list.push({ label: label, appearance: appearance });
+    saveLibrary(list);
+    refreshLibSelect();
+    nameInput.value = '';
+  });
+  function applyLibTo(slot){
+    const list = loadLibrary();
+    const idx = parseInt(libSelect.value, 10);
+    if(isNaN(idx) || !list[idx]) return;
+    const appearance = Object.assign({}, list[idx].appearance);
+    const savedName = appearance.name;
+    delete appearance.name; // keep the slot's own name (Alex/Sam) unless the user renames it
+    const target = slot === 'A' ? state.scene.charA : state.scene.charB;
+    Object.assign(target, appearance);
+    syncCharacterFormFromState();
+  }
+  document.getElementById('applyToABtn').addEventListener('click', ()=> applyLibTo('A'));
+  document.getElementById('applyToBBtn').addEventListener('click', ()=> applyLibTo('B'));
+  document.getElementById('deleteLibBtn').addEventListener('click', ()=>{
+    const list = loadLibrary();
+    const idx = parseInt(libSelect.value, 10);
+    if(isNaN(idx)) return;
+    list.splice(idx,1);
+    saveLibrary(list);
+    refreshLibSelect();
+  });
+  refreshLibSelect();
 
   // ---------- Timeline / segment editor ----------
   function clipOptionsHtml(selected){
