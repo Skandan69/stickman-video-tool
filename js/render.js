@@ -103,7 +103,13 @@ function computeSkeleton(x, faceDir, appearance, pose){
   const effTorsoLean = pose.torsoLean + stoop;
   const effHeadTilt = pose.headTilt + stoop*0.5;
 
-  const hip = { x: x, y: GROUND_Y - HIP_HEIGHT - pose.bounceY };
+  // "lying" poses (e.g. sleep) drop the hip anchor down to near ground level instead of standing
+  // HIP_HEIGHT — the pose function is then responsible for setting torsoLean/headTilt/leg angles
+  // close to +-1.5rad (~90deg) so the whole body reads as one coherent horizontal line, since every
+  // joint angle here is world-relative rather than parent-relative.
+  const hip = pose.lying
+    ? { x: x, y: GROUND_Y - HEAD_R*0.6 - (pose.bounceY||0) }
+    : { x: x, y: GROUND_Y - HIP_HEIGHT - pose.bounceY };
   const shoulder = upPoint(hip, effTorsoLean, TORSO_LEN, faceDir);
   const neck = upPoint(shoulder, effHeadTilt, NECK_LEN, faceDir);
   const head = upPoint(neck, effHeadTilt, HEAD_R*0.9, faceDir);

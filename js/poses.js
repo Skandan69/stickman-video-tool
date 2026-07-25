@@ -237,17 +237,20 @@ function poseSwim(t){
     mouthOpen: 0
   };
 }
-// "Sleep" is a drowsy standing pose (head drooping, gentle sway) rather than lying flat — the
-// skeleton always anchors the hip at standing HIP_HEIGHT above the ground, so a fully horizontal
-// lying pose would appear to float; pairing this with the 'sleepy' emotion (js/emotions.js) and the
-// Zzz prop below reads clearly as sleeping without needing a lying-down anchor scheme.
+// "Sleep" lies the figure flat on the ground: computeSkeleton (render.js) special-cases
+// pose.lying to drop the hip anchor near ground level, and every angle here is set close to
+// +-1.5rad (~90deg) so torso/head/legs form one coherent horizontal line — since joint angles in
+// this engine are world-relative, not parent-relative, matching angles is what keeps segments
+// visually connected instead of bending at a sharp disconnected joint.
 function poseSleep(t){
-  const nod = Math.sin(t*1.2);
+  const breathe = Math.sin(t*1.2)*0.025;
   return {
-    torsoLean: 0.15, headTilt: 0.55 + 0.1*Math.max(0,nod), bounceY: Math.sin(t*1.5)*1.5,
-    leftShoulderAngle: 0.05, leftElbowBend: 0.1,
-    rightShoulderAngle: -0.05, rightElbowBend: 0.1,
-    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    lying: true,
+    torsoLean: 1.5 + breathe, headTilt: 1.42, bounceY: 0,
+    leftShoulderAngle: -1.2, leftElbowBend: 0.4,
+    rightShoulderAngle: -1.6, rightElbowBend: -0.3,
+    leftHipAngle: -1.48, leftKneeBend: 0.15,
+    rightHipAngle: -1.52, rightKneeBend: 0.08,
     mouthOpen: 0
   };
 }
