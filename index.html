@@ -47,6 +47,11 @@
         <option value="sofa">Sofa</option>
       </select>
     </div>
+    <div class="field">
+      <label for="foodSelect">Food (used by the Eat action)</label>
+      <!-- options are populated from the FOODS registry (js/food.js) at init -->
+      <select id="foodSelect"></select>
+    </div>
     <hr class="sep">
     <h2>Characters</h2>
     <div id="characterList"></div>
@@ -100,6 +105,7 @@
 <script src="js/emotions.js"></script>
 <script src="js/backgrounds.js"></script>
 <script src="js/costumes.js"></script>
+<script src="js/food.js"></script>
 <script src="js/render.js"></script>
 <script src="js/poses.js"></script>
 <script src="js/scene.js"></script>
