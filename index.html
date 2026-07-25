@@ -105,7 +105,12 @@
         <option value="sky">Sky / park</option>
         <option value="grid">Graph paper</option>
         <option value="cafe">Cafe (indoor)</option>
+        <option value="custom">Custom photo…</option>
       </select>
+    </div>
+    <div class="field">
+      <label for="bgImageInput">Or upload your own background</label>
+      <input type="file" id="bgImageInput" accept="image/*">
     </div>
     <div class="checkbox-field"><input type="checkbox" id="enableB" checked> <label for="enableB">Enable Character B</label></div>
 
@@ -232,6 +237,15 @@
       ctx.fillStyle = '#3a2a1a';
       ctx.beginPath(); ctx.moveTo(628,36); ctx.lineTo(672,36); ctx.lineTo(662,62); ctx.lineTo(638,62); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#c9a877'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+    } else if(bg === 'custom'){
+      if(state.scene.customBgImage){
+        ctx.drawImage(state.scene.customBgImage, 0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#f4f5f7'; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = '#9aa1ad'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Upload a background image to see it here', W/2, H/2);
+        ctx.textAlign = 'left';
+      }
     } else {
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
     }
@@ -469,6 +483,27 @@
     };
   }
 
+  // 2-bone IK: given a target point (dx,dy) offset from the shoulder in the pose's local,
+  // pre-faceDir frame (same convention as upPoint/downPoint: x=sin(angle)*len, y=cos(angle)*len),
+  // solve for shoulderAngle/elbowBend so the hand actually reaches that point (law of cosines).
+  function armReachAngles(dx, dy){
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    const maxReach = UPPER_ARM + FORE_ARM - 1;
+    const minReach = Math.abs(UPPER_ARM - FORE_ARM) + 1;
+    dist = Math.max(minReach, Math.min(maxReach, dist));
+    const targetAngle = Math.atan2(dx, dy);
+    const cosElbow = (UPPER_ARM*UPPER_ARM + FORE_ARM*FORE_ARM - dist*dist) / (2*UPPER_ARM*FORE_ARM);
+    const elbowInterior = Math.acos(Math.max(-1, Math.min(1, cosElbow)));
+    const cosShoulderOff = (UPPER_ARM*UPPER_ARM + dist*dist - FORE_ARM*FORE_ARM) / (2*UPPER_ARM*dist);
+    const shoulderOffset = Math.acos(Math.max(-1, Math.min(1, cosShoulderOff)));
+    return { shoulderAngle: targetAngle - shoulderOffset, elbowBend: (Math.PI - elbowInterior) };
+  }
+  function headPointsRelToShoulder(headTilt){
+    const neckX = Math.sin(headTilt)*NECK_LEN, neckY = -Math.cos(headTilt)*NECK_LEN;
+    const headX = neckX + Math.sin(headTilt)*(HEAD_R*0.9), headY = neckY - Math.cos(headTilt)*(HEAD_R*0.9);
+    return { x: headX, y: headY };
+  }
+
   function poseSit(t){
     return {
       torsoLean: 0.03*Math.sin(t*1.1), headTilt: 0.05*Math.sin(t*1.3),
@@ -483,17 +518,26 @@
     const cycle = t % 4;
     const liftPhase = cycle < 1.2 ? Math.sin((cycle/1.2)*Math.PI) : 0;
     const base = poseSit(t);
-    base.rightShoulderAngle = 0.3 + 1.0*liftPhase;
-    base.rightElbowBend = -0.3 - 1.6*liftPhase;
-    base.headTilt = base.headTilt + 0.08*liftPhase;
+    base.headTilt = base.headTilt + 0.06*liftPhase;
+    const head = headPointsRelToShoulder(base.headTilt);
+    const mouth = { x: head.x + 6, y: head.y + 8 }; // matches drawStickman's mouth position (head.x+faceDir*6, head.y+8)
+    const reach = armReachAngles(mouth.x, mouth.y);
+    const restShoulder = 0.4, restElbow = 0.6; // relaxed, cup resting near the lap
+    base.rightShoulderAngle = restShoulder + (reach.shoulderAngle - restShoulder) * liftPhase;
+    base.rightElbowBend = restElbow + (reach.elbowBend - restElbow) * liftPhase;
     base.mouthOpen = liftPhase > 0.6 ? 1 : 0;
     return base;
   }
   function posePhoneCall(t){
     const base = poseIdle(t);
-    base.headTilt = base.headTilt + 0.22;
-    base.rightShoulderAngle = 1.9;
-    base.rightElbowBend = -1.9 + 0.08*Math.sin(t*2);
+    base.headTilt = base.headTilt + 0.15;
+    const head = headPointsRelToShoulder(base.headTilt);
+    const ear = { x: head.x + 11, y: head.y - 2 }; // side of the head, ear height
+    const reach = armReachAngles(ear.x, ear.y);
+    base.rightShoulderAngle = reach.shoulderAngle + 0.03*Math.sin(t*2);
+    base.rightElbowBend = reach.elbowBend;
+    base.leftShoulderAngle = 0.1*Math.sin(t*1.1);
+    base.leftElbowBend = 0.2;
     base.mouthOpen = Math.sin(t*9) > 0.2 ? 1 : 0.15;
     return base;
   }
@@ -628,6 +672,7 @@
     speed: 1,
     scene: {
       background: 'white',
+      customBgImage: null,
       enableB: true,
       charA: { name: 'Alex', color: '#1d4ed8', gender: 'male' },
       charB: { name: 'Sam', color: '#db2777', gender: 'female' },
@@ -746,7 +791,23 @@
       ' (' + result.summary.actions.join(' → ') + '), ' + result.summary.totalDuration.toFixed(1) + 's total. Fine-tune in the Timeline panel.';
   });
   presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
+  const bgImageInput = document.getElementById('bgImageInput');
   bgSelect.addEventListener('change', ()=> { state.scene.background = bgSelect.value; });
+  bgImageInput.addEventListener('change', (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onload = function(){
+        state.scene.customBgImage = img;
+        state.scene.background = 'custom';
+        bgSelect.value = 'custom';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
   enableBCheckbox.addEventListener('change', ()=>{
     state.scene.enableB = enableBCheckbox.checked;
     if(!state.scene.enableB){
