@@ -46,7 +46,9 @@ generateBtn.addEventListener('click', ()=>{
   furnitureSelect.value = result.furniture;
   if(result.food){ state.scene.food = result.food; foodSelect.value = result.food; }
   state.scene.animals = result.animals || [];
+  state.scene.vehicles = result.vehicles || [];
   renderAnimalList();
+  renderVehicleList();
   renderCharacterList();
   renderSegmentList();
   elapsed = 0;
@@ -296,6 +298,62 @@ addAnimalBtn.addEventListener('click', ()=>{
   renderAnimalList();
 });
 
+// ---------- Vehicles panel (static scene props, same pattern as Animals) ----------
+const vehicleList = document.getElementById('vehicleList');
+const vehicleTypeSelect = document.getElementById('vehicleTypeSelect');
+const addVehicleBtn = document.getElementById('addVehicleBtn');
+// Options come from the VEHICLES registry (js/vehicles.js) — add a new vehicle there and it shows up here.
+vehicleTypeSelect.innerHTML = VEHICLE_LIST.map(v=> '<option value="'+v.id+'">'+escapeHtml(v.label)+'</option>').join('');
+
+function vehicleCardHtml(v, idx){
+  const label = (VEHICLES[v.type] && VEHICLES[v.type].label) || v.type;
+  return (
+    '<div class="segment-card">' +
+      '<div class="segment-head">' +
+        '<strong>' + escapeHtml(label) + ' ' + (idx+1) + '</strong>' +
+        '<div class="segment-actions-row">' +
+          '<button type="button" class="icon-btn danger" data-vact="remove" data-vid="'+v.id+'">&times;</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label>Size <span class="size-val" data-vsizeval="'+v.id+'">'+(v.sizeScale||1).toFixed(2)+'x</span></label><input type="range" min="0.5" max="1.8" step="0.05" data-vfield="sizeScale" data-vid="'+v.id+'" value="'+(v.sizeScale||1)+'"></div>' +
+    '</div>'
+  );
+}
+
+function findVehicle(id){ return state.scene.vehicles.find(v=> v.id === id); }
+
+function renderVehicleList(){
+  vehicleList.innerHTML = state.scene.vehicles.map((v,idx)=> vehicleCardHtml(v, idx)).join('');
+  vehicleList.querySelectorAll('[data-vfield]').forEach(el=> el.addEventListener('input', onVehicleFieldChange));
+  vehicleList.querySelectorAll('[data-vact]').forEach(btn=> btn.addEventListener('click', onVehicleAction));
+}
+
+function onVehicleFieldChange(e){
+  const id = e.target.getAttribute('data-vid');
+  const field = e.target.getAttribute('data-vfield');
+  const v = findVehicle(id);
+  if(!v) return;
+  if(field === 'sizeScale'){
+    v.sizeScale = parseFloat(e.target.value) || 1;
+    const label = vehicleList.querySelector('[data-vsizeval="'+id+'"]');
+    if(label) label.textContent = v.sizeScale.toFixed(2) + 'x';
+  }
+}
+
+function onVehicleAction(e){
+  const id = e.currentTarget.getAttribute('data-vid');
+  const act = e.currentTarget.getAttribute('data-vact');
+  if(act === 'remove'){
+    state.scene.vehicles = state.scene.vehicles.filter(v=> v.id !== id);
+    renderVehicleList();
+  }
+}
+
+addVehicleBtn.addEventListener('click', ()=>{
+  state.scene.vehicles.push({ id: uid(), type: vehicleTypeSelect.value, sizeScale: 1 });
+  renderVehicleList();
+});
+
 // ---------- Character Library (saved to this browser via localStorage) ----------
 const LIB_KEY = 'stickmanCharacterLibrary';
 const libSelect = document.getElementById('libSelect');
@@ -458,4 +516,5 @@ exportBtn.addEventListener('click', ()=>{
 // ---------- init ----------
 renderCharacterList();
 renderAnimalList();
+renderVehicleList();
 renderSegmentList();

@@ -122,6 +122,20 @@ function detectAnimals(text){
   return found;
 }
 
+// ---------- vehicles: static scene props, detected independently of the character count ----------
+const VEHICLE_KEYWORDS = [
+  { type:'car',     words:['car','drives','driving'] },
+  { type:'bicycle', words:['bicycle','bike','bikes'] },
+  { type:'bus',     words:['bus','buses'] }
+];
+function detectVehicles(text){
+  const found = [];
+  VEHICLE_KEYWORDS.forEach(entry=>{
+    if(entry.words.some(w=> text.indexOf(w) !== -1)) found.push({ id: uid(), type: entry.type, sizeScale: 1 });
+  });
+  return found;
+}
+
 function extractQuotedLines(text){
   const lines = [];
   const re = /"([^"]+)"/g;
@@ -141,6 +155,7 @@ function parsePromptToScene(rawText){
   const explicitDuration = detectDuration(rawText);
   const enableB = detectTwoCharacters(text);
   const animals = detectAnimals(text);
+  const vehicles = detectVehicles(text);
   const quoted = extractQuotedLines(rawText);
 
   const minPerSeg = 1.5;
@@ -168,6 +183,7 @@ function parsePromptToScene(rawText){
   return {
     background: bg, furniture: furniture, food: food, bodyType: bodyType, charCount: charCount, timeline: timeline,
     animals: animals,
+    vehicles: vehicles,
     summary: { actions: seq, totalDuration: Math.round(total*10)/10 }
   };
 }
@@ -181,6 +197,7 @@ const state = {
     furniture: 'chair',
     food: 'sandwich',
     animals: [],
+    vehicles: [],
     characters: [
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[0])),
       makeCharacter(Object.assign({}, DEFAULT_CHARACTER_PALETTE[1]))
@@ -214,6 +231,16 @@ function computeAnimalPositions(n){
   return positions;
 }
 
+// Vehicles get even wider spacing than animals since their sprites are bigger (car/bus width).
+function computeVehiclePositions(n){
+  if(n <= 0) return [];
+  const spacing = Math.min(170, 620 / Math.max(1, n));
+  const startX = 400 - (spacing * (n - 1)) / 2;
+  const positions = [];
+  for(let i=0;i<n;i++){ positions.push({ x: startX + spacing*i, faceDir: i % 2 === 0 ? 1 : -1 }); }
+  return positions;
+}
+
 function evaluateScene(scene, t){
   const timeline = scene.timeline.length ? scene.timeline : [makeSegment(1, {}, null)];
   const total = timeline.reduce((s,seg)=> s + Math.max(0.1, seg.duration), 0);
@@ -238,11 +265,15 @@ function evaluateScene(scene, t){
   const animalPositions = computeAnimalPositions((scene.animals || []).length);
   const animals = (scene.animals || []).map((a, i)=> ({ id: a.id, type: a.type, x: animalPositions[i].x, faceDir: animalPositions[i].faceDir, sizeScale: a.sizeScale || 1 }));
 
-  return { characters: characters, animals: animals, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
+  const vehiclePositions = computeVehiclePositions((scene.vehicles || []).length);
+  const vehicles = (scene.vehicles || []).map((v, i)=> ({ id: v.id, type: v.type, x: vehiclePositions[i].x, faceDir: vehiclePositions[i].faceDir, sizeScale: v.sizeScale || 1 }));
+
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
   drawBackground(frame.background);
+  frame.vehicles.forEach(v=> drawVehicleProp(v.x, v.faceDir, v.type, frame.localT, v.sizeScale));
   frame.animals.forEach(a=> drawAnimalProp(a.x, a.faceDir, a.type, frame.localT, a.sizeScale));
   frame.characters.forEach(c=>{
     if(SEATED_CLIPS[c.clipId]){
