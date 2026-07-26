@@ -119,7 +119,12 @@ function resolveEngineFrame(graph, t){
     applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
     const faceDir = positions[i].faceDir;
     const x = travelX(positions[i].x, spec.action, t);
-    const pose = EnginePrimitives.useClip(spec.action, t, {});
+    // action:'custom' means the description didn't match any of the ~50 named clips well — the AI
+    // instead filled in customPose's numeric joint parameters (see engine/primitives.js's
+    // evalParametricPose), which renders through the exact same pipeline as any named clip.
+    const pose = spec.action === 'custom'
+      ? EnginePrimitives.evalParametricPose(t, spec.customPose)
+      : EnginePrimitives.useClip(spec.action, t, {});
     // Must be set before computeSkeleton — it reads pose.altitude to lift the whole skeleton up off
     // GROUND_Y for flyplane/flyhelicopter (see js/render.js's computeSkeleton), same as the main tool.
     pose.altitude = computeAltitude(spec.action, t);
