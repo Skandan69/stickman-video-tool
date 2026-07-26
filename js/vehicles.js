@@ -604,11 +604,14 @@ function drawRideHelicopterPropRide(x, faceDir, t, altitude, sizeScale){
   ctx.beginPath(); ctx.moveTo(x-36*s*fd, gy+12*s); ctx.lineTo(x-36*s*fd, gy+24*s); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x+44*s*fd, gy+12*s); ctx.lineTo(x+44*s*fd, gy+24*s); ctx.stroke();
   ctx.strokeStyle = INK; ctx.lineWidth = 3;
-  // main rotor mast + spinning blades
-  ctx.beginPath(); ctx.moveTo(x, gy-32*s); ctx.lineTo(x, gy-42*s); ctx.stroke();
-  ctx.save(); ctx.translate(x, gy-42*s); ctx.rotate(spin);
+  // main rotor mast + spinning blades — must clear the seated character's head, not just the body
+  // shell: the character's hip sits at gy-44*s (HIP_HEIGHT+bounce above effective ground) and their
+  // head extends roughly another 130*s above that, so the mast/blades are placed well past that,
+  // around gy-190*s, rather than just above the fuselage the way a real (unoccupied) toy model would be.
+  ctx.beginPath(); ctx.moveTo(x, gy-30*s); ctx.lineTo(x, gy-190*s); ctx.stroke();
+  ctx.save(); ctx.translate(x, gy-190*s); ctx.rotate(spin);
   ctx.strokeStyle = 'rgba(30,30,30,0.55)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(-72*s,0); ctx.lineTo(72*s,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-76*s,0); ctx.lineTo(76*s,0); ctx.stroke();
   ctx.restore();
   ctx.restore();
 }
