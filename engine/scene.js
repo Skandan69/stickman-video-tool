@@ -40,7 +40,10 @@ function travelX(baseX, action, t){
   const speed = MOVE_SPEEDS[action];
   if(!speed) return baseX;
   const cycle = W + 220;
-  return ((t * speed) % cycle) - 110;
+  // baseX is folded in as a phase offset (not a fixed start point — movers still wrap continuously)
+  // so multiple characters sharing the same moving action (e.g. "three people riding bikes") stay
+  // spread out at their assigned slot positions instead of all collapsing onto the same x.
+  return (((t * speed) + baseX) % cycle) - 110;
 }
 function appearanceFor(spec, idx){
   const isFemale = (spec && spec.gender) === 'female';
