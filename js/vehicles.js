@@ -116,6 +116,68 @@ const VEHICLES = {
       ctx.restore();
     }
   },
+  jeep: {
+    label: 'Jeep',
+    // Open-top off-roader: boxy khaki body, a roll bar arching over the seating area (so a character
+    // drawn "in" it still reads clearly, same idea as the bicycle's open seat), chunky wheels, and a
+    // front grille — deliberately open-top rather than a full sedan cabin/roof.
+    draw: (x, faceDir, t, sizeScale)=>{
+      const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
+      const bx = x, by = gy - 20*s;
+      const wheelR = 12*s, spin = t*4;
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 3; ctx.strokeStyle = INK;
+
+      // boxy body
+      ctx.fillStyle = '#6b7a4f';
+      ctx.beginPath();
+      ctx.moveTo(bx-34*s, by+14*s);
+      ctx.lineTo(bx-34*s, by-8*s);
+      ctx.lineTo(bx-26*s, by-8*s);
+      ctx.lineTo(bx-22*s, by-2*s);
+      ctx.lineTo(bx+22*s, by-2*s);
+      ctx.lineTo(bx+30*s, by-8*s);
+      ctx.lineTo(bx+36*s, by-8*s);
+      ctx.lineTo(bx+36*s, by+14*s);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      // hood/grille at the front
+      ctx.fillStyle = '#556b2f';
+      ctx.beginPath(); ctx.rect(bx+30*s, by-6*s, 8*s, 20*s); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(bx+31*s, by-3*s+i*5*s); ctx.lineTo(bx+37*s, by-3*s+i*5*s); ctx.stroke(); }
+
+      // roll bar over the open seating area
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(bx-22*s, by-2*s); ctx.lineTo(bx-22*s, by-22*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx+18*s, by-2*s); ctx.lineTo(bx+18*s, by-22*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx-22*s, by-22*s); ctx.quadraticCurveTo(bx-2*s, by-30*s, bx+18*s, by-22*s); ctx.stroke();
+
+      // seat hint
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.rect(bx-20*s, by-4*s, 38*s, 4*s); ctx.fill();
+
+      // chunky off-road wheels
+      [-24, 22].forEach(ox=>{
+        const wx = bx+ox*s, wy = gy;
+        ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#888';
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR*0.42, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#555'; ctx.lineWidth = 1.2;
+        for(let i=0;i<5;i++){
+          const ang = spin + i*Math.PI*2/5;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR*0.4, wy+Math.sin(ang)*wheelR*0.4); ctx.stroke();
+        }
+      });
+
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath(); ctx.arc(bx+faceDir*35*s, by+2*s, 3*s, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  },
   bus: {
     label: 'Bus',
     draw: (x, faceDir, t, sizeScale)=>{
