@@ -2,8 +2,12 @@
 // background/weather default to null, meaning "inherit the scene-wide setting" — set them to a real
 // id to override just this segment (e.g. so a multi-segment "driving" sequence can cut from a summer
 // street to a snowy highway to sell a long journey without any literal point-to-point movement).
-function makeSegment(duration, actions, dialogue, background, weather, directions, povCamera){
-  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null, directions: directions || {}, povCamera: !!povCamera };
+// dragTargets: { charId: { x } } — set by dragging a character/rider on the canvas (js/ui.js) to pin
+// where they should END UP by the end of THIS segment. When present for a character, it overrides the
+// normal direction/speed-based movement entirely for that character this segment: they linearly slide
+// from wherever the previous segment left them to dragTargets[charId].x over the segment's duration.
+function makeSegment(duration, actions, dialogue, background, weather, directions, povCamera, dragTargets){
+  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null, directions: directions || {}, povCamera: !!povCamera, dragTargets: dragTargets || {} };
 }
 // Resolves a character's effective facing/movement direction for a segment: an explicit per-segment
 // override ('left'/'right') if the user set one, else the character's normal layout-assigned faceDir
@@ -78,7 +82,8 @@ function resolveIndexedTimeline(indexedSegments, charCount){
     background: s.background || null,
     weather: s.weather || null,
     directions: {},
-    povCamera: !!s.povCamera
+    povCamera: !!s.povCamera,
+    dragTargets: {}
   }));
 }
 
@@ -419,7 +424,13 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
     const startX = runningX.slice();
     scene.characters.forEach((c,i)=>{
       const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
-      if(isMoveClip(clipId)){
+      // A dragged end position (js/ui.js: drag a character on the canvas to pin where they land by the
+      // end of this segment) takes priority over everything else, including for non-movement clips like
+      // idle/talk — it's a direct position override, not just another kind of "movement".
+      const dragTarget = seg.dragTargets && seg.dragTargets[c.id];
+      if(dragTarget){
+        runningX[i] = clamp(dragTarget.x, 60, W-60);
+      } else if(isMoveClip(clipId)){
         // A flying character in a climb/descend segment (direction 'up'/'down') travels vertically
         // instead of horizontally this segment — see computeSegmentStartAltitudes for the altitude side.
         const vdir = isFlyClip(clipId) ? resolveVerticalDir(seg, c.id) : 0;
@@ -484,8 +495,17 @@ function evaluateScene(scene, t){
     // y-axis instead — see computeSegmentStartAltitudes. Otherwise altitude just holds whatever was
     // reached previously (so cruising horizontally at height, or idling mid-air, keeps that height).
     const vdir = isFlyClip(clipId) ? resolveVerticalDir(active, appearance.id) : 0;
+    // A dragged end position (js/ui.js) wins over both the direction-based movement and the fly
+    // climb/descend logic below — the character eases from wherever they started this segment straight
+    // toward the dragged point, linearly over the segment's duration, however long that takes.
+    const dragTarget = active.dragTargets && active.dragTargets[appearance.id];
     let x, altitude;
-    if(vdir !== 0){
+    if(dragTarget){
+      const dragFrac = Math.min(1, localT / Math.max(0.1, active.duration));
+      const targetX = clamp(dragTarget.x, 60, W-60);
+      x = activeStartX[i] + (targetX - activeStartX[i]) * dragFrac;
+      altitude = activeStartAlt[i];
+    } else if(vdir !== 0){
       x = clamp(activeStartX[i], 60, W-60);
       altitude = clamp(activeStartAlt[i] + VERTICAL_SPEEDS[clipId]*localT*vdir, 0, MAX_ALTITUDE);
     } else {
@@ -511,7 +531,7 @@ function evaluateScene(scene, t){
   const povChar = active.povCamera ? characters.find(c=> RIDE_VEHICLES[c.clipId] && RIDE_VEHICLES[c.clipId].kind !== 'fly') : null;
   const povDriver = povChar ? { speed: MOVE_SPEEDS[povChar.clipId] || 0, faceDir: povChar.faceDir, clipId: povChar.clipId } : null;
 
-  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total, povDriver: povDriver };
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total, povDriver: povDriver, activeSegmentId: active.id };
 }
 
 function renderFrame(frame){

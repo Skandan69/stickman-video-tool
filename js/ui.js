@@ -1,10 +1,16 @@
 // ---------- main render loop ----------
 let elapsed = 0, lastNow = performance.now();
+// Cache of the most recently evaluated frame — used outside the render loop for canvas hit-testing
+// (drag-to-reposition below) so we know exactly where each character was actually drawn this frame,
+// rather than recomputing scene evaluation separately and risking it drifting out of sync.
+let lastFrame = null;
 function loop(now){
   const dt = (now - lastNow)/1000;
   lastNow = now;
   if(state.playing) elapsed += dt*state.speed;
-  renderFrame(evaluateScene(state.scene, elapsed));
+  lastFrame = evaluateScene(state.scene, elapsed);
+  renderFrame(lastFrame);
+  if(canvasDrag) drawCanvasDragGhost();
   updateTimelineStripPlayhead();
   requestAnimationFrame(loop);
 }
@@ -14,7 +20,7 @@ requestAnimationFrame(loop);
 // changing a dropdown (Art Style, Background, Weather, Furniture, Food) or uploading a custom rig part
 // could otherwise sit invisibly in state until the next natural animation frame. Every listener that
 // mutates state.scene outside of normal playback should call this right after.
-function forceRedraw(){ renderFrame(evaluateScene(state.scene, elapsed)); }
+function forceRedraw(){ lastFrame = evaluateScene(state.scene, elapsed); renderFrame(lastFrame); if(canvasDrag) drawCanvasDragGhost(); }
 
 // ---------- Scene panel wiring ----------
 const promptInput = document.getElementById('promptInput');
@@ -548,12 +554,20 @@ function renderSegmentList(){
         ? '<option value="up"'+(dirVal==='up'?' selected':'')+'>Up &uarr; (climb)</option>' +
           '<option value="down"'+(dirVal==='down'?' selected':'')+'>Down &darr; (descend)</option>'
         : '';
+      // A dragged end-position (task #28: drag the character directly on the canvas) overrides this
+      // dropdown entirely for this character/segment — surface that as a small inline note + clear
+      // button rather than letting the dropdown silently lie about what's actually happening.
+      const dragNote = (seg.dragTargets && seg.dragTargets[c.id])
+        ? '<div class="drag-target-note">Custom position set on canvas &middot; ' +
+            '<button type="button" class="icon-btn" data-act="clearDrag" data-id="'+seg.id+'" data-char="'+c.id+'" title="Clear custom position">&times; Clear</button>' +
+          '</div>'
+        : '';
       return '<div class="field"><label>' + escapeHtml(c.name) + ' direction</label><select data-field="direction_'+c.id+'" data-id="'+seg.id+'">' +
         '<option value="auto"'+(dirVal==='auto'?' selected':'')+'>Auto</option>' +
         '<option value="right"'+(dirVal==='right'?' selected':'')+'>Right &rarr;</option>' +
         '<option value="left"'+(dirVal==='left'?' selected':'')+'>&larr; Left</option>' +
         vertOptions +
-        '</select></div>';
+        '</select>' + dragNote + '</div>';
     }).join('');
     return (
       '<div class="segment-card" draggable="true" data-seg-id="'+seg.id+'">' +
@@ -703,6 +717,93 @@ function updateTimelineStripPlayhead(){
 
 function findSegment(id){ return state.scene.timeline.find(s=> s.id === id); }
 
+// ---------- Canvas drag-to-reposition (task #28): click-drag a character (or whatever vehicle they're
+// riding — the vehicle prop just follows the character's x) directly on the preview to pin where they
+// should be by the END of whichever segment is currently on screen. This is the simplest of a few
+// possible "direct manipulation" designs: it slides the character from wherever this segment started
+// to the dropped point over the segment's duration (js/scene.js: seg.dragTargets), rather than
+// authoring a full multi-point path. Dragging always edits the segment that's active at drag-start
+// time, so scrub the strip/cards to the right segment first, then drag.
+let canvasDrag = null; // { charId, segId, startX, x } while a drag is in progress
+function canvasPointFromEvent(e){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+// Generous hit box (the stickman silhouette is thin) — roughly head-to-feet vertically, centered on x,
+// shifted up by however high a flying character currently is so mid-flight drags still land correctly.
+function hitTestCharacterAt(px, py){
+  if(!lastFrame || !lastFrame.characters) return null;
+  let best = null, bestDist = Infinity;
+  lastFrame.characters.forEach(c=>{
+    const altitude = (c.pose && c.pose.altitude) || 0;
+    const topY = GROUND_Y - altitude - 170, botY = GROUND_Y - altitude + 20;
+    if(px >= c.x - 45 && px <= c.x + 45 && py >= topY && py <= botY){
+      const d = Math.abs(px - c.x);
+      if(d < bestDist){ bestDist = d; best = c; }
+    }
+  });
+  return best;
+}
+// Drawn on top of the normal frame (by loop()/forceRedraw() above) while a drag is in progress: a
+// dashed line from the drag's start x to the live cursor x, plus a small handle dot at the cursor.
+function drawCanvasDragGhost(){
+  if(!canvasDrag) return;
+  ctx.save();
+  ctx.setLineDash([6,5]);
+  ctx.strokeStyle = 'rgba(37,99,235,0.85)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(canvasDrag.startX, GROUND_Y); ctx.lineTo(canvasDrag.x, GROUND_Y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(37,99,235,0.9)';
+  ctx.beginPath(); ctx.arc(canvasDrag.x, GROUND_Y, 8, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+}
+canvas.addEventListener('mousedown', (e)=>{
+  if(!lastFrame) return;
+  const pt = canvasPointFromEvent(e);
+  const hit = hitTestCharacterAt(pt.x, pt.y);
+  if(!hit) return;
+  const seg = findSegment(lastFrame.activeSegmentId);
+  if(!seg) return;
+  const wasPlaying = state.playing;
+  state.playing = false;
+  if(playPauseBtn) playPauseBtn.textContent = 'Play';
+  canvasDrag = { charId: hit.id, segId: seg.id, startX: hit.x, x: hit.x };
+  canvas.style.cursor = 'grabbing';
+  forceRedraw();
+  function onMove(ev){
+    const p = canvasPointFromEvent(ev);
+    canvasDrag.x = clamp(p.x, 60, W-60);
+    forceRedraw();
+  }
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    const targetSeg = findSegment(canvasDrag.segId);
+    if(targetSeg){
+      if(!targetSeg.dragTargets) targetSeg.dragTargets = {};
+      targetSeg.dragTargets[canvasDrag.charId] = { x: canvasDrag.x };
+      // Drag replaces the direction dropdown for this character/segment — clearing it avoids the
+      // dropdown showing a stale "Right"/"Left" that no longer reflects what's actually happening.
+      if(targetSeg.directions) delete targetSeg.directions[canvasDrag.charId];
+    }
+    canvasDrag = null;
+    canvas.style.cursor = '';
+    state.playing = wasPlaying;
+    if(playPauseBtn) playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
+    renderSegmentList();
+    forceRedraw();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+canvas.addEventListener('mousemove', (e)=>{
+  if(canvasDrag) return; // an active drag is driven by the document-level listener installed above
+  const pt = canvasPointFromEvent(e);
+  canvas.style.cursor = hitTestCharacterAt(pt.x, pt.y) ? 'grab' : '';
+});
+
 function onSegmentAction(e){
   const id = e.currentTarget.getAttribute('data-id');
   const act = e.currentTarget.getAttribute('data-act');
@@ -716,8 +817,12 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets) };
     state.scene.timeline.splice(idx+1, 0, copy);
+  } else if(act === 'clearDrag'){
+    const charId = e.currentTarget.getAttribute('data-char');
+    const seg = state.scene.timeline[idx];
+    if(seg.dragTargets) delete seg.dragTargets[charId];
   }
   renderSegmentList();
   forceRedraw();
@@ -742,6 +847,13 @@ function onSegmentFieldChange(e){
     const charId = field.slice('direction_'.length);
     if(!seg.directions) seg.directions = {};
     seg.directions[charId] = e.target.value;
+    // Direction and a dragged custom position (task #28) are mutually exclusive controls for the same
+    // character/segment — picking a direction here means "go back to the normal auto-movement", so any
+    // dragged end-position is cleared rather than silently overriding what the dropdown now shows.
+    if(seg.dragTargets && seg.dragTargets[charId]){
+      delete seg.dragTargets[charId];
+      renderSegmentList();
+    }
   } else if(field === 'povCamera'){
     seg.povCamera = e.target.checked;
   } else if(field === 'hasDialogue'){
