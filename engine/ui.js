@@ -108,12 +108,16 @@ function engineInit(){
           data.vehicleOverride = detectJeepOverride(text);
           currentEngineScene = data;
           if(statusEl){
+            // action:'custom' means no named clip fit — the AI generated pose parameters instead
+            // (engine/primitives.js's evalParametricPose), so label it as such rather than showing
+            // the literal word "custom" with no context.
+            const describeAction = a => a === 'custom' ? 'custom AI-generated pose' : a;
             const n = data.characterCount || 1;
             let desc;
-            if(n === 1){ desc = data.character1.action; }
-            else if(n === 2){ desc = data.character1.action + ' + ' + data.character2.action + (data.interaction === 'hugFromBehind' ? ' (hugging from behind)' : ''); }
+            if(n === 1){ desc = describeAction(data.character1.action); }
+            else if(n === 2){ desc = describeAction(data.character1.action) + ' + ' + describeAction(data.character2.action) + (data.interaction === 'hugFromBehind' ? ' (hugging from behind)' : ''); }
             else {
-              const actions = ENGINE_CHAR_KEYS_UI.slice(0, n).map(k => data[k] && data[k].action).filter(Boolean);
+              const actions = ENGINE_CHAR_KEYS_UI.slice(0, n).map(k => data[k] && data[k].action).filter(Boolean).map(describeAction);
               desc = n + ' characters (' + actions.join(', ') + ')';
             }
             statusEl.textContent = '✨ AI built: ' + desc + ', background=' + data.background + (data.vehicleOverride ? ', vehicle skin=jeep' : '') + '.';
