@@ -22,11 +22,24 @@ var JEEP_ELIGIBLE_ACTIONS = { ridebike: true, drivecar: true };
 // Same idea as js/scene.js's MOVE_SPEEDS table (px/sec) — kept as an independent copy per the engine's
 // "stays fully separate from the existing tool" design, not because the concept differs.
 var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190, swim: 55 };
-// Group scenes: up to 5 stickmen. hugFromBehind (the one cross-character IK interaction) still only
-// makes sense between exactly 2 — with 3+ everyone resolves independently, same as pass 1 always did.
-var MAX_ENGINE_CHARACTERS = 5;
-var ENGINE_NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
-var ENGINE_CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5'];
+// Group scenes: up to 12 stickmen (small squads — a tennis doubles match, a cricket XI, a football
+// drill — not full 11v11/22-player matches, which would shrink figures past the point of reading as
+// anything but dots; see engine.html's copy for that explicit scope note). hugFromBehind (the one
+// cross-character IK interaction) still only makes sense between exactly 2 — with 3+ everyone
+// resolves independently, same as pass 1 always did.
+var MAX_ENGINE_CHARACTERS = 12;
+var ENGINE_NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Jordan', 'Avery', 'Quinn', 'Drew', 'Reese'];
+var ENGINE_CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5', 'character6', 'character7', 'character8', 'character9', 'character10', 'character11', 'character12'];
+
+// Auto-shrinks the whole figure as the group grows so a 10-12 person scene still fits the 800px stage
+// without everyone overlapping — same sizeScale field applyBodyScale already reads for every other
+// scene, just driven by character count here instead of a manual per-character setting.
+function scaleForCount(n){
+  if(n <= 3) return 1;
+  if(n <= 6) return 0.85;
+  if(n <= 9) return 0.72;
+  return 0.6;
+}
 
 function computeEnginePositions(n){
   if(n <= 1) return [{ x: 400, faceDir: 1 }];
@@ -45,14 +58,14 @@ function travelX(baseX, action, t){
   // spread out at their assigned slot positions instead of all collapsing onto the same x.
   return (((t * speed) + baseX) % cycle) - 110;
 }
-function appearanceFor(spec, idx){
+function appearanceFor(spec, idx, charCount){
   const isFemale = (spec && spec.gender) === 'female';
   const defaultName = ENGINE_NAME_POOL[idx] || ('Person' + (idx + 1));
   return {
     name: (spec && spec.name) || defaultName, gender: isFemale ? 'female' : 'male',
     outfit: isFemale ? '#db2777' : '#1d4ed8', skin: '#ffe0bd',
     hairStyle: isFemale ? 'long' : 'short', hairColor: isFemale ? '#3b2415' : '#2b1b12',
-    eyeStyle: isFemale ? 'happy' : 'dot', emotion: 'happy'
+    eyeStyle: isFemale ? 'happy' : 'dot', emotion: 'happy', sizeScale: scaleForCount(charCount || 1)
   };
 }
 
@@ -83,7 +96,7 @@ function resolveEngineFrame(graph, t){
   // 2 with no interaction) — each fully self-contained, same as any existing pose in the main tool. ---
   specs.forEach((spec, i)=>{
     if(i === dependentIdx) { resolved.push(null); return; }
-    const appearance = appearanceFor(spec, i);
+    const appearance = appearanceFor(spec, i, charCount);
     applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
     const faceDir = positions[i].faceDir;
     const x = travelX(positions[i].x, spec.action, t);
@@ -96,7 +109,7 @@ function resolveEngineFrame(graph, t){
   if(dependentIdx >= 0){
     const target = resolved[1 - dependentIdx];
     const spec = specs[dependentIdx];
-    const appearance = appearanceFor(spec, dependentIdx);
+    const appearance = appearanceFor(spec, dependentIdx, charCount);
     applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
     const faceDir = target.faceDir;
     const x = target.x - 22 * faceDir;
