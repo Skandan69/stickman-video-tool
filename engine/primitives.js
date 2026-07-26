@@ -58,3 +58,41 @@ EnginePrimitives.wrapAroundTorso = function(t, seed, selfShoulderWorld, faceDir,
   const arms = EnginePrimitives.reachBothHandsTo(selfShoulderWorld, faceDir, leftTarget, rightTarget);
   return Object.assign({}, base, arms);
 };
+
+// ---------- AI-generated parametric pose fallback ----------
+// Every hand-written pose in js/poses.js already boils down to the same shape: baseline + amplitude *
+// sin(frequency*t + phase) per joint (see poseWalk/poseRun/poseSwim/poseIdle etc — they're almost all
+// literally this, sometimes with a Math.max(0, ...) clamp for one-directional motion). That means an AI
+// can describe a genuinely new action — one that doesn't match any of the ~50 named clips — just by
+// filling in those four numbers per joint, WITHOUT generating or eval'ing any actual code. This is what
+// makes it safe to expose to an LLM: the "formula" is fixed and hardcoded right here, the AI only ever
+// supplies plain numbers, and every number is clamped to a safe range below regardless of what comes
+// back, so a custom pose can never produce NaN/runaway values or execute anything.
+var PARAM_POSE_JOINTS = [
+  'torsoLean', 'headTilt', 'leftShoulderAngle', 'leftElbowBend', 'rightShoulderAngle', 'rightElbowBend',
+  'leftHipAngle', 'leftKneeBend', 'rightHipAngle', 'rightKneeBend'
+];
+function clampParam(v, lo, hi, fallback){
+  const n = (typeof v === 'number' && isFinite(v)) ? v : fallback;
+  return Math.max(lo, Math.min(hi, n));
+}
+EnginePrimitives.evalParametricPose = function(t, desc){
+  const d = desc || {};
+  const joints = d.joints || {};
+  const pose = {};
+  PARAM_POSE_JOINTS.forEach(name=>{
+    const cfg = joints[name] || {};
+    const baseline = clampParam(cfg.baseline, -3.2, 3.2, 0);
+    const amplitude = clampParam(cfg.amplitude, 0, 3.2, 0);
+    const frequency = clampParam(cfg.frequency, 0, 12, 1);
+    const phase = clampParam(cfg.phase, -7, 7, 0);
+    pose[name] = baseline + amplitude * Math.sin(frequency * t + phase);
+  });
+  const bounceCfg = d.bounce || {};
+  const bounceAmp = clampParam(bounceCfg.amplitude, 0, 30, 0);
+  const bounceFreq = clampParam(bounceCfg.frequency, 0, 12, 1);
+  pose.bounceY = bounceAmp * Math.sin(bounceFreq * t);
+  pose.mouthOpen = clampParam(d.mouthOpen, 0, 1, 0);
+  if(d.lying) pose.lying = true;
+  return pose;
+};
