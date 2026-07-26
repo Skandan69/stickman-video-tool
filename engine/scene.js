@@ -21,7 +21,7 @@ var RIDE_ART_FOR_ACTION = { ridebike: 'bicycle', ridemotorcycle: 'motorcycle', d
 var JEEP_ELIGIBLE_ACTIONS = { ridebike: true, drivecar: true };
 // Same idea as js/scene.js's MOVE_SPEEDS table (px/sec) — kept as an independent copy per the engine's
 // "stays fully separate from the existing tool" design, not because the concept differs.
-var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190 };
+var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190, swim: 55 };
 // Group scenes: up to 5 stickmen. hugFromBehind (the one cross-character IK interaction) still only
 // makes sense between exactly 2 — with 3+ everyone resolves independently, same as pass 1 always did.
 var MAX_ENGINE_CHARACTERS = 5;
