@@ -410,6 +410,12 @@ function drawPerspectiveRoad(cx, horizonY, floorY, roadHalfW, offsetNorm){
 }
 function drawDriverPOV(t, speedPxPerSec, faceDir, weatherId){
   const cx = W/2, horizonY = 195, floorY = H;
+  // The sky/pillars/road/dashboard shapes below don't opaquely cover every pixel (there are small gaps
+  // near the side edges, between where the A-pillars stop and the road/dashboard start) — without an
+  // explicit clear here, whatever was drawn on a PREVIOUS frame (e.g. the normal side-view characters,
+  // rendered right up until POV mode was switched on) stays stuck in those gaps forever, since nothing
+  // ever paints over them again. Clearing the whole canvas first guarantees a clean cockpit view.
+  ctx.clearRect(0, 0, W, H);
   ctx.save();
   // sky
   ctx.fillStyle = POV_SKY[weatherId] || POV_SKY.none;
