@@ -520,3 +520,102 @@ function drawRideCarProp(x, faceDir, t, sizeScale, variant){
   });
   ctx.restore();
 }
+
+// ---------- rideable flying vehicles (plane/helicopter): open-cockpit, purpose-built for a seated
+// character the same way drawRideCarProp is for cars — poseFly reuses poseSit's leg angles, so feet
+// land at roughly hip.x + 37*faceDir, and hip.y is shifted up by `altitude` (js/render.js computeSkeleton
+// subtracts pose.altitude from GROUND_Y). Everything here is drawn from an "effective ground" of
+// GROUND_Y - altitude so the character stays seated in the cockpit at any height, and a shrinking
+// ground-shadow ellipse (fixed at the real GROUND_Y) sells the sense of climbing higher.
+function drawFlyShadow(x, altitude, sizeScale){
+  if(altitude <= 1) return;
+  const shrink = clamp(1 - altitude/MAX_ALTITUDE_HINT, 0.12, 1);
+  ctx.save();
+  ctx.globalAlpha = 0.22 * shrink;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(x, GROUND_Y + 2, 55*sizeScale*shrink, 10*sizeScale*shrink, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+const MAX_ALTITUDE_HINT = 220; // mirrors scene.js's MAX_ALTITUDE — kept local since vehicles.js loads standalone
+
+function drawRidePlaneProp(x, faceDir, t, altitude, sizeScale){
+  const s = sizeScale || 1, INK = '#111', gy = GROUND_Y - altitude, fd = faceDir || 1;
+  drawFlyShadow(x, altitude, s);
+  const propSpin = t*26;
+  ctx.save();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK;
+  // tail fin, drawn behind the cockpit
+  ctx.fillStyle = '#e5e7eb';
+  ctx.beginPath();
+  ctx.moveTo(x-68*s*fd, gy-2*s); ctx.lineTo(x-98*s*fd, gy-32*s); ctx.lineTo(x-86*s*fd, gy-32*s); ctx.lineTo(x-58*s*fd, gy-8*s);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // fuselage with an open cockpit well (character sits in the gap between the two curves) — nose out
+  // front carries the spinning propeller, matching poseFly/poseSit's forward-reaching arm geometry.
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath();
+  ctx.moveTo(x-68*s*fd, gy+6*s);
+  ctx.lineTo(x-68*s*fd, gy-12*s);
+  ctx.quadraticCurveTo(x-38*s*fd, gy-28*s, x-2*s*fd, gy-28*s);
+  ctx.lineTo(x+38*s*fd, gy-28*s);
+  ctx.quadraticCurveTo(x+80*s*fd, gy-26*s, x+90*s*fd, gy-2*s);
+  ctx.quadraticCurveTo(x+94*s*fd, gy+6*s, x+88*s*fd, gy+8*s);
+  ctx.lineTo(x-68*s*fd, gy+8*s);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // wing straight through the fuselage
+  ctx.fillStyle = '#e5e7eb';
+  ctx.beginPath(); ctx.ellipse(x-4*s*fd, gy+8*s, 88*s, 8*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // spinning propeller (blurred cross)
+  ctx.strokeStyle = 'rgba(30,30,30,0.5)'; ctx.lineWidth = 3;
+  ctx.save(); ctx.translate(x+92*s*fd, gy-2*s); ctx.rotate(propSpin);
+  ctx.beginPath(); ctx.moveTo(-26*s,0); ctx.lineTo(26*s,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-26*s); ctx.lineTo(0,26*s); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = '#374151'; ctx.beginPath(); ctx.arc(x+92*s*fd, gy-2*s, 4*s, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawRideHelicopterPropRide(x, faceDir, t, altitude, sizeScale){
+  const s = sizeScale || 1, INK = '#111', gy = GROUND_Y - altitude, fd = faceDir || 1;
+  drawFlyShadow(x, altitude, s);
+  const spin = t*22;
+  ctx.save();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK;
+  // tail boom + rotor
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(x-38*s*fd, gy-6*s); ctx.lineTo(x-98*s*fd, gy-18*s); ctx.lineTo(x-98*s*fd, gy-10*s); ctx.lineTo(x-38*s*fd, gy+4*s);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(30,30,30,0.5)';
+  ctx.save(); ctx.translate(x-98*s*fd, gy-14*s); ctx.rotate(spin*1.3);
+  ctx.beginPath(); ctx.moveTo(0,-12*s); ctx.lineTo(0,12*s); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = INK;
+  // open-cockpit body — wide ellipse the character visibly sits inside of
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.ellipse(x+4*s*fd, gy-4*s, 66*s, 28*s, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // bubble windshield hint
+  ctx.fillStyle = 'rgba(191,227,255,0.55)';
+  ctx.beginPath(); ctx.ellipse(x+52*s*fd, gy-2*s, 18*s, 16*s, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // skids
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(x-44*s*fd, gy+24*s); ctx.lineTo(x+52*s*fd, gy+24*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-36*s*fd, gy+12*s); ctx.lineTo(x-36*s*fd, gy+24*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+44*s*fd, gy+12*s); ctx.lineTo(x+44*s*fd, gy+24*s); ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  // main rotor mast + spinning blades
+  ctx.beginPath(); ctx.moveTo(x, gy-32*s); ctx.lineTo(x, gy-42*s); ctx.stroke();
+  ctx.save(); ctx.translate(x, gy-42*s); ctx.rotate(spin);
+  ctx.strokeStyle = 'rgba(30,30,30,0.55)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-72*s,0); ctx.lineTo(72*s,0); ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+}
+
+// Dispatcher used by renderFrame (js/scene.js) — picks plane vs helicopter art for the RIDE_VEHICLES
+// 'fly' kind, mirroring how drawRideCarProp is dispatched for the 'car' kind.
+function drawRideFlyProp(x, faceDir, t, type, altitude){
+  if(type === 'helicopter') drawRideHelicopterPropRide(x, faceDir, t, altitude, 1);
+  else drawRidePlaneProp(x, faceDir, t, altitude, 1);
+}

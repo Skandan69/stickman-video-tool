@@ -541,10 +541,18 @@ function renderSegmentList(){
     // this segment — this is what lets the same "walk"/"drivecar" action go either direction on screen.
     const directionFieldsHtml = state.scene.characters.map(c=>{
       const dirVal = (seg.directions && seg.directions[c.id]) || 'auto';
+      const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
+      // Up/Down only apply to flying clips (flyplane/flyhelicopter) — climb/descend instead of
+      // left/right travel. Shown only when relevant so the control doesn't confuse ground clips.
+      const vertOptions = isFlyClip(clipId)
+        ? '<option value="up"'+(dirVal==='up'?' selected':'')+'>Up &uarr; (climb)</option>' +
+          '<option value="down"'+(dirVal==='down'?' selected':'')+'>Down &darr; (descend)</option>'
+        : '';
       return '<div class="field"><label>' + escapeHtml(c.name) + ' direction</label><select data-field="direction_'+c.id+'" data-id="'+seg.id+'">' +
         '<option value="auto"'+(dirVal==='auto'?' selected':'')+'>Auto</option>' +
         '<option value="right"'+(dirVal==='right'?' selected':'')+'>Right &rarr;</option>' +
         '<option value="left"'+(dirVal==='left'?' selected':'')+'>&larr; Left</option>' +
+        vertOptions +
         '</select></div>';
     }).join('');
     return (
@@ -727,6 +735,9 @@ function onSegmentFieldChange(e){
     const charId = field.slice('action_'.length);
     if(!seg.actions) seg.actions = {};
     seg.actions[charId] = e.target.value;
+    // Re-render so the direction select's Up/Down (climb/descend) options show up immediately when
+    // switching a character into flyplane/flyhelicopter, and disappear when switching back out.
+    renderSegmentList();
   } else if(field.indexOf('direction_') === 0){
     const charId = field.slice('direction_'.length);
     if(!seg.directions) seg.directions = {};

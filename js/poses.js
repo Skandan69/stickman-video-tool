@@ -559,6 +559,20 @@ function poseRide(t){
     mouthOpen: 0
   };
 }
+// Pilot pose for flyplane/flyhelicopter — reuses poseRide's proven seated leg geometry (feet land at
+// the same hip-relative offset the vehicle art expects) but narrows the arm grip inward to read as
+// gripping a center control stick/collective rather than a wide steering wheel.
+function poseFly(t){
+  const w = t*3;
+  return {
+    torsoLean: 0.03*Math.sin(w*0.5), headTilt: 0.03*Math.sin(w*0.6),
+    bounceY: -22 + Math.sin(w)*1.1,
+    leftShoulderAngle: 0.55, leftElbowBend: -0.35,
+    rightShoulderAngle: 0.55, rightElbowBend: -0.35,
+    leftHipAngle: 1.3, leftKneeBend: -1.3, rightHipAngle: 1.3, rightKneeBend: -1.3,
+    mouthOpen: 0
+  };
+}
 function poseCamera(t){
   return {
     torsoLean: 0.05, headTilt: 0, bounceY: Math.sin(t*2)*0.5,
@@ -617,7 +631,9 @@ const CLIPS = {
   drivesportscar: { label:'Drive a Sports Car', pose:(t)=>poseRide(t) },
   drivelimo: { label:'Drive a Limo', pose:(t)=>poseRide(t) },
   ridebike: { label:'Ride a Bicycle', pose:(t)=>poseRide(t) },
-  ridemotorcycle: { label:'Ride a Motorcycle', pose:(t)=>poseRide(t) }
+  ridemotorcycle: { label:'Ride a Motorcycle', pose:(t)=>poseRide(t) },
+  flyplane: { label:'Fly a Plane', pose:(t)=>poseFly(t) },
+  flyhelicopter: { label:'Pilot a Helicopter', pose:(t)=>poseFly(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -635,7 +651,8 @@ const CLIP_LIST = [
   {id:'guitar', label:'Play Guitar'}, {id:'umbrella', label:'Hold Umbrella'}, {id:'skateboard', label:'Skateboard'},
   {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'},
   {id:'drivecar', label:'Drive a Car'}, {id:'drivesportscar', label:'Drive a Sports Car'}, {id:'drivelimo', label:'Drive a Limo'},
-  {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'}
+  {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'},
+  {id:'flyplane', label:'Fly a Plane'}, {id:'flyhelicopter', label:'Pilot a Helicopter'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —

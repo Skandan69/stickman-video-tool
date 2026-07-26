@@ -128,8 +128,8 @@ function computeSkeleton(x, faceDir, appearance, pose){
   // close to +-1.5rad (~90deg) so the whole body reads as one coherent horizontal line, since every
   // joint angle here is world-relative rather than parent-relative.
   const hip = pose.lying
-    ? { x: x, y: GROUND_Y - HEAD_R*0.6 - (pose.bounceY||0) }
-    : { x: x, y: GROUND_Y - HIP_HEIGHT - pose.bounceY };
+    ? { x: x, y: GROUND_Y - HEAD_R*0.6 - (pose.bounceY||0) - (pose.altitude||0) }
+    : { x: x, y: GROUND_Y - HIP_HEIGHT - pose.bounceY - (pose.altitude||0) };
   const shoulder = upPoint(hip, effTorsoLean, TORSO_LEN, faceDir);
   const neck = upPoint(shoulder, effHeadTilt, NECK_LEN, faceDir);
   const head = upPoint(neck, effHeadTilt, HEAD_R*0.9, faceDir);

@@ -18,8 +18,19 @@ function resolveFaceDir(seg, charId, homeFaceDir){
 // move too (a limo is heavier/slower than a sports car; a bike is slower than a motorcycle) — for a
 // really long journey, pair a move segment with a per-segment background/weather override (task #14)
 // to cut to a new backdrop rather than relying on one segment to cross the whole stage.
-const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, drivesportscar: 230, drivelimo: 150, ridebike: 90, ridemotorcycle: 190 };
+const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, drivesportscar: 230, drivelimo: 150, ridebike: 90, ridemotorcycle: 190, flyplane: 200, flyhelicopter: 140 };
 function isMoveClip(clipId){ return Object.prototype.hasOwnProperty.call(MOVE_SPEEDS, clipId); }
+// flyplane/flyhelicopter additionally support vertical travel: px/sec climb-or-descend rate, used only
+// when the segment's direction override for that character is 'up' or 'down' (see resolveVerticalDir).
+// When vertical movement is active for a segment, horizontal movement pauses for that segment (a plane
+// climbing straight up doesn't also cruise forward) — see computeSegmentStartPositions/evaluateScene.
+const VERTICAL_SPEEDS = { flyplane: 90, flyhelicopter: 110 };
+const MAX_ALTITUDE = 220;
+function isFlyClip(clipId){ return Object.prototype.hasOwnProperty.call(VERTICAL_SPEEDS, clipId); }
+function resolveVerticalDir(seg, charId){
+  const override = seg && seg.directions && seg.directions[charId];
+  return override === 'up' ? 1 : override === 'down' ? -1 : 0;
+}
 // Ride/drive clips pair the seated "steering" pose (poseRide) with a vehicle prop drawn right behind
 // the character. 'car'-kind rides use drawRideCarProp (js/vehicles.js) — purpose-built, larger, and
 // with a footwell/wheel layout matched to poseRide's actual leg geometry so feet never overlap a
@@ -30,12 +41,14 @@ const RIDE_VEHICLES = {
   drivesportscar: { kind:'car', variant:'sports' },
   drivelimo: { kind:'car', variant:'limo' },
   ridebike: { kind:'generic', type:'bicycle', scale:1.5 },
-  ridemotorcycle: { kind:'generic', type:'motorcycle', scale:1.7 }
+  ridemotorcycle: { kind:'generic', type:'motorcycle', scale:1.7 },
+  flyplane: { kind:'fly', type:'airplane' },
+  flyhelicopter: { kind:'fly', type:'helicopter' }
 };
 // Only used to avoid double-placing a decorative vehicle prop when the character is already riding
 // that same kind of vehicle (see parsePromptToScene below) — maps each ride clip to the VEHICLES.js
 // registry key it visually corresponds to, regardless of which draw function actually renders it.
-const RIDE_DECORATIVE_TYPE = { drivecar:'car', drivesportscar:'car', drivelimo:'car', ridebike:'bicycle', ridemotorcycle:'motorcycle' };
+const RIDE_DECORATIVE_TYPE = { drivecar:'car', drivesportscar:'car', drivelimo:'car', ridebike:'bicycle', ridemotorcycle:'motorcycle', flyplane:'airplane', flyhelicopter:'helicopter' };
 // Presets are templates: actions/speakers are keyed by CHARACTER INDEX (0,1,...), not by id,
 // since the actual character list is open-ended now. resolveIndexedTimeline() below translates
 // indices into whichever real character ids currently occupy those slots (growing the list if needed).
@@ -115,6 +128,8 @@ const ACTION_KEYWORDS = [
   { clipId:'drivecar', words:['drives a car','driving a car','drives the car','drives his car','drives her car','drives a luxury car','driving a luxury car'] },
   { clipId:'ridebike', words:['rides a bike','riding a bike','rides a bicycle','riding a bicycle','rides his bike','rides her bike','rides the bike'] },
   { clipId:'ridemotorcycle', words:['rides a motorcycle','riding a motorcycle','rides a motorbike','riding a motorbike','rides the motorcycle'] },
+  { clipId:'flyplane', words:['flies a plane','flying a plane','pilots a plane','flies the plane','flies an airplane','flying an airplane','flies a jet'] },
+  { clipId:'flyhelicopter', words:['flies a helicopter','flying a helicopter','pilots a helicopter','flies the helicopter','flies a chopper','flying a chopper'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -402,12 +417,39 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
     scene.characters.forEach((c,i)=>{
       const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
       if(isMoveClip(clipId)){
-        const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir);
-        const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
-        runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
+        // A flying character in a climb/descend segment (direction 'up'/'down') travels vertically
+        // instead of horizontally this segment — see computeSegmentStartAltitudes for the altitude side.
+        const vdir = isFlyClip(clipId) ? resolveVerticalDir(seg, c.id) : 0;
+        if(vdir === 0){
+          const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir);
+          const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
+          runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
+        }
       }
     });
     return startX;
+  });
+}
+
+// Parallels computeSegmentStartPositions but for altitude (vertical offset above ground, in px) —
+// only flyplane/flyhelicopter clips ever change it, via an explicit 'up'/'down' direction override.
+// Every other clip (including flying horizontally with direction auto/left/right) holds altitude flat,
+// so a plane can cruise at a chosen height across several segments without drifting back to the ground.
+function computeSegmentStartAltitudes(scene, timeline){
+  const running = scene.characters.map(()=> 0);
+  return timeline.map(seg=>{
+    const startAlt = running.slice();
+    scene.characters.forEach((c,i)=>{
+      const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
+      if(isFlyClip(clipId)){
+        const vdir = resolveVerticalDir(seg, c.id);
+        if(vdir !== 0){
+          const dAlt = VERTICAL_SPEEDS[clipId] * Math.max(0.1, seg.duration) * vdir;
+          running[i] = clamp(running[i] + dAlt, 0, MAX_ALTITUDE);
+        }
+      }
+    });
+    return startAlt;
   });
 }
 
@@ -425,6 +467,8 @@ function evaluateScene(scene, t){
   const positions = computePositions(scene.characters.length);
   const segStartPositions = computeSegmentStartPositions(scene, timeline, positions);
   const activeStartX = segStartPositions[activeIdx];
+  const segStartAltitudes = computeSegmentStartAltitudes(scene, timeline);
+  const activeStartAlt = segStartAltitudes[activeIdx];
 
   const characters = scene.characters.map((appearance, i)=>{
     const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
@@ -433,8 +477,20 @@ function evaluateScene(scene, t){
     const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
     pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
     const faceDir = resolveFaceDir(active, appearance.id, positions[i].faceDir);
-    const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0;
-    const x = clamp(activeStartX[i] + travelled, 60, W-60);
+    // Flying characters climbing/descending this segment (vdir!=0) hold x still and travel on the
+    // y-axis instead — see computeSegmentStartAltitudes. Otherwise altitude just holds whatever was
+    // reached previously (so cruising horizontally at height, or idling mid-air, keeps that height).
+    const vdir = isFlyClip(clipId) ? resolveVerticalDir(active, appearance.id) : 0;
+    let x, altitude;
+    if(vdir !== 0){
+      x = clamp(activeStartX[i], 60, W-60);
+      altitude = clamp(activeStartAlt[i] + VERTICAL_SPEEDS[clipId]*localT*vdir, 0, MAX_ALTITUDE);
+    } else {
+      const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0;
+      x = clamp(activeStartX[i] + travelled, 60, W-60);
+      altitude = activeStartAlt[i];
+    }
+    pose.altitude = altitude; // read by computeSkeleton (js/render.js) to lift the whole skeleton
     return { id: appearance.id, x: x, faceDir: faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
@@ -447,7 +503,9 @@ function evaluateScene(scene, t){
   // Driver POV camera (task #25): only meaningful if the segment has it toggled on AND at least one
   // character is actually in a ride/drive clip this frame — first such character found becomes "the
   // driver" whose seat we're viewing from. speed feeds the scrolling-road animation.
-  const povChar = active.povCamera ? characters.find(c=> RIDE_VEHICLES[c.clipId]) : null;
+  // Fly-kind rides are excluded from POV: the driver-POV cockpit (road/windshield/mirror) is built for
+  // ground vehicles and would look wrong with a plane/helicopter in open sky.
+  const povChar = active.povCamera ? characters.find(c=> RIDE_VEHICLES[c.clipId] && RIDE_VEHICLES[c.clipId].kind !== 'fly') : null;
   const povDriver = povChar ? { speed: MOVE_SPEEDS[povChar.clipId] || 0, faceDir: povChar.faceDir, clipId: povChar.clipId } : null;
 
   return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total, povDriver: povDriver };
@@ -473,6 +531,7 @@ function renderFrame(frame){
     const rv = RIDE_VEHICLES[c.clipId];
     if(rv){
       if(rv.kind === 'car') drawRideCarProp(c.x, c.faceDir, frame.localT, 1, rv.variant);
+      else if(rv.kind === 'fly') drawRideFlyProp(c.x, c.faceDir, frame.localT, rv.type, c.pose.altitude || 0);
       else drawVehicleProp(c.x, c.faceDir, rv.type, frame.localT, rv.scale);
     }
   });
