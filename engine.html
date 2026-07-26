@@ -22,12 +22,21 @@
   <p class="subtitle">A separate, experimental page — the main tool above is untouched. This proves out one idea: composing a pose from physical building blocks (reach, wrap-around) instead of only picking from the ~50 pre-built actions.</p>
 
   <div class="engine-note">
-    <strong>What you're looking at:</strong> a duo bike ride with one character hugging the other from
+    <strong>What you're looking at:</strong> a duo ride with one character hugging the other from
     behind — this exact pose does not exist anywhere in the main tool's action library. The rider uses
-    the real, unmodified "Ride a Bicycle" action. The hugger's arms are computed live every frame with
-    inverse kinematics, reaching toward wherever the rider's torso actually is — not a fixed pre-tuned
-    position. This is the first working proof of the two-pass composition approach; more primitives
-    (sit-on, lean-along, more wrap variations) and a text-prompt front end come next.
+    a real, unmodified ride action. The hugger's arms are computed live every frame with inverse
+    kinematics, reaching toward wherever the rider's torso actually is — not a fixed pre-tuned position.
+    Try a description below: it currently reacts to a <strong>vehicle</strong> (say "jeep" or "4x4" for
+    a jeep, anything else defaults to a bicycle) and a <strong>background</strong> (name any of the
+    main tool's backgrounds, e.g. "beach", "forest", "desert"). The hug interaction itself is still
+    fixed for now — full AI-composed scenes (any interaction, not just this one) are the next phase.
+  </div>
+
+  <div class="field" style="max-width:600px; margin:0 auto 10px;">
+    <label for="enginePromptInput">Describe the scene</label>
+    <textarea id="enginePromptInput" rows="2" placeholder="e.g. riding a jeep hugging from behind on the beach" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+    <button type="button" id="engineGenerateBtn" class="ai-btn" style="width:100%; margin-top:6px;">&#10024; Generate</button>
+    <p id="engineStatus" style="font-size:11px; color:var(--muted); margin:6px 0 0; min-height:14px; line-height:1.4;"></p>
   </div>
 
   <div class="stage-wrap" style="margin:0 auto;">
