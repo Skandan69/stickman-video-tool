@@ -24,15 +24,21 @@ function detectJeepOverride(text){
 // Local, offline fallback used ONLY if the AI call fails (not configured / rate-limited / network
 // error) — deliberately simple keyword matching, not a substitute for the AI path, just enough to keep
 // the page useful when the AI is unavailable rather than showing a dead end.
-const ENGINE_NAME_POOL_UI = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
-const ENGINE_CHAR_KEYS_UI = ['character1', 'character2', 'character3', 'character4', 'character5'];
-const NUMBER_WORDS = { two:2, three:3, four:4, five:5 };
+const ENGINE_NAME_POOL_UI = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Jordan', 'Avery', 'Quinn', 'Drew', 'Reese'];
+const ENGINE_CHAR_KEYS_UI = ['character1', 'character2', 'character3', 'character4', 'character5', 'character6', 'character7', 'character8', 'character9', 'character10', 'character11', 'character12'];
+const NUMBER_WORDS = { two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12 };
+// Small-squad sports get an explicit headcount before falling through to generic number/word
+// detection — "a cricket team" doesn't literally say "11", but should still seat a full XI rather
+// than the generic 6-person "team" fallback below.
 function detectGroupCount(lower){
-  const digitMatch = lower.match(/\b([2-5])\s*(people|person|stickmen|stickman|characters|friends|guys)\b/);
+  if(/\bcricket\b/.test(lower) && /\b(team|squad|eleven|xi)\b/.test(lower)) return 11;
+  if(/\b(football|soccer)\b/.test(lower) && /\b(team|squad)\b/.test(lower)) return 11;
+  if(/\btennis\b/.test(lower) && /\bdoubles\b/.test(lower)) return 4;
+  const digitMatch = lower.match(/\b([2-9]|1[0-2])\s*(people|person|stickmen|stickman|characters|friends|guys|players)\b/);
   if(digitMatch) return parseInt(digitMatch[1], 10);
-  const wordMatch = lower.match(/\b(two|three|four|five)\s*(people|person|stickmen|stickman|characters|friends|guys)?\b/);
+  const wordMatch = lower.match(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(people|person|stickmen|stickman|characters|friends|guys|players)?\b/);
   if(wordMatch && NUMBER_WORDS[wordMatch[1]]) return NUMBER_WORDS[wordMatch[1]];
-  if(/\b(group|crowd|team|everyone|several)\b/.test(lower)) return 4;
+  if(/\b(group|crowd|team|squad|everyone|several)\b/.test(lower)) return 6;
   return null;
 }
 function localFallbackGraph(text){
@@ -42,8 +48,11 @@ function localFallbackGraph(text){
   const bgMatch = BACKGROUND_LIST.find(b => b.id !== 'custom' && (lower.includes(b.id) || lower.includes(b.label.toLowerCase())));
   if(bgMatch) background = bgMatch.id;
   const movesLikeVehicle = /\b(jeep|bike|bicycle|cycle|motorcycle|car|drive|ride|4x4)\b/.test(lower);
+  // No dedicated "play cricket/football/tennis" pose exists yet — approximate with the closest
+  // existing action (kick/throw) rather than defaulting sports scenes to idle.
   const action1 = /\bswim/.test(lower) ? 'swim' : /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
-    /\bwave/.test(lower) ? 'wave' : (wantsHug || movesLikeVehicle) ? 'ridebike' : 'idle';
+    /\bwave/.test(lower) ? 'wave' : /\b(football|soccer)\b/.test(lower) ? 'kick' : /\b(cricket|tennis)\b/.test(lower) ? 'throw' :
+    (wantsHug || movesLikeVehicle) ? 'ridebike' : 'idle';
   const groupCount = detectGroupCount(lower);
   // hugFromBehind only makes sense between exactly 2 — a detected group size wins over "hug" wanting 2.
   const characterCount = wantsHug && !groupCount ? 2 : (groupCount || 1);
