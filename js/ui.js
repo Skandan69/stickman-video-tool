@@ -29,6 +29,46 @@ const exportBtn = document.getElementById('exportBtn');
 const previewVideo = document.getElementById('previewVideo');
 const downloadLink = document.getElementById('downloadLink');
 const segmentList = document.getElementById('segmentList');
+// Drag-and-drop segment reordering (Canva-style), layered on top of the existing up/down buttons
+// rather than replacing them — dragging is faster once there are many segments, arrows still work
+// for precise single-step moves or when a mouse drag isn't practical (touch/accessibility).
+let dragSegId = null;
+segmentList.addEventListener('dragstart', (e)=>{
+  const card = e.target.closest('.segment-card');
+  if(!card) return;
+  dragSegId = card.getAttribute('data-seg-id');
+  e.dataTransfer.effectAllowed = 'move';
+  card.classList.add('dragging');
+});
+segmentList.addEventListener('dragend', (e)=>{
+  const card = e.target.closest('.segment-card');
+  if(card) card.classList.remove('dragging');
+  dragSegId = null;
+});
+segmentList.addEventListener('dragover', (e)=>{
+  e.preventDefault();
+  const card = e.target.closest('.segment-card');
+  if(card) card.classList.add('drag-over');
+});
+segmentList.addEventListener('dragleave', (e)=>{
+  const card = e.target.closest('.segment-card');
+  if(card) card.classList.remove('drag-over');
+});
+segmentList.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  const card = e.target.closest('.segment-card');
+  segmentList.querySelectorAll('.drag-over').forEach(el=> el.classList.remove('drag-over'));
+  if(!card || !dragSegId) return;
+  const targetId = card.getAttribute('data-seg-id');
+  if(targetId === dragSegId) return;
+  const fromIdx = state.scene.timeline.findIndex(s=> s.id === dragSegId);
+  const toIdx = state.scene.timeline.findIndex(s=> s.id === targetId);
+  if(fromIdx === -1 || toIdx === -1) return;
+  const [moved] = state.scene.timeline.splice(fromIdx, 1);
+  state.scene.timeline.splice(toIdx, 0, moved);
+  renderSegmentList();
+  forceRedraw();
+});
 const timelineTotal = document.getElementById('timelineTotal');
 const addSegmentBtn = document.getElementById('addSegmentBtn');
 
@@ -479,13 +519,30 @@ function renderSegmentList(){
         '<div class="field"><label>Line</label><input type="text" data-field="dialogueText" data-id="'+seg.id+'" value="'+escapeHtml(seg.dialogue.text)+'"></div>' +
       '</div>'
     ) : '';
+    // Per-segment background/weather overrides — "(Scene default)" means inherit the global Scene
+    // panel setting; picking a real option only changes THIS segment, letting a "driving" sequence
+    // cut between segments with different backgrounds/seasons to sell a journey without literal
+    // point-to-point movement (js/scene.js: active.background||scene.background).
+    const bgOverrideOptions = '<option value="">(Scene default)</option>' + BACKGROUND_LIST.map(b=>
+      '<option value="'+b.id+'"'+(seg.background===b.id?' selected':'')+'>'+escapeHtml(b.label)+'</option>'
+    ).join('');
+    const weatherOverrideOptions = '<option value="">(Scene default)</option>' + WEATHER_LIST.map(w=>
+      '<option value="'+w.id+'"'+(seg.weather===w.id?' selected':'')+'>'+escapeHtml(w.label)+'</option>'
+    ).join('');
+    const sceneOverrideHtml =
+      '<div class="row">' +
+        '<div class="field"><label>Background (this segment)</label><select data-field="segBackground" data-id="'+seg.id+'">'+bgOverrideOptions+'</select></div>' +
+        '<div class="field"><label>Weather (this segment)</label><select data-field="segWeather" data-id="'+seg.id+'">'+weatherOverrideOptions+'</select></div>' +
+      '</div>';
     return (
-      '<div class="segment-card">' +
+      '<div class="segment-card" draggable="true" data-seg-id="'+seg.id+'">' +
         '<div class="segment-head">' +
+          '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
           '<strong>Segment ' + (idx+1) + '</strong>' +
           '<div class="segment-actions-row">' +
             '<button type="button" class="icon-btn" data-act="up" data-id="'+seg.id+'" '+(idx===0?'disabled':'')+'>&uarr;</button>' +
             '<button type="button" class="icon-btn" data-act="down" data-id="'+seg.id+'" '+(idx===state.scene.timeline.length-1?'disabled':'')+'>&darr;</button>' +
+            '<button type="button" class="icon-btn" data-act="duplicate" data-id="'+seg.id+'" title="Duplicate">&#10697;</button>' +
             '<button type="button" class="icon-btn danger" data-act="remove" data-id="'+seg.id+'" '+(state.scene.timeline.length<=1?'disabled':'')+'>&times;</button>' +
           '</div>' +
         '</div>' +
@@ -493,6 +550,7 @@ function renderSegmentList(){
           '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
           actionFieldsHtml +
         '</div>' +
+        sceneOverrideHtml +
         '<div class="checkbox-field"><input type="checkbox" data-field="hasDialogue" data-id="'+seg.id+'" '+(seg.dialogue?'checked':'')+'> <label>Dialogue in this segment</label></div>' +
         dialogueHtml +
       '</div>'
@@ -519,8 +577,13 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx-1]; state.scene.timeline[idx-1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'down' && idx < state.scene.timeline.length-1){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
+  } else if(act === 'duplicate'){
+    const seg = state.scene.timeline[idx];
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather };
+    state.scene.timeline.splice(idx+1, 0, copy);
   }
   renderSegmentList();
+  forceRedraw();
 }
 
 function onSegmentFieldChange(e){
@@ -543,7 +606,12 @@ function onSegmentFieldChange(e){
     if(seg.dialogue) seg.dialogue.speakerId = e.target.value;
   } else if(field === 'dialogueText'){
     if(seg.dialogue) seg.dialogue.text = e.target.value || ' ';
+  } else if(field === 'segBackground'){
+    seg.background = e.target.value || null;
+  } else if(field === 'segWeather'){
+    seg.weather = e.target.value || null;
   }
+  forceRedraw();
 }
 
 addSegmentBtn.addEventListener('click', ()=>{
@@ -551,6 +619,7 @@ addSegmentBtn.addEventListener('click', ()=>{
   state.scene.characters.forEach(c=> actions[c.id] = 'idle');
   state.scene.timeline.push(makeSegment(2.5, actions, null));
   renderSegmentList();
+  forceRedraw();
 });
 
 // ---------- export ----------

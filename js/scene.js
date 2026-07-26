@@ -1,7 +1,18 @@
 // ---------- scene / timeline domain model ----------
-function makeSegment(duration, actions, dialogue){
-  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null };
+// background/weather default to null, meaning "inherit the scene-wide setting" — set them to a real
+// id to override just this segment (e.g. so a multi-segment "driving" sequence can cut from a summer
+// street to a snowy highway to sell a long journey without any literal point-to-point movement).
+function makeSegment(duration, actions, dialogue, background, weather){
+  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null };
 }
+// Clips that actually translate the character's x position across the segment (as opposed to
+// animating in place). px/sec — tuned so a default ~4s segment covers a believable chunk of the
+// 800px-wide stage without a character needing several segments just to cross it.
+const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130 };
+function isMoveClip(clipId){ return Object.prototype.hasOwnProperty.call(MOVE_SPEEDS, clipId); }
+// Ride/drive clips don't move the character at all (see makeSegment comment above) — instead they pair
+// a stationary "seated, steering" pose with a vehicle prop drawn right behind the character.
+const RIDE_VEHICLES = { drivecar: 'car', ridebike: 'bicycle', ridemotorcycle: 'motorcycle' };
 // Presets are templates: actions/speakers are keyed by CHARACTER INDEX (0,1,...), not by id,
 // since the actual character list is open-ended now. resolveIndexedTimeline() below translates
 // indices into whichever real character ids currently occupy those slots (growing the list if needed).
@@ -24,7 +35,9 @@ function resolveIndexedTimeline(indexedSegments, charCount){
     id: uid(),
     duration: s.duration,
     actions: Object.fromEntries(Object.entries(s.actions||{}).map(([idx,clip])=>[ids[idx], clip])),
-    dialogue: s.dialogue ? { speakerId: ids[s.dialogue.speakerIdx], text: s.dialogue.text } : null
+    dialogue: s.dialogue ? { speakerId: ids[s.dialogue.speakerIdx], text: s.dialogue.text } : null,
+    background: s.background || null,
+    weather: s.weather || null
   }));
 }
 
@@ -72,6 +85,9 @@ const ACTION_KEYWORDS = [
   { clipId:'skateboard', words:['skateboard','skateboards','skateboarding'] },
   { clipId:'laptop', words:['laptop','types on a laptop','typing on a laptop','works on a laptop'] },
   { clipId:'camera', words:['takes a photo','takes a picture','photographs','snaps a photo'] },
+  { clipId:'drivecar', words:['drives a car','driving a car','drives the car','drives his car','drives her car'] },
+  { clipId:'ridebike', words:['rides a bike','riding a bike','rides a bicycle','riding a bicycle','rides his bike','rides her bike','rides the bike'] },
+  { clipId:'ridemotorcycle', words:['rides a motorcycle','riding a motorcycle','rides a motorbike','riding a motorbike','rides the motorcycle'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
   { clipId:'talk',  words:['talks to','talking to','chats with','chatting with','has a conversation','conversation with'] },
   { clipId:'idle',  words:['stand','wait','relax'] }
@@ -255,7 +271,10 @@ function parsePromptToScene(rawText){
   const explicitDuration = detectDuration(rawText);
   const enableB = detectTwoCharacters(text);
   const animals = detectAnimals(text);
-  const vehicles = detectVehicles(text);
+  // If a character is already driving/riding (seq includes drivecar/ridebike/ridemotorcycle), don't
+  // also spawn a redundant decorative copy of that same vehicle type floating separately in the scene.
+  const rideVehicleTypes = seq.filter(id=> RIDE_VEHICLES[id]).map(id=> RIDE_VEHICLES[id]);
+  const vehicles = detectVehicles(text).filter(v=> !rideVehicleTypes.includes(v.type));
   const quoted = extractQuotedLines(rawText);
 
   const minPerSeg = 1.5;
@@ -343,17 +362,41 @@ function computeVehiclePositions(n){
   return positions;
 }
 
+// Walks the whole timeline once (independent of playback time) to figure out each character's x
+// position at the START of every segment: movement clips (walk/run/skateboard) push them forward by
+// duration*speed in whichever direction they're already facing, every other clip leaves them in place.
+// This is what makes movement continue across consecutive walk/run segments instead of snapping back
+// to the static layout position each segment, while non-movement segments (talk, sit, etc.) just hold
+// the position they already reached.
+function computeSegmentStartPositions(scene, timeline, homePositions){
+  const runningX = scene.characters.map((c,i)=> homePositions[i].x);
+  return timeline.map(seg=>{
+    const startX = runningX.slice();
+    scene.characters.forEach((c,i)=>{
+      const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
+      if(isMoveClip(clipId)){
+        const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
+        runningX[i] = clamp(runningX[i] + dist*homePositions[i].faceDir, 60, W-60);
+      }
+    });
+    return startX;
+  });
+}
+
 function evaluateScene(scene, t){
   const timeline = scene.timeline.length ? scene.timeline : [makeSegment(1, {}, null)];
   const total = timeline.reduce((s,seg)=> s + Math.max(0.1, seg.duration), 0);
   const tt = ((t % total) + total) % total;
-  let acc = 0, active = timeline[0], localT = 0;
-  for(const seg of timeline){
+  let acc = 0, active = timeline[0], activeIdx = 0, localT = 0;
+  for(let i=0;i<timeline.length;i++){
+    const seg = timeline[i];
     const d = Math.max(0.1, seg.duration);
-    if(tt < acc + d){ active = seg; localT = tt - acc; break; }
+    if(tt < acc + d){ active = seg; activeIdx = i; localT = tt - acc; break; }
     acc += d;
   }
   const positions = computePositions(scene.characters.length);
+  const segStartPositions = computeSegmentStartPositions(scene, timeline, positions);
+  const activeStartX = segStartPositions[activeIdx];
 
   const characters = scene.characters.map((appearance, i)=>{
     const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
@@ -361,7 +404,9 @@ function evaluateScene(scene, t){
     const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // must be active before the pose is computed (arm IK reads current geometry)
     const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
     pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
-    return { id: appearance.id, x: positions[i].x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
+    const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*positions[i].faceDir : 0;
+    const x = clamp(activeStartX[i] + travelled, 60, W-60);
+    return { id: appearance.id, x: x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
   const animalPositions = computeAnimalPositions((scene.animals || []).length);
@@ -370,7 +415,7 @@ function evaluateScene(scene, t){
   const vehiclePositions = computeVehiclePositions((scene.vehicles || []).length);
   const vehicles = (scene.vehicles || []).map((v, i)=> ({ id: v.id, type: v.type, x: vehiclePositions[i].x, faceDir: vehiclePositions[i].faceDir, sizeScale: v.sizeScale || 1 }));
 
-  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: scene.background, weather: scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
 }
 
 function renderFrame(frame){
@@ -382,6 +427,7 @@ function renderFrame(frame){
     if(SEATED_CLIPS[c.clipId]){
       if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
     }
+    if(RIDE_VEHICLES[c.clipId]) drawVehicleProp(c.x, c.faceDir, RIDE_VEHICLES[c.clipId], frame.localT, 1.15);
   });
   const activeStyle = STYLES[frame.style] || STYLES.bold;
   const handsById = {};

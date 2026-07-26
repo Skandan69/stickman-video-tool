@@ -504,6 +504,21 @@ function poseLaptop(t){
     mouthOpen: 0
   };
 }
+// Shared "seated, hands forward on a wheel/handlebar" pose for the drive/ride clips (js/scene.js pairs
+// this with a vehicle prop drawn directly behind the character, rather than any real point-to-point
+// movement — the "distance traveled" illusion comes from per-segment background/weather swaps instead,
+// so this only needs to look convincingly seated-and-steering in place, like poseSit but arms forward).
+function poseRide(t){
+  const w = t*3;
+  return {
+    torsoLean: 0.05*Math.sin(w*0.5), headTilt: 0.03*Math.sin(w*0.7),
+    bounceY: -16 + Math.sin(w)*1.3,
+    leftShoulderAngle: 0.9, leftElbowBend: -0.7,
+    rightShoulderAngle: 0.9, rightElbowBend: -0.7,
+    leftHipAngle: 1.2, leftKneeBend: -1.1, rightHipAngle: 1.2, rightKneeBend: -1.1,
+    mouthOpen: 0
+  };
+}
 function poseCamera(t){
   return {
     torsoLean: 0.05, headTilt: 0, bounceY: Math.sin(t*2)*0.5,
@@ -557,7 +572,10 @@ const CLIPS = {
   umbrella: { label:'Hold Umbrella', pose:(t)=>poseUmbrella(t) },
   skateboard: { label:'Skateboard', pose:(t)=>poseSkateboard(t) },
   laptop: { label:'Type on Laptop', pose:(t)=>poseLaptop(t) },
-  camera: { label:'Take Photo', pose:(t)=>poseCamera(t) }
+  camera: { label:'Take Photo', pose:(t)=>poseCamera(t) },
+  drivecar: { label:'Drive a Car', pose:(t)=>poseRide(t) },
+  ridebike: { label:'Ride a Bicycle', pose:(t)=>poseRide(t) },
+  ridemotorcycle: { label:'Ride a Motorcycle', pose:(t)=>poseRide(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -573,7 +591,8 @@ const CLIP_LIST = [
   {id:'cartwheel', label:'Cartwheel'}, {id:'paint', label:'Paint'}, {id:'write', label:'Write'}, {id:'fish', label:'Fish'},
   {id:'shake', label:'Shake Hands'},
   {id:'guitar', label:'Play Guitar'}, {id:'umbrella', label:'Hold Umbrella'}, {id:'skateboard', label:'Skateboard'},
-  {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'}
+  {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'},
+  {id:'drivecar', label:'Drive a Car'}, {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —

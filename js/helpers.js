@@ -21,6 +21,7 @@ function wrapText(context, text, maxWidth){
 function escapeHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 let uidCounter = 1;
 function uid(){ return 'seg' + (uidCounter++); }
 let charUidCounter = 1;
