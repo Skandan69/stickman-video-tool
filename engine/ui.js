@@ -14,20 +14,29 @@ function engineLoop(now){
   requestAnimationFrame(engineLoop);
 }
 
-// Deliberately simple keyword matching, NOT the full AI-composed decomposition planned for later
-// (see conversation: an AI that breaks a description into primitives it already knows, the same way
-// api/generate-scene.js already does for the main tool's fixed pose menu). This exists so free-text
-// input can be tried right now against the two things the engine currently understands — which
-// vehicle, and which background — instead of shipping the prompt box with nothing behind it yet.
-function interpretEnginePrompt(text){
-  const lower = text.toLowerCase();
-  const vehicleType = /\b(jeep|4x4|off.?road|truck)\b/.test(lower) ? 'jeep' : 'bicycle';
+// "jeep" isn't its own action in api/generate-engine-scene.js's schema — it's a pure visual skin on
+// top of whichever ride-type action the AI picked (see engine/scene.js's JEEP_ELIGIBLE_ACTIONS), so
+// it's detected locally from the raw text rather than asking the AI to track a separate field for it.
+function detectJeepOverride(text){
+  return /\b(jeep|4x4|off.?road)\b/i.test(text) ? 'jeep' : null;
+}
 
+// Local, offline fallback used ONLY if the AI call fails (not configured / rate-limited / network
+// error) — deliberately simple keyword matching, not a substitute for the AI path, just enough to keep
+// the page useful when the AI is unavailable rather than showing a dead end.
+function localFallbackGraph(text){
+  const lower = text.toLowerCase();
+  const wantsHug = /\bhug/.test(lower);
   let background = 'mountain';
   const bgMatch = BACKGROUND_LIST.find(b => b.id !== 'custom' && (lower.includes(b.id) || lower.includes(b.label.toLowerCase())));
   if(bgMatch) background = bgMatch.id;
-
-  return Object.assign({}, EngineScene.demo, { vehicleType: vehicleType, background: background });
+  const movesLikeVehicle = /\b(jeep|bike|bicycle|cycle|motorcycle|car|drive|ride|4x4)\b/.test(lower);
+  const action1 = /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
+    /\bwave/.test(lower) ? 'wave' : (wantsHug || movesLikeVehicle) ? 'ridebike' : 'idle';
+  const graph = { background: background, weather: 'none', characterCount: wantsHug ? 2 : 1,
+    character1: { name:'Alex', action: action1, gender:'male' }, vehicleOverride: detectJeepOverride(text) };
+  if(wantsHug){ graph.character2 = { name:'Sam', action:'idle', gender:'female' }; graph.interaction = 'hugFromBehind'; }
+  return graph;
 }
 
 function engineInit(){
@@ -50,14 +59,38 @@ function engineInit(){
     restartBtn.addEventListener('click', ()=>{ engineElapsed = 0; });
   }
   if(generateBtn && promptInput){
-    generateBtn.addEventListener('click', ()=>{
+    generateBtn.addEventListener('click', async ()=>{
       const text = promptInput.value.trim();
       if(!text){ if(statusEl) statusEl.textContent = 'Type a description first.'; return; }
-      currentEngineScene = interpretEnginePrompt(text);
-      engineElapsed = 0;
-      if(statusEl){
-        statusEl.textContent = 'Matched: vehicle = ' + currentEngineScene.vehicleType + ', background = ' + currentEngineScene.background +
-          '. (Beta: this is simple keyword matching, not AI-composed yet — only vehicle + background react to your text right now, the hug interaction itself is still fixed.)';
+      generateBtn.disabled = true;
+      const prevLabel = generateBtn.textContent;
+      generateBtn.textContent = 'Generating…';
+      if(statusEl) statusEl.textContent = 'Asking AI to plan the scene…';
+      try {
+        const res = await fetch('/api/generate-engine-scene', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt: text })
+        });
+        const data = await res.json().catch(()=> null);
+        if(!res.ok || !data || !data.character1){
+          currentEngineScene = localFallbackGraph(text);
+          if(statusEl) statusEl.textContent = ((data && data.error) || 'AI generation failed') + ' — showing a simple keyword-matched scene instead.';
+        } else {
+          data.vehicleOverride = detectJeepOverride(text);
+          currentEngineScene = data;
+          if(statusEl){
+            const desc = data.characterCount === 2
+              ? (data.character1.action + ' + ' + data.character2.action + (data.interaction === 'hugFromBehind' ? ' (hugging from behind)' : ''))
+              : data.character1.action;
+            statusEl.textContent = '✨ AI built: ' + desc + ', background=' + data.background + (data.vehicleOverride ? ', vehicle skin=jeep' : '') + '.';
+          }
+        }
+      } catch(e){
+        currentEngineScene = localFallbackGraph(text);
+        if(statusEl) statusEl.textContent = 'Network error — showing a simple keyword-matched scene instead.';
+      } finally {
+        engineElapsed = 0;
+        generateBtn.disabled = false;
+        generateBtn.textContent = prevLabel;
       }
     });
   }
