@@ -43,36 +43,56 @@ const LISTEN_GESTURE_PALETTE = [
   { shoulder: 0.15, elbow: 0.15 }, { shoulder: 0.35, elbow: -0.1 },
   { shoulder: 0.05, elbow: 0.25 }, { shoulder: 0.4, elbow: 0.0 }
 ];
-function poseIdle(t){
-  // Amplitudes raised from the original 0.09/0.05 rad — the smaller range read as an almost
-  // imperceptible twitch rather than a relaxed natural sway, which is part of what made idle/talk
-  // characters look stiff/robotic even though the easing itself was already hold-and-transition.
-  const lArm = keyframeDrift(t, 1, 1.6, 0.14), rArm = keyframeDrift(t, 2, 1.9, 0.14);
+// Real standing people never lock both knees straight and centered — weight slowly drifts from one
+// leg to the other with a small knee microbend that follows, plus a faint torso counter-lean. Perfectly
+// straight, motionless legs under an already-subtle arm sway is what reads as "action figure on a
+// stand" even once the arms move — this is very visible on a plain silhouette even at small amplitude,
+// more so than most arm tweaks. `offset` (from evaluateScene's per-character `i*Math.PI`) decorrelates
+// multiple characters sharing a scene so they don't sway in lockstep with each other.
+function weightShift(t, seed, offset){
+  const shift = keyframeDrift(t, seed + (offset||0), 3.2, 1); // -1..1, slow drift between legs
   return {
-    torsoLean: keyframeDrift(t, 3, 2.4, 0.025),
-    headTilt: keyframeDrift(t, 4, 2.1, 0.04),
-    bounceY: Math.sin(t*2)*1.4 + 0.4*Math.sin(t*0.87+0.4),
-    leftShoulderAngle: lArm, leftElbowBend: 0.15 + keyframeDrift(t, 5, 1.7, 0.08),
-    rightShoulderAngle: rArm, rightElbowBend: 0.15 + keyframeDrift(t, 6, 1.5, 0.08),
-    leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0
+    leftHipAngle: 0.07 + shift*0.06, leftKneeBend: 0.06 + Math.max(0, shift)*0.07,
+    rightHipAngle: -0.07 - shift*0.06, rightKneeBend: 0.06 + Math.max(0, -shift)*0.07,
+    torsoLean: shift*0.02
   };
 }
-function poseTalk(t, speaking){
-  const gesture = keyframeGesture(t, 7, 0.85, TALK_GESTURE_PALETTE);
+function poseIdle(t, offset){
+  const o = offset||0;
+  // Amplitudes raised significantly from the original 0.09/0.05 rad — that range read as an almost
+  // imperceptible twitch rather than a relaxed natural sway, which was the main reason idle/talk
+  // characters still looked stiff/robotic even with hold-and-ease timing already in place.
+  const lArm = keyframeDrift(t, 1+o, 1.3, 0.22), rArm = keyframeDrift(t, 2+o, 1.5, 0.22);
+  const ws = weightShift(t, 40, o);
+  return {
+    torsoLean: keyframeDrift(t, 3+o, 2.4, 0.03) + ws.torsoLean,
+    headTilt: keyframeDrift(t, 4+o, 2.1, 0.05),
+    bounceY: Math.sin(t*2)*1.4 + 0.4*Math.sin(t*0.87+0.4),
+    leftShoulderAngle: lArm, leftElbowBend: 0.15 + keyframeDrift(t, 5+o, 1.4, 0.13),
+    rightShoulderAngle: rArm, rightElbowBend: 0.15 + keyframeDrift(t, 6+o, 1.2, 0.13),
+    leftHipAngle: ws.leftHipAngle, leftKneeBend: ws.leftKneeBend,
+    rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend, mouthOpen:0
+  };
+}
+function poseTalk(t, speaking, offset){
+  const o = offset||0;
+  const gesture = keyframeGesture(t, 7+o, 0.85, TALK_GESTURE_PALETTE);
   // The listening character (Talk pose, but not the current dialogue speaker) used to get only a
   // near-zero-amplitude drift on one arm and a flat, never-moving 0.15 elbow bend on the other — next
   // to the speaker's big expressive gesture that read as a frozen mannequin standing beside a puppet.
   // Give it the same keyframe-gesture treatment, just from a subtler "at rest / listening" palette.
-  const listen = keyframeGesture(t, 14, 1.6, LISTEN_GESTURE_PALETTE);
+  const listen = keyframeGesture(t, 14+o, 1.6, LISTEN_GESTURE_PALETTE);
+  const ws = weightShift(t, 41, o);
   const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
   return {
-    torsoLean: keyframeDrift(t, 8, 2.2, 0.02),
-    headTilt: speaking ? keyframeDrift(t, 9, 0.9, 0.13) : keyframeDrift(t, 9, 2.3, 0.06),
+    torsoLean: keyframeDrift(t, 8+o, 2.2, 0.025) + ws.torsoLean,
+    headTilt: speaking ? keyframeDrift(t, 9+o, 0.9, 0.13) : keyframeDrift(t, 9+o, 2.3, 0.06),
     bounceY: Math.sin(t*2)*1.2 + 0.35*Math.sin(t*0.9+0.6),
-    leftShoulderAngle: keyframeDrift(t, 10, 1.8, 0.1), leftElbowBend: 0.15 + keyframeDrift(t, 13, 2.1, 0.06),
+    leftShoulderAngle: keyframeDrift(t, 10+o, 1.6, 0.16), leftElbowBend: 0.15 + keyframeDrift(t, 13+o, 1.7, 0.1),
     rightShoulderAngle: speaking ? gesture.shoulder : listen.shoulder,
     rightElbowBend: speaking ? gesture.elbow : listen.elbow,
-    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    leftHipAngle: ws.leftHipAngle, leftKneeBend: ws.leftKneeBend,
+    rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend,
     mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
   };
 }
@@ -166,11 +186,12 @@ function poseShake(t){
     mouthOpen: 0
   };
 }
-function poseWave(t){
+function poseWave(t, offset){
+  const ws = weightShift(t, 42, offset);
   return {
-    torsoLean: 0.02*Math.sin(t*1.3), headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
+    torsoLean: 0.02*Math.sin(t*1.3) + ws.torsoLean, headTilt: 0.05*Math.sin(t*1.3), bounceY: Math.abs(Math.sin(t*2))*1.5,
     leftShoulderAngle: 0.1*Math.sin(t*1.3), leftElbowBend: 0.15, rightShoulderAngle: 2.6+0.5*Math.sin(t*8), rightElbowBend: -0.3,
-    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    leftHipAngle: ws.leftHipAngle, leftKneeBend: ws.leftKneeBend, rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend,
     mouthOpen: 0
   };
 }
@@ -605,10 +626,10 @@ function poseCamera(t){
 }
 
 const CLIPS = {
-  idle: { label:'Idle', pose:(t)=>poseIdle(t) },
-  talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking)) },
+  idle: { label:'Idle', pose:(t,opts)=>poseIdle(t, opts&&opts.phase) },
+  talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking), opts&&opts.phase) },
   walk: { label:'Walk', pose:(t)=>poseWalk(t) },
-  wave: { label:'Wave', pose:(t)=>poseWave(t) },
+  wave: { label:'Wave', pose:(t,opts)=>poseWave(t, opts&&opts.phase) },
   dance:{ label:'Dance', pose:(t,opts)=>poseDance(t, opts&&opts.phase) },
   kite: { label:'Fly Kite', pose:(t)=>poseKite(t) },
   sit:  { label:'Sit (chair)', pose:(t)=>poseSit(t) },
