@@ -263,7 +263,7 @@ const ANIMAL_KEYWORDS = [
   { type:'owl',      words:['owl'] },
   { type:'giraffe',  words:['giraffe'] },
   { type:'zebra',    words:['zebra'] },
-  { type:"kangaroo', words:['kangaroo'] },
+  { type:'kangaroo', words:['kangaroo'] },
   { type:'panda',    words:['panda'] },
   { type:'fox',      words:['fox'] },
   { type:'wolf',     words:['wolf'] }
