@@ -320,18 +320,22 @@ function poseThrow(t){
 }
 // Swimming lies the figure flat, same "lying" trick as Sleep below (hip anchor drops near ground,
 // torso/head angles sit near +-1.5rad for a horizontal line) — the earlier version stood the figure
-// upright and just windmilled the arms, which read as dancing/waving rather than swimming. Arm/leg
-// angles now oscillate AROUND that ~1.5 horizontal baseline (not around 0) for a front-crawl stroke:
-// arms take turns reaching forward and pulling back, legs give a gentle alternating flutter kick.
+// upright and just windmilled the arms, which read as dancing/waving rather than swimming.
+// - Legs use a NEGATIVE baseline (~-1.5, opposite sign from torsoLean's ~+1.5) so they trail away
+//   from the head instead of curling forward toward it — same convention Sleep uses just below
+//   (torsoLean +1.5, hip angles -1.48/-1.52) to keep head-torso-hip-legs one continuous line.
+// - bounceY carries a large constant lift (not just a small bob) so the figure floats up into the
+//   body of "water" instead of sitting on GROUND_Y, which every background renders as solid
+//   ground/seafloor — without this the swimmer visually reads as lying on the bottom, not swimming.
 function poseSwim(t){
   const w = t*4.5;
   return {
     lying: true,
-    torsoLean: 1.52, headTilt: 1.3, bounceY: 2+Math.sin(w*2)*2,
+    torsoLean: 1.52, headTilt: 1.3, bounceY: 160 + Math.sin(w*2)*5,
     leftShoulderAngle: 1.5 + 1.3*Math.sin(w), leftElbowBend: -0.2-0.55*Math.max(0,Math.sin(w)),
     rightShoulderAngle: 1.5 + 1.3*Math.sin(w+Math.PI), rightElbowBend: -0.2-0.55*Math.max(0,Math.sin(w+Math.PI)),
-    leftHipAngle: 1.5+0.3*Math.sin(w*2.2), leftKneeBend: 0.25+0.3*Math.max(0,Math.sin(w*2.2)),
-    rightHipAngle: 1.5+0.3*Math.sin(w*2.2+Math.PI), rightKneeBend: 0.25+0.3*Math.max(0,Math.sin(w*2.2+Math.PI)),
+    leftHipAngle: -1.5+0.3*Math.sin(w*2.2), leftKneeBend: 0.25+0.3*Math.max(0,Math.sin(w*2.2)),
+    rightHipAngle: -1.5+0.3*Math.sin(w*2.2+Math.PI), rightKneeBend: 0.25+0.3*Math.max(0,Math.sin(w*2.2+Math.PI)),
     mouthOpen: 0
   };
 }
