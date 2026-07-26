@@ -45,6 +45,10 @@ button.secondary{background:#eef0f4; color:var(--text);}
 button.secondary:hover{background:#e2e4e9;}
 button.small{padding:6px 10px; font-size:12px;}
 button:disabled{opacity:.5; cursor:not-allowed;}
+/* AI-assisted generation button (js/ui.js -> POST /api/generate-scene): a distinct violet gradient so
+   it reads as "smarter but optional", separate from the always-free instant keyword-parser button. */
+.ai-btn{background:linear-gradient(135deg,#7c3aed,#c026d3); color:#fff;}
+.ai-btn:hover{background:linear-gradient(135deg,#6d28d9,#a21caf);}
 .speed-wrap{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted);}
 .export-box{width:100%; text-align:center;}
 video{max-width:100%; border-radius:8px; margin-top:8px; display:none; border:1px solid var(--border);}
