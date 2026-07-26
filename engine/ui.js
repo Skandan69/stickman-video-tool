@@ -24,6 +24,17 @@ function detectJeepOverride(text){
 // Local, offline fallback used ONLY if the AI call fails (not configured / rate-limited / network
 // error) — deliberately simple keyword matching, not a substitute for the AI path, just enough to keep
 // the page useful when the AI is unavailable rather than showing a dead end.
+const ENGINE_NAME_POOL_UI = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
+const ENGINE_CHAR_KEYS_UI = ['character1', 'character2', 'character3', 'character4', 'character5'];
+const NUMBER_WORDS = { two:2, three:3, four:4, five:5 };
+function detectGroupCount(lower){
+  const digitMatch = lower.match(/\b([2-5])\s*(people|person|stickmen|stickman|characters|friends|guys)\b/);
+  if(digitMatch) return parseInt(digitMatch[1], 10);
+  const wordMatch = lower.match(/\b(two|three|four|five)\s*(people|person|stickmen|stickman|characters|friends|guys)?\b/);
+  if(wordMatch && NUMBER_WORDS[wordMatch[1]]) return NUMBER_WORDS[wordMatch[1]];
+  if(/\b(group|crowd|team|everyone|several)\b/.test(lower)) return 4;
+  return null;
+}
 function localFallbackGraph(text){
   const lower = text.toLowerCase();
   const wantsHug = /\bhug/.test(lower);
@@ -31,11 +42,17 @@ function localFallbackGraph(text){
   const bgMatch = BACKGROUND_LIST.find(b => b.id !== 'custom' && (lower.includes(b.id) || lower.includes(b.label.toLowerCase())));
   if(bgMatch) background = bgMatch.id;
   const movesLikeVehicle = /\b(jeep|bike|bicycle|cycle|motorcycle|car|drive|ride|4x4)\b/.test(lower);
-  const action1 = /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
+  const action1 = /\bswim/.test(lower) ? 'swim' : /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
     /\bwave/.test(lower) ? 'wave' : (wantsHug || movesLikeVehicle) ? 'ridebike' : 'idle';
-  const graph = { background: background, weather: 'none', characterCount: wantsHug ? 2 : 1,
-    character1: { name:'Alex', action: action1, gender:'male' }, vehicleOverride: detectJeepOverride(text) };
-  if(wantsHug){ graph.character2 = { name:'Sam', action:'idle', gender:'female' }; graph.interaction = 'hugFromBehind'; }
+  const groupCount = detectGroupCount(lower);
+  // hugFromBehind only makes sense between exactly 2 — a detected group size wins over "hug" wanting 2.
+  const characterCount = wantsHug && !groupCount ? 2 : (groupCount || 1);
+  const graph = { background: background, weather: 'none', characterCount,
+    character1: { name: ENGINE_NAME_POOL_UI[0], action: action1, gender:'male' }, vehicleOverride: detectJeepOverride(text) };
+  for(let i=1;i<characterCount;i++){
+    graph['character' + (i+1)] = { name: ENGINE_NAME_POOL_UI[i], action: action1, gender: i % 2 ? 'male' : 'female' };
+  }
+  if(characterCount === 2 && wantsHug){ graph.character2.action = 'idle'; graph.interaction = 'hugFromBehind'; }
   return graph;
 }
 
@@ -78,9 +95,14 @@ function engineInit(){
           data.vehicleOverride = detectJeepOverride(text);
           currentEngineScene = data;
           if(statusEl){
-            const desc = data.characterCount === 2
-              ? (data.character1.action + ' + ' + data.character2.action + (data.interaction === 'hugFromBehind' ? ' (hugging from behind)' : ''))
-              : data.character1.action;
+            const n = data.characterCount || 1;
+            let desc;
+            if(n === 1){ desc = data.character1.action; }
+            else if(n === 2){ desc = data.character1.action + ' + ' + data.character2.action + (data.interaction === 'hugFromBehind' ? ' (hugging from behind)' : ''); }
+            else {
+              const actions = ENGINE_CHAR_KEYS_UI.slice(0, n).map(k => data[k] && data[k].action).filter(Boolean);
+              desc = n + ' characters (' + actions.join(', ') + ')';
+            }
             statusEl.textContent = '✨ AI built: ' + desc + ', background=' + data.background + (data.vehicleOverride ? ', vehicle skin=jeep' : '') + '.';
           }
         }
