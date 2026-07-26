@@ -1,4 +1,4 @@
-// --------- Scene Engine (Beta) AI planner (Vercel serverless function) ----------
+// ---------- Scene Engine (Beta) AI planner (Vercel serverless function) ----------
 // A separate endpoint from api/generate-scene.js (the main tool's planner) — kept independent on
 // purpose, same as every other engine/ file, so nothing about the main tool's AI flow is touched.
 // Reuses the SAME ANTHROPIC_API_KEY environment variable already configured in the Vercel project
@@ -27,26 +27,34 @@ const BACKGROUND_IDS = [
 ];
 const WEATHER_IDS = ['none','rain','snow','fog','sunny','autumn'];
 
-// Group scenes: up to 5 stickmen. The wrapAroundTorso hug primitive only targets one other
-// character's real skeleton, so hugFromBehind stays scoped to exactly 2 — for 3-5 everyone
-// resolves independently (their own action, side by side), same as pass 1 always did.
-const MAX_CHARACTERS = 5;
-const NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
-const CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5'];
+// Group scenes: up to 12 stickmen — small squads (tennis doubles, a cricket XI, a football drill),
+// NOT full 11v11/22-player matches, which would shrink figures past the point of reading as anything
+// but dots (engine/scene.js auto-shrinks sizeScale as the count grows, but that only stays legible up
+// to roughly a dozen). The wrapAroundTorso hug primitive only targets one other character's real
+// skeleton, so hugFromBehind stays scoped to exactly 2 — for 3+ everyone resolves independently
+// (their own action, side by side), same as pass 1 always did.
+const MAX_CHARACTERS = 12;
+const NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Jordan', 'Avery', 'Quinn', 'Drew', 'Reese'];
+const CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5', 'character6', 'character7', 'character8', 'character9', 'character10', 'character11', 'character12'];
+const CHARACTER_COUNT_ENUM = Array.from({ length: MAX_CHARACTERS }, (_, i) => i + 1);
 
 const SYSTEM_PROMPT =
   'You are the scene planner for the Scene Engine, an experimental part of Stickman Video Studio (a ' +
   'browser tool that renders simple 2D stick-figure animations — never realistic humans, never ' +
   'generated video/image pixels, everything is drawn by code). Given a description, call ' +
   'build_engine_scene using ONLY the allowed ids in the tool schema — never invent one. Set ' +
-  'characterCount to match how many people the description actually involves, up to a maximum of 5 ' +
-  '(e.g. "three people dancing" -> characterCount 3, "a stickman doing yoga" -> characterCount 1). ' +
-  'When the description implies a group without an exact number (e.g. "a crowd", "a team", "several ' +
-  'people"), pick a reasonable count between 3 and 5. Give each character the action that best matches ' +
-  'what they are doing; if all are doing the same thing, repeat that action for each. Set interaction ' +
-  'to "hugFromBehind" ONLY when characterCount is exactly 2 AND the description clearly describes one ' +
+  'characterCount to match how many people the description actually involves, up to a maximum of 12 ' +
+  '(e.g. "three people dancing" -> characterCount 3, "a stickman doing yoga" -> characterCount 1, ' +
+  '"a cricket team fielding" -> characterCount around 11). There is no dedicated "play cricket/football/ ' +
+  'tennis" action in the library — for sports scenes, approximate with the closest existing action ' +
+  '(run, kick, throw, walk, idle, jump, cheer are usually the best fits) rather than leaving characters ' +
+  'idle by default. When the description implies a group without an exact number (e.g. "a crowd", "a ' +
+  'team", "several people"), pick a reasonable count for that context (a handful for "a few people", ' +
+  '9-12 for "a team" or "a squad"). Give each character the action that best matches what they are ' +
+  'doing; if all are doing the same thing, repeat that action for each. Set interaction to ' +
+  '"hugFromBehind" ONLY when characterCount is exactly 2 AND the description clearly describes one ' +
   'person embracing/hugging the other from behind (including while riding something together) — ' +
-  'otherwise "none". character2 through character5 are only used when characterCount is high enough ' +
+  'otherwise "none". character2 through character12 are only used when characterCount is high enough ' +
   'to need them.';
 
 const CHARACTER_PROPERTY = {
@@ -62,17 +70,16 @@ const BUILD_SCENE_TOOL = {
   description: 'Build a Scene Engine scene graph.',
   input_schema: {
     type: 'object',
-    properties: {
-      background: { type: 'string', enum: BACKGROUND_IDS },
-      weather: { type: 'string', enum: WEATHER_IDS },
-      characterCount: { type: 'integer', enum: [1, 2, 3, 4, 5] },
-      character1: { ...CHARACTER_PROPERTY, required: ['action'] },
-      character2: CHARACTER_PROPERTY,
-      character3: CHARACTER_PROPERTY,
-      character4: CHARACTER_PROPERTY,
-      character5: CHARACTER_PROPERTY,
-      interaction: { type: 'string', enum: ['none', 'hugFromBehind'], description: 'hugFromBehind = character2 hugs character1 from behind. Only valid when characterCount is 2.' }
-    },
+    properties: Object.assign(
+      {
+        background: { type: 'string', enum: BACKGROUND_IDS },
+        weather: { type: 'string', enum: WEATHER_IDS },
+        characterCount: { type: 'integer', enum: CHARACTER_COUNT_ENUM },
+        character1: { ...CHARACTER_PROPERTY, required: ['action'] }
+      },
+      Object.fromEntries(CHAR_KEYS.slice(1).map(key => [key, CHARACTER_PROPERTY])),
+      { interaction: { type: 'string', enum: ['none', 'hugFromBehind'], description: 'hugFromBehind = character2 hugs character1 from behind. Only valid when characterCount is 2.' } }
+    ),
     required: ['background', 'weather', 'characterCount', 'character1']
   }
 };
