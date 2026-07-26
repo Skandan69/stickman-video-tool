@@ -135,11 +135,16 @@ function poseRun(t){
 // evaluateScene(scene,t) pipeline doesn't pass today.
 function poseFight(t, offset){
   const w = t*6 + (offset||0);
-  const punch = Math.max(0, Math.sin(w));
+  // Alternating jab/cross: each arm cycles from a raised guard (bent elbow, fist near chin) out to a
+  // near-full extension "punch" — rather than one arm holding a static guard while only the other arm
+  // makes a small swing, which read as vague arm-waving (dancing) with no visible opponent to punch at.
+  // The torso lunges into whichever side is currently extending for a clearer sense of thrown weight.
+  const punchR = Math.max(0, Math.sin(w));
+  const punchL = Math.max(0, Math.sin(w + Math.PI));
   return {
-    torsoLean: 0.15 + 0.1*Math.sin(w*2), headTilt: -0.05*Math.sin(w), bounceY: Math.abs(Math.sin(w*2))*3,
-    leftShoulderAngle: 0.6 - 0.3*Math.sin(w), leftElbowBend: -0.9,
-    rightShoulderAngle: 1.4*punch, rightElbowBend: -1.5*punch - 0.3,
+    torsoLean: 0.18 + 0.14*(punchR - punchL), headTilt: -0.05*Math.sin(w), bounceY: Math.abs(Math.sin(w*2))*3,
+    leftShoulderAngle: 0.5 + 1.1*punchL, leftElbowBend: -1.2 + 1.0*punchL,
+    rightShoulderAngle: 0.5 + 1.1*punchR, rightElbowBend: -1.2 + 1.0*punchR,
     leftHipAngle: 0.15, leftKneeBend: 0.3, rightHipAngle: -0.1, rightKneeBend: 0.2,
     mouthOpen: 0
   };
