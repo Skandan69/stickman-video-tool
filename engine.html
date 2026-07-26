@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stickman Video Studio — Scene Engine (Beta)</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .engine-wrap{ max-width:900px; margin:0 auto; }
+  .engine-note{
+    background:#f5f0ff; border:1px solid #ddd0ff; border-radius:10px; padding:14px 16px;
+    font-size:13px; color:#4c1d95; line-height:1.5; margin-bottom:16px;
+  }
+  .engine-note strong{ color:#2e1065; }
+  .engine-back{ display:inline-block; margin-bottom:14px; font-size:13px; color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<div class="engine-wrap">
+  <a class="engine-back" href="index.html">&larr; Back to Stickman Video Studio</a>
+  <h1>Scene Engine <span style="color:#7c3aed;">— Beta</span></h1>
+  <p class="subtitle">A separate, experimental page — the main tool above is untouched. This proves out one idea: composing a pose from physical building blocks (reach, wrap-around) instead of only picking from the ~50 pre-built actions.</p>
+
+  <div class="engine-note">
+    <strong>What you're looking at:</strong> a duo bike ride with one character hugging the other from
+    behind — this exact pose does not exist anywhere in the main tool's action library. The rider uses
+    the real, unmodified "Ride a Bicycle" action. The hugger's arms are computed live every frame with
+    inverse kinematics, reaching toward wherever the rider's torso actually is — not a fixed pre-tuned
+    position. This is the first working proof of the two-pass composition approach; more primitives
+    (sit-on, lean-along, more wrap variations) and a text-prompt front end come next.
+  </div>
+
+  <div class="stage-wrap" style="margin:0 auto;">
+    <canvas id="stage" width="800" height="450"></canvas>
+    <div class="controls-row">
+      <button id="enginePlayPauseBtn" class="secondary">Pause</button>
+      <button id="engineRestartBtn" class="secondary">Restart</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/humanTypes.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/character.js"></script>
+<script src="js/emotions.js"></script>
+<script src="js/backgrounds.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/costumes.js"></script>
+<script src="js/food.js"></script>
+<script src="js/animals.js"></script>
+<script src="js/vehicles.js"></script>
+<script src="js/render.js"></script>
+<script src="js/styles.js"></script>
+<script src="js/poses.js"></script>
+<script src="engine/ik.js"></script>
+<script src="engine/primitives.js"></script>
+<script src="engine/scene.js"></script>
+<script src="engine/ui.js"></script>
+</body>
+</html>
