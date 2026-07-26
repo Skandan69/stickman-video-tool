@@ -22,6 +22,11 @@ var JEEP_ELIGIBLE_ACTIONS = { ridebike: true, drivecar: true };
 // Same idea as js/scene.js's MOVE_SPEEDS table (px/sec) — kept as an independent copy per the engine's
 // "stays fully separate from the existing tool" design, not because the concept differs.
 var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190 };
+// Group scenes: up to 5 stickmen. hugFromBehind (the one cross-character IK interaction) still only
+// makes sense between exactly 2 — with 3+ everyone resolves independently, same as pass 1 always did.
+var MAX_ENGINE_CHARACTERS = 5;
+var ENGINE_NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
+var ENGINE_CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5'];
 
 function computeEnginePositions(n){
   if(n <= 1) return [{ x: 400, faceDir: 1 }];
@@ -37,10 +42,11 @@ function travelX(baseX, action, t){
   const cycle = W + 220;
   return ((t * speed) % cycle) - 110;
 }
-function appearanceFor(spec){
+function appearanceFor(spec, idx){
   const isFemale = (spec && spec.gender) === 'female';
+  const defaultName = ENGINE_NAME_POOL[idx] || ('Person' + (idx + 1));
   return {
-    name: (spec && spec.name) || (isFemale ? 'Sam' : 'Alex'), gender: isFemale ? 'female' : 'male',
+    name: (spec && spec.name) || defaultName, gender: isFemale ? 'female' : 'male',
     outfit: isFemale ? '#db2777' : '#1d4ed8', skin: '#ffe0bd',
     hairStyle: isFemale ? 'long' : 'short', hairColor: isFemale ? '#3b2415' : '#2b1b12',
     eyeStyle: isFemale ? 'happy' : 'dot', emotion: 'happy'
@@ -59,20 +65,22 @@ EngineScene.demo = {
 };
 
 function resolveEngineFrame(graph, t){
-  const charCount = graph.characterCount === 2 ? 2 : 1;
+  const charCount = Math.min(Math.max(graph.characterCount || 1, 1), MAX_ENGINE_CHARACTERS);
   const positions = computeEnginePositions(charCount);
-  const specs = [graph.character1, graph.character2].slice(0, charCount);
+  const specs = ENGINE_CHAR_KEYS.slice(0, charCount).map(k => graph[k] || {});
+  // hugFromBehind (the one cross-character IK interaction) only makes sense between exactly 2 —
+  // group scenes of 3+ always resolve every character independently.
   const interaction = charCount === 2 ? (graph.interaction || 'none') : 'none';
   // Only interaction supported today: character2 hugs character1 from behind. More interactions
   // (sit-together, face-to-face, etc.) are meant to slot in here as new named cases later.
   const dependentIdx = interaction === 'hugFromBehind' ? 1 : -1;
 
   const resolved = [];
-  // --- Pass 1: every independent character (covers the common case: 1 character, or 2 with no
-  // interaction) — each fully self-contained, same as any existing pose in the main tool. ---
+  // --- Pass 1: every independent character (covers the common case: 1 character, a group of 3-5, or
+  // 2 with no interaction) — each fully self-contained, same as any existing pose in the main tool. ---
   specs.forEach((spec, i)=>{
     if(i === dependentIdx) { resolved.push(null); return; }
-    const appearance = appearanceFor(spec);
+    const appearance = appearanceFor(spec, i);
     applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
     const faceDir = positions[i].faceDir;
     const x = travelX(positions[i].x, spec.action, t);
@@ -85,7 +93,7 @@ function resolveEngineFrame(graph, t){
   if(dependentIdx >= 0){
     const target = resolved[1 - dependentIdx];
     const spec = specs[dependentIdx];
-    const appearance = appearanceFor(spec);
+    const appearance = appearanceFor(spec, dependentIdx);
     applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
     const faceDir = target.faceDir;
     const x = target.x - 22 * faceDir;
@@ -96,16 +104,16 @@ function resolveEngineFrame(graph, t){
     resolved[dependentIdx] = { id:'c'+dependentIdx, x, faceDir, appearance, pose, action: spec.action, skeleton: approxSkeleton, isDependent: true };
   }
 
-  // Vehicle art auto-attaches to whichever resolved character is doing a ride-type action.
-  let vehicleArt = null, vehicleCharIdx = -1;
+  // Vehicle art auto-attaches to EVERY resolved character doing a ride-type action (not just one) —
+  // matters now that group scenes can have several riders at once, e.g. "5 people riding bikes".
+  const vehicleByIdx = {};
   resolved.forEach((c, i)=>{
     if(c && RIDE_ART_FOR_ACTION[c.action]){
-      vehicleArt = (graph.vehicleOverride && JEEP_ELIGIBLE_ACTIONS[c.action]) ? graph.vehicleOverride : RIDE_ART_FOR_ACTION[c.action];
-      vehicleCharIdx = i;
+      vehicleByIdx[i] = (graph.vehicleOverride && JEEP_ELIGIBLE_ACTIONS[c.action]) ? graph.vehicleOverride : RIDE_ART_FOR_ACTION[c.action];
     }
   });
 
-  return { background: graph.background, weather: graph.weather, localT: t, characters: resolved, vehicleArt, vehicleCharIdx };
+  return { background: graph.background, weather: graph.weather, localT: t, characters: resolved, vehicleByIdx };
 }
 
 function renderEngineFrame(frame){
@@ -122,8 +130,9 @@ function renderEngineFrame(frame){
   order.forEach(i=>{
     const c = frame.characters[i];
     if(!c) return;
-    if(i === frame.vehicleCharIdx && frame.vehicleArt){
-      drawVehicleProp(c.x, c.faceDir, frame.vehicleArt, frame.localT, (ENGINE_VEHICLE_ART[frame.vehicleArt] || {scale:1}).scale);
+    const vehicleArt = frame.vehicleByIdx && frame.vehicleByIdx[i];
+    if(vehicleArt){
+      drawVehicleProp(c.x, c.faceDir, vehicleArt, frame.localT, (ENGINE_VEHICLE_ART[vehicleArt] || {scale:1}).scale);
     }
     STYLES.bold.drawStickman(c.x, c.faceDir, c.appearance, c.pose);
   });
