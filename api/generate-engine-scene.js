@@ -28,6 +28,41 @@ const BACKGROUND_IDS = [
 ];
 const WEATHER_IDS = ['none','rain','snow','fog','sunny','autumn'];
 
+// action:'custom' is the fallback for descriptions that don't match any of the ~50 named clips above —
+// the AI fills in customPose's plain numeric parameters (amplitude*sin(frequency*t+phase)+baseline per
+// joint, radians) instead, which engine/primitives.js's evalParametricPose renders through the exact
+// same pipeline as a named clip. This is NOT code generation — the formula is fixed and hardcoded
+// client-side; the AI only ever supplies numbers, and every one is re-clamped below regardless of what
+// comes back, so a custom pose can never execute anything or produce a runaway/NaN value.
+const ACTION_ENUM = CLIP_IDS.concat(['custom']);
+const PARAM_POSE_JOINTS = [
+  'torsoLean', 'headTilt', 'leftShoulderAngle', 'leftElbowBend', 'rightShoulderAngle', 'rightElbowBend',
+  'leftHipAngle', 'leftKneeBend', 'rightHipAngle', 'rightKneeBend'
+];
+const JOINT_PARAM_SCHEMA = {
+  type: 'object',
+  properties: {
+    baseline: { type: 'number', minimum: -3.2, maximum: 3.2, description: 'rest angle in radians' },
+    amplitude: { type: 'number', minimum: 0, maximum: 3.2, description: 'how far it swings from baseline' },
+    frequency: { type: 'number', minimum: 0, maximum: 12, description: 'oscillation speed, roughly matching js/poses.js clips: walk~6, run~10, idle~1' },
+    phase: { type: 'number', minimum: -7, maximum: 7, description: 'radians offset; use ~3.14 (pi) between a left/right pair for alternating limbs' }
+  }
+};
+const CUSTOM_POSE_PROPERTY = {
+  type: 'object',
+  description: 'Only used when action is "custom". Approximate the described motion with amplitude*sin(frequency*t+phase)+baseline per joint. Omit a joint to leave it at 0 (straight/neutral).',
+  properties: {
+    lying: { type: 'boolean', description: 'true if the character should lie flat (like swimming or sleeping) instead of standing.' },
+    mouthOpen: { type: 'number', minimum: 0, maximum: 1 },
+    bounce: {
+      type: 'object',
+      description: 'vertical bob, e.g. footsteps or jumping.',
+      properties: { amplitude: { type: 'number', minimum: 0, maximum: 30 }, frequency: { type: 'number', minimum: 0, maximum: 12 } }
+    },
+    joints: { type: 'object', properties: Object.fromEntries(PARAM_POSE_JOINTS.map(name => [name, JOINT_PARAM_SCHEMA])) }
+  }
+};
+
 // Group scenes: up to 12 stickmen — small squads (tennis doubles, a cricket XI, a football drill),
 // NOT full 11v11/22-player matches, which would shrink figures past the point of reading as anything
 // but dots (engine/scene.js auto-shrinks sizeScale as the count grows, but that only stays legible up
@@ -58,13 +93,18 @@ const SYSTEM_PROMPT =
   '"hugFromBehind" ONLY when characterCount is exactly 2 AND the description clearly describes one ' +
   'person embracing/hugging the other from behind (including while riding something together) — ' +
   'otherwise "none". character2 through character12 are only used when characterCount is high enough ' +
-  'to need them.';
+  'to need them. If a description genuinely does not fit ANY of the named actions above even ' +
+  'approximately (a truly novel motion), set action to "custom" and fill in customPose instead — ' +
+  'describe each relevant joint with amplitude/frequency/phase/baseline (see the schema) rather than ' +
+  'leaving the character idle. Prefer a named action whenever a reasonable one exists; "custom" is for ' +
+  'when nothing on the list is even a rough fit.';
 
 const CHARACTER_PROPERTY = {
   type: 'object',
   properties: {
-    action: { type: 'string', enum: CLIP_IDS },
-    gender: { type: 'string', enum: ['male', 'female'] }
+    action: { type: 'string', enum: ACTION_ENUM },
+    gender: { type: 'string', enum: ['male', 'female'] },
+    customPose: CUSTOM_POSE_PROPERTY
   }
 };
 
@@ -98,6 +138,34 @@ function isRateLimited(ip) {
   return timestamps.length > RATE_LIMIT_MAX;
 }
 
+function clampNumber(v, lo, hi, fallback) {
+  const n = (typeof v === 'number' && isFinite(v)) ? v : fallback;
+  return Math.max(lo, Math.min(hi, n));
+}
+// Re-clamps every customPose number regardless of what the AI returned — defense in depth beyond the
+// JSON schema's own min/max constraints, matching the same "never trust AI output directly" pattern
+// buildFinalGraph already applies to every other field.
+function sanitizeCustomPose(cp) {
+  const src = cp || {};
+  const joints = {};
+  PARAM_POSE_JOINTS.forEach(name => {
+    const j = (src.joints && src.joints[name]) || {};
+    joints[name] = {
+      baseline: clampNumber(j.baseline, -3.2, 3.2, 0),
+      amplitude: clampNumber(j.amplitude, 0, 3.2, 0),
+      frequency: clampNumber(j.frequency, 0, 12, 1),
+      phase: clampNumber(j.phase, -7, 7, 0)
+    };
+  });
+  const bounceSrc = src.bounce || {};
+  return {
+    lying: !!src.lying,
+    mouthOpen: clampNumber(src.mouthOpen, 0, 1, 0),
+    bounce: { amplitude: clampNumber(bounceSrc.amplitude, 0, 30, 0), frequency: clampNumber(bounceSrc.frequency, 0, 12, 1) },
+    joints
+  };
+}
+
 function buildFinalGraph(ai) {
   const background = BACKGROUND_IDS.includes(ai.background) ? ai.background : 'white';
   const weather = WEATHER_IDS.includes(ai.weather) ? ai.weather : 'none';
@@ -109,9 +177,11 @@ function buildFinalGraph(ai) {
   for (let i = 0; i < charCount; i++) {
     const key = CHAR_KEYS[i];
     const c = ai[key] || {};
-    const action = CLIP_IDS.includes(c.action) ? c.action : 'idle';
+    const action = ACTION_ENUM.includes(c.action) ? c.action : 'idle';
     const gender = c.gender === 'female' ? 'female' : 'male';
-    result[key] = { name: NAME_POOL[i], action, gender };
+    const entry = { name: NAME_POOL[i], action, gender };
+    if (action === 'custom') entry.customPose = sanitizeCustomPose(c.customPose);
+    result[key] = entry;
   }
   if (charCount === 2) result.interaction = interaction;
   return result;
