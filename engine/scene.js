@@ -1,87 +1,130 @@
-// ---------- Scene Engine (Beta): two-pass resolution + demo scenes ----------
+// ---------- Scene Engine (Beta): two-pass resolution + generalized scene graph ----------
 // This is the one real structural change the existing tool's pipeline doesn't support: js/scene.js's
 // evaluateScene() resolves every character's pose fully independently (see the NOTE comment above
 // poseFight in js/poses.js — "no cross-character contact solving"), so nothing can ever reach toward
 // or wrap around another character's ACTUAL position. Two-pass resolution fixes that: pass 1 resolves
-// "base" characters whose pose doesn't depend on anyone else (here, the vehicle rider); pass 2 resolves
-// "dependent" characters using pass 1's real, computed joint positions as live IK targets (here, the
-// hugger). Everything downstream — computeSkeleton, drawStickman, art styles, backgrounds, vehicle
-// art — is the existing, completely unmodified rendering pipeline from js/render.js, js/styles.js,
-// js/scene.js and js/vehicles.js. The engine only changes how a POSE gets computed, never how it's drawn.
+// every INDEPENDENT character (their pose doesn't depend on anyone else — this covers the vast
+// majority of scenes, including any single-character prompt or two characters just doing their own
+// thing side by side); pass 2 resolves DEPENDENT characters (currently just "hugs someone from
+// behind") using pass 1's real, computed joint positions as live IK targets. Everything downstream —
+// computeSkeleton, drawStickman, art styles, backgrounds, vehicle art — is the existing, completely
+// unmodified rendering pipeline from js/render.js, js/styles.js, js/scene.js and js/vehicles.js. The
+// engine only changes how a POSE gets computed, never how it's drawn.
 var EngineScene = {}; // var (not const) so it's reachable via window.EngineScene in tests/debugging
 
-// Per-vehicle travel speed (px/sec) and draw scale — same idea as js/scene.js's MOVE_SPEEDS table, just
-// scoped to the two vehicles the engine currently supports. Adding a new rideable vehicle to the engine
-// is meant to be "add one entry here" the same way js/vehicles.js's VEHICLES registry works.
-var ENGINE_VEHICLES = {
-  bicycle: { scale: 1.5, speed: 70 },
-  jeep: { scale: 1.3, speed: 130 }
-};
+// Decorative vehicle art (js/vehicles.js's generic drawVehicleProp path only — the main tool's special
+// seated-in-car/flying visuals aren't reused here yet) auto-attaches to whichever character is doing a
+// ride-type action. "jeep" is a pure alt-skin, not its own action — riding a bike or driving a car can
+// both be re-skinned as a jeep if the description says so (see engine/ui.js's vehicleOverride).
+var ENGINE_VEHICLE_ART = { bicycle: { scale: 1.5 }, jeep: { scale: 1.3 }, motorcycle: { scale: 1.7 }, car: { scale: 1 } };
+var RIDE_ART_FOR_ACTION = { ridebike: 'bicycle', ridemotorcycle: 'motorcycle', drivecar: 'car' };
+var JEEP_ELIGIBLE_ACTIONS = { ridebike: true, drivecar: true };
+// Same idea as js/scene.js's MOVE_SPEEDS table (px/sec) — kept as an independent copy per the engine's
+// "stays fully separate from the existing tool" design, not because the concept differs.
+var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190 };
 
-// Proof-of-concept scene: a duo ride with one character hugging the other from behind. No pose like
-// this exists anywhere in js/poses.js's ~50 clips — the rider uses the real, unmodified 'ridebike'
-// clip; the hugger's pose is assembled entirely from engine/primitives.js, live-targeting wherever the
-// rider's torso actually is this frame (works at any body size/scale, not just one tuned distance).
-EngineScene.demo = {
-  id: 'bikehug',
-  vehicleType: 'bicycle',
-  background: 'mountain',
-  weather: 'none',
-  riderAppearance: { name:'Alex', gender:'male', outfit:'#1d4ed8', skin:'#ffe0bd', hairStyle:'short', hairColor:'#2b1b12', eyeStyle:'dot', emotion:'happy' },
-  huggerAppearance: { name:'Sam', gender:'female', outfit:'#db2777', skin:'#ffe0bd', hairStyle:'long', hairColor:'#3b2415', eyeStyle:'happy', emotion:'happy' }
-};
-
-function resolveEngineFrame(scene, t){
-  const vcfg = ENGINE_VEHICLES[scene.vehicleType] || ENGINE_VEHICLES.bicycle;
-  const riderFaceDir = 1;
-  // Continuous rightward travel that wraps around once the vehicle has fully exited the canvas on the
-  // right, reappearing off-screen on the left — reads as "riding across the scene" on a loop rather
-  // than sitting fixed in one spot. Uses the full elapsed t (not modulo'd against any fixed scene
-  // duration) so there's no jump/reset discontinuity; the pedaling/animation cycle (inside poseRide)
-  // is independently periodic via its own internal sine, so it stays smooth regardless.
+function computeEnginePositions(n){
+  if(n <= 1) return [{ x: 400, faceDir: 1 }];
+  const spacing = Math.min(180, 620 / (n - 1));
+  const startX = 400 - (spacing * (n - 1)) / 2;
+  const positions = [];
+  for(let i=0;i<n;i++) positions.push({ x: startX + spacing*i, faceDir: i < Math.ceil(n/2) ? 1 : -1 });
+  return positions;
+}
+function travelX(baseX, action, t){
+  const speed = MOVE_SPEEDS[action];
+  if(!speed) return baseX;
   const cycle = W + 220;
-  const riderX = ((t * vcfg.speed) % cycle) - 110;
-
-  // --- Pass 1: base character (rider). Fully independent, exactly like any existing pose. ---
-  const riderPreset = applyBodyScale(scene.riderAppearance.bodyType, scene.riderAppearance.sizeScale, scene.riderAppearance.build);
-  const riderPose = EnginePrimitives.useClip('ridebike', t, {});
-  riderPose.bounceY *= riderPreset.scale * (scene.riderAppearance.sizeScale || 1);
-  const riderSkeleton = computeSkeleton(riderX, riderFaceDir, scene.riderAppearance, riderPose);
-
-  // --- Pass 2: dependent character (hugger). Targets pass 1's REAL resolved torso point. ---
-  // Drawn at a small offset BEHIND the rider (opposite their facing direction), not the exact same x —
-  // at identical x the hugger's whole body sits directly behind the rider's and is almost entirely
-  // hidden (tried first; looked like overlapping color glitches, not two people). Offsetting back lets
-  // the hugger's head/shoulders peek out realistically while their arms still IK-target the rider's
-  // REAL torso position, so the wrap still reads as reaching onto the rider rather than floating.
-  const huggerX = riderX - 22 * riderFaceDir, huggerFaceDir = riderFaceDir;
-  applyBodyScale(scene.huggerAppearance.bodyType, scene.huggerAppearance.sizeScale, scene.huggerAppearance.build);
-  const torsoTarget = { x: (riderSkeleton.hip.x + riderSkeleton.shoulder.x) / 2, y: (riderSkeleton.hip.y + riderSkeleton.shoulder.y) / 2 };
-  // Legs/torso/head resolved first from a plain standing stance so there's a real shoulder position to
-  // solve the arm IK from (shoulder placement depends on hip+torsoLean+faceDir, never on arm angles —
-  // so this doesn't need to iterate, one pass is exact).
-  const huggerBasePose = EnginePrimitives.standingStance(t, 5);
-  const huggerApproxSkeleton = computeSkeleton(huggerX, huggerFaceDir, scene.huggerAppearance, huggerBasePose);
-  const huggerPose = EnginePrimitives.wrapAroundTorso(t, 5, huggerApproxSkeleton.shoulder, huggerFaceDir, torsoTarget);
-
+  return ((t * speed) % cycle) - 110;
+}
+function appearanceFor(spec){
+  const isFemale = (spec && spec.gender) === 'female';
   return {
-    background: scene.background, weather: scene.weather, localT: t, vehicleType: scene.vehicleType, vehicleScale: vcfg.scale,
-    characters: [
-      { id:'hugger', x:huggerX, faceDir:huggerFaceDir, appearance:scene.huggerAppearance, pose:huggerPose },
-      { id:'rider', x:riderX, faceDir:riderFaceDir, appearance:scene.riderAppearance, pose:riderPose }
-    ]
+    name: (spec && spec.name) || (isFemale ? 'Sam' : 'Alex'), gender: isFemale ? 'female' : 'male',
+    outfit: isFemale ? '#db2777' : '#1d4ed8', skin: '#ffe0bd',
+    hairStyle: isFemale ? 'long' : 'short', hairColor: isFemale ? '#3b2415' : '#2b1b12',
+    eyeStyle: isFemale ? 'happy' : 'dot', emotion: 'happy'
   };
+}
+
+// Demo / default scene graph, in the exact shape api/generate-engine-scene.js returns and
+// resolveEngineFrame consumes — one rider hugged from behind, the proof-of-concept this whole
+// approach started from.
+EngineScene.demo = {
+  background: 'mountain', weather: 'none', characterCount: 2,
+  character1: { name:'Alex', action:'ridebike', gender:'male' },
+  character2: { name:'Sam', action:'idle', gender:'female' },
+  interaction: 'hugFromBehind',
+  vehicleOverride: null
+};
+
+function resolveEngineFrame(graph, t){
+  const charCount = graph.characterCount === 2 ? 2 : 1;
+  const positions = computeEnginePositions(charCount);
+  const specs = [graph.character1, graph.character2].slice(0, charCount);
+  const interaction = charCount === 2 ? (graph.interaction || 'none') : 'none';
+  // Only interaction supported today: character2 hugs character1 from behind. More interactions
+  // (sit-together, face-to-face, etc.) are meant to slot in here as new named cases later.
+  const dependentIdx = interaction === 'hugFromBehind' ? 1 : -1;
+
+  const resolved = [];
+  // --- Pass 1: every independent character (covers the common case: 1 character, or 2 with no
+  // interaction) — each fully self-contained, same as any existing pose in the main tool. ---
+  specs.forEach((spec, i)=>{
+    if(i === dependentIdx) { resolved.push(null); return; }
+    const appearance = appearanceFor(spec);
+    applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
+    const faceDir = positions[i].faceDir;
+    const x = travelX(positions[i].x, spec.action, t);
+    const pose = EnginePrimitives.useClip(spec.action, t, {});
+    const skeleton = computeSkeleton(x, faceDir, appearance, pose);
+    resolved[i] = { id:'c'+i, x, faceDir, appearance, pose, action: spec.action, skeleton };
+  });
+
+  // --- Pass 2: dependent character, targeting pass 1's REAL resolved skeleton. ---
+  if(dependentIdx >= 0){
+    const target = resolved[1 - dependentIdx];
+    const spec = specs[dependentIdx];
+    const appearance = appearanceFor(spec);
+    applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build);
+    const faceDir = target.faceDir;
+    const x = target.x - 22 * faceDir;
+    const torsoTarget = { x: (target.skeleton.hip.x + target.skeleton.shoulder.x)/2, y: (target.skeleton.hip.y + target.skeleton.shoulder.y)/2 };
+    const basePose = EnginePrimitives.standingStance(t, 5);
+    const approxSkeleton = computeSkeleton(x, faceDir, appearance, basePose);
+    const pose = EnginePrimitives.wrapAroundTorso(t, 5, approxSkeleton.shoulder, faceDir, torsoTarget);
+    resolved[dependentIdx] = { id:'c'+dependentIdx, x, faceDir, appearance, pose, action: spec.action, skeleton: approxSkeleton, isDependent: true };
+  }
+
+  // Vehicle art auto-attaches to whichever resolved character is doing a ride-type action.
+  let vehicleArt = null, vehicleCharIdx = -1;
+  resolved.forEach((c, i)=>{
+    if(c && RIDE_ART_FOR_ACTION[c.action]){
+      vehicleArt = (graph.vehicleOverride && JEEP_ELIGIBLE_ACTIONS[c.action]) ? graph.vehicleOverride : RIDE_ART_FOR_ACTION[c.action];
+      vehicleCharIdx = i;
+    }
+  });
+
+  return { background: graph.background, weather: graph.weather, localT: t, characters: resolved, vehicleArt, vehicleCharIdx };
 }
 
 function renderEngineFrame(frame){
   drawBackground(frame.background);
   drawWeatherOverlay(frame.weather, frame.localT);
-  const hugger = frame.characters.find(c=>c.id==='hugger');
-  const rider = frame.characters.find(c=>c.id==='rider');
-  // Hugger drawn first (behind), then the vehicle prop, then the rider on top — the exact same
-  // drawVehicleProp(...) call js/scene.js already uses for ride clips, so the vehicle art itself is
-  // completely unchanged/reused, whichever vehicle is selected.
-  STYLES.bold.drawStickman(hugger.x, hugger.faceDir, hugger.appearance, hugger.pose);
-  drawVehicleProp(rider.x, rider.faceDir, frame.vehicleType, frame.localT, frame.vehicleScale);
-  STYLES.bold.drawStickman(rider.x, rider.faceDir, rider.appearance, rider.pose);
+  // Dependents (e.g. the hugger) draw first so they sit "behind" whoever they're interacting with;
+  // everyone else draws in original order. Vehicle art draws immediately before its rider so it
+  // layers correctly regardless of draw order otherwise.
+  const order = frame.characters.map((c,i)=>i).sort((a,b)=>{
+    const da = (frame.characters[a] && frame.characters[a].isDependent) ? 0 : 1;
+    const db = (frame.characters[b] && frame.characters[b].isDependent) ? 0 : 1;
+    return da - db;
+  });
+  order.forEach(i=>{
+    const c = frame.characters[i];
+    if(!c) return;
+    if(i === frame.vehicleCharIdx && frame.vehicleArt){
+      drawVehicleProp(c.x, c.faceDir, frame.vehicleArt, frame.localT, (ENGINE_VEHICLE_ART[frame.vehicleArt] || {scale:1}).scale);
+    }
+    STYLES.bold.drawStickman(c.x, c.faceDir, c.appearance, c.pose);
+  });
 }
