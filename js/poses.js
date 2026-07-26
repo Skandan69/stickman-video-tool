@@ -1,19 +1,36 @@
 // ---------- animation clips: pure functions of (localT, opts) -> BonePose ----------
+// Idle/talk arms deliberately layer 2-3 sine terms at non-multiple frequencies (rather than one clean
+// oscillation) — a single sine reads as a metronome/robotic tick, while several slightly-offbeat waves
+// summed together produce the small, irregular-looking drift real held-still gestures have. Also used
+// by poseTalk below for the speaking gesture and by the mouth-open curve, which is now a continuous
+// shaped wave instead of a hard on/off step (previously: fully open or fully 0.2, snapping between the
+// two every ~0.3s — now eases through the range instead).
 function poseIdle(t){
-  return { torsoLean:0.02*Math.sin(t*1.2), headTilt:0.04*Math.sin(t*1.1), bounceY:Math.sin(t*2)*1.5,
-    leftShoulderAngle:0.05*Math.sin(t*1.1), leftElbowBend:0.15, rightShoulderAngle:0.05*Math.sin(t*1.1+1), rightElbowBend:0.15,
-    leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0 };
+  return {
+    torsoLean: 0.018*Math.sin(t*1.2) + 0.008*Math.sin(t*0.53+1.3),
+    headTilt: 0.03*Math.sin(t*0.9+0.6) + 0.015*Math.sin(t*2.3+2),
+    bounceY: Math.sin(t*2)*1.4 + 0.4*Math.sin(t*0.87+0.4),
+    leftShoulderAngle: 0.05*Math.sin(t*1.05) + 0.025*Math.sin(t*0.47+1.1),
+    leftElbowBend: 0.15 + 0.04*Math.sin(t*0.6+0.8),
+    rightShoulderAngle: 0.05*Math.sin(t*1.05+1) + 0.025*Math.sin(t*0.47+2.4),
+    rightElbowBend: 0.15 + 0.04*Math.sin(t*0.6+2.1),
+    leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0
+  };
 }
 function poseTalk(t, speaking){
+  // Two non-harmonic gesture waves (5.3 and 2.7 rad/s, not integer multiples of each other) summed
+  // together so the speaking-hand-raise drifts and varies instead of ticking on one fixed beat.
+  const gestureA = Math.sin(t*5.3), gestureB = Math.sin(t*2.7+0.9);
+  const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
   return {
-    torsoLean: 0.03*Math.sin(t*1.1),
-    headTilt: speaking ? 0.15*Math.sin(t*5) : 0.05*Math.sin(t*1.5),
+    torsoLean: 0.03*Math.sin(t*1.1) + (speaking ? 0.018*Math.sin(t*2.2+0.5) : 0),
+    headTilt: speaking ? 0.1*gestureA + 0.05*gestureB : 0.05*Math.sin(t*1.5),
     bounceY: Math.sin(t*2)*1.5,
-    leftShoulderAngle: 0.1*Math.sin(t*1.3+1), leftElbowBend: 0.15,
-    rightShoulderAngle: speaking ? 1.3+0.4*Math.sin(t*6) : 0.15*Math.sin(t*1.2),
-    rightElbowBend: speaking ? -0.6+0.3*Math.sin(t*6+0.5) : 0.2,
+    leftShoulderAngle: 0.1*Math.sin(t*1.3+1) + (speaking ? 0.05*Math.sin(t*3.1+2) : 0), leftElbowBend: 0.15,
+    rightShoulderAngle: speaking ? 1.1 + 0.35*gestureA + 0.15*gestureB : 0.15*Math.sin(t*1.2),
+    rightElbowBend: speaking ? -0.55 + 0.25*gestureB + 0.12*gestureA : 0.2,
     leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
-    mouthOpen: speaking ? (Math.sin(t*10) > 0 ? 1 : 0.2) : 0
+    mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
   };
 }
 function poseKite(t){
@@ -504,18 +521,19 @@ function poseLaptop(t){
     mouthOpen: 0
   };
 }
-// Shared "seated, hands forward on a wheel/handlebar" pose for the drive/ride clips (js/scene.js pairs
-// this with a vehicle prop drawn directly behind the character, rather than any real point-to-point
-// movement — the "distance traveled" illusion comes from per-segment background/weather swaps instead,
-// so this only needs to look convincingly seated-and-steering in place, like poseSit but arms forward).
+// Shared "seated, hands forward on a wheel/handlebar" pose for the drive/ride clips. Deliberately
+// reuses poseSit's exact hip/knee angles and bounceY (-22) rather than inventing new ones — those
+// numbers are already tuned so the feet land right at GROUND_Y (proven by the existing chair-seated
+// clips), which the vehicle art below depends on to place the footwell/wheels correctly. Only the arms
+// change, reaching forward onto a wheel/handlebar instead of resting at the sides.
 function poseRide(t){
   const w = t*3;
   return {
-    torsoLean: 0.05*Math.sin(w*0.5), headTilt: 0.03*Math.sin(w*0.7),
-    bounceY: -16 + Math.sin(w)*1.3,
-    leftShoulderAngle: 0.9, leftElbowBend: -0.7,
-    rightShoulderAngle: 0.9, rightElbowBend: -0.7,
-    leftHipAngle: 1.2, leftKneeBend: -1.1, rightHipAngle: 1.2, rightKneeBend: -1.1,
+    torsoLean: 0.03*Math.sin(w*0.5), headTilt: 0.03*Math.sin(w*0.7),
+    bounceY: -22 + Math.sin(w)*1.1,
+    leftShoulderAngle: 0.85, leftElbowBend: -0.75,
+    rightShoulderAngle: 0.85, rightElbowBend: -0.75,
+    leftHipAngle: 1.3, leftKneeBend: -1.3, rightHipAngle: 1.3, rightKneeBend: -1.3,
     mouthOpen: 0
   };
 }
@@ -574,6 +592,8 @@ const CLIPS = {
   laptop: { label:'Type on Laptop', pose:(t)=>poseLaptop(t) },
   camera: { label:'Take Photo', pose:(t)=>poseCamera(t) },
   drivecar: { label:'Drive a Car', pose:(t)=>poseRide(t) },
+  drivesportscar: { label:'Drive a Sports Car', pose:(t)=>poseRide(t) },
+  drivelimo: { label:'Drive a Limo', pose:(t)=>poseRide(t) },
   ridebike: { label:'Ride a Bicycle', pose:(t)=>poseRide(t) },
   ridemotorcycle: { label:'Ride a Motorcycle', pose:(t)=>poseRide(t) }
 };
@@ -592,7 +612,8 @@ const CLIP_LIST = [
   {id:'shake', label:'Shake Hands'},
   {id:'guitar', label:'Play Guitar'}, {id:'umbrella', label:'Hold Umbrella'}, {id:'skateboard', label:'Skateboard'},
   {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'},
-  {id:'drivecar', label:'Drive a Car'}, {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'}
+  {id:'drivecar', label:'Drive a Car'}, {id:'drivesportscar', label:'Drive a Sports Car'}, {id:'drivelimo', label:'Drive a Limo'},
+  {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —

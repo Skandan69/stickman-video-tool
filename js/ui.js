@@ -5,6 +5,7 @@ function loop(now){
   lastNow = now;
   if(state.playing) elapsed += dt*state.speed;
   renderFrame(evaluateScene(state.scene, elapsed));
+  updateTimelineStripPlayhead();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -29,6 +30,7 @@ const exportBtn = document.getElementById('exportBtn');
 const previewVideo = document.getElementById('previewVideo');
 const downloadLink = document.getElementById('downloadLink');
 const segmentList = document.getElementById('segmentList');
+const timelineStrip = document.getElementById('timelineStrip');
 // Drag-and-drop segment reordering (Canva-style), layered on top of the existing up/down buttons
 // rather than replacing them — dragging is faster once there are many segments, arrows still work
 // for precise single-step moves or when a mouse drag isn't practical (touch/accessibility).
@@ -562,6 +564,67 @@ function renderSegmentList(){
   segmentList.querySelectorAll('input[data-field]').forEach(el=>{
     el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', onSegmentFieldChange);
   });
+  renderTimelineStrip();
+}
+
+// Canva/CapCut-style visual timeline strip: same segments as the detailed cards below, rendered as
+// proportionally-sized colored blocks with a live playhead — a navigational overview on top of the
+// cards, which stay the actual editing surface. Clicking a block jumps playback there; dragging one
+// reorders the timeline (shares dragSegId with the segment-card drag handlers above, since only one
+// drag can be in flight at a time).
+const STRIP_COLORS = ['#6366f1','#0891b2','#16a34a','#d97706','#db2777','#7c3aed','#dc2626','#0d9488','#4f46e5','#059669'];
+function segLabel(seg){
+  const firstChar = state.scene.characters[0];
+  const clipId = (firstChar && seg.actions && seg.actions[firstChar.id]) || 'idle';
+  const clip = (typeof CLIPS !== 'undefined' && CLIPS[clipId]) || null;
+  return clip ? clip.label : 'Idle';
+}
+function renderTimelineStrip(){
+  timelineStrip.innerHTML = '';
+  const timeline = state.scene.timeline;
+  let acc = 0;
+  timeline.forEach((seg, idx)=>{
+    const block = document.createElement('div');
+    block.className = 'timeline-strip-block';
+    block.style.flex = Math.max(0.1, seg.duration) + ' 1 0%';
+    block.style.background = STRIP_COLORS[idx % STRIP_COLORS.length];
+    block.title = 'Segment ' + (idx+1) + ' (' + seg.duration + 's) — click to jump, drag to reorder';
+    block.textContent = (idx+1) + '. ' + segLabel(seg);
+    block.setAttribute('draggable', 'true');
+    block.setAttribute('data-seg-id', seg.id);
+    const segStart = acc;
+    block.addEventListener('click', ()=>{ elapsed = segStart + 0.01; forceRedraw(); updateTimelineStripPlayhead(); });
+    block.addEventListener('dragstart', ()=>{ dragSegId = seg.id; block.classList.add('dragging'); });
+    block.addEventListener('dragend', ()=>{ block.classList.remove('dragging'); dragSegId = null; });
+    block.addEventListener('dragover', (e)=>{ e.preventDefault(); block.classList.add('drag-over'); });
+    block.addEventListener('dragleave', ()=> block.classList.remove('drag-over'));
+    block.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      block.classList.remove('drag-over');
+      if(!dragSegId || dragSegId === seg.id) return;
+      const fromIdx = state.scene.timeline.findIndex(s=> s.id === dragSegId);
+      const toIdx = state.scene.timeline.findIndex(s=> s.id === seg.id);
+      if(fromIdx === -1 || toIdx === -1) return;
+      const [moved] = state.scene.timeline.splice(fromIdx, 1);
+      state.scene.timeline.splice(toIdx, 0, moved);
+      renderSegmentList();
+      forceRedraw();
+    });
+    timelineStrip.appendChild(block);
+    acc += Math.max(0.1, seg.duration);
+  });
+  const playhead = document.createElement('div');
+  playhead.className = 'timeline-strip-playhead';
+  playhead.id = 'timelineStripPlayhead';
+  timelineStrip.appendChild(playhead);
+  updateTimelineStripPlayhead();
+}
+function updateTimelineStripPlayhead(){
+  const playhead = document.getElementById('timelineStripPlayhead');
+  if(!playhead) return;
+  const total = state.scene.timeline.reduce((s,seg)=> s + Math.max(0.1, seg.duration), 0) || 1;
+  const tt = ((elapsed % total) + total) % total;
+  playhead.style.left = (tt/total*100) + '%';
 }
 
 function findSegment(id){ return state.scene.timeline.find(s=> s.id === id); }

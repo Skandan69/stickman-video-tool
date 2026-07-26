@@ -7,12 +7,28 @@ function makeSegment(duration, actions, dialogue, background, weather){
 }
 // Clips that actually translate the character's x position across the segment (as opposed to
 // animating in place). px/sec — tuned so a default ~4s segment covers a believable chunk of the
-// 800px-wide stage without a character needing several segments just to cross it.
-const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130 };
+// 800px-wide stage without a character needing several segments just to cross it. Ride/drive clips
+// move too (a limo is heavier/slower than a sports car; a bike is slower than a motorcycle) — for a
+// really long journey, pair a move segment with a per-segment background/weather override (task #14)
+// to cut to a new backdrop rather than relying on one segment to cross the whole stage.
+const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, drivesportscar: 230, drivelimo: 150, ridebike: 90, ridemotorcycle: 190 };
 function isMoveClip(clipId){ return Object.prototype.hasOwnProperty.call(MOVE_SPEEDS, clipId); }
-// Ride/drive clips don't move the character at all (see makeSegment comment above) — instead they pair
-// a stationary "seated, steering" pose with a vehicle prop drawn right behind the character.
-const RIDE_VEHICLES = { drivecar: 'car', ridebike: 'bicycle', ridemotorcycle: 'motorcycle' };
+// Ride/drive clips pair the seated "steering" pose (poseRide) with a vehicle prop drawn right behind
+// the character. 'car'-kind rides use drawRideCarProp (js/vehicles.js) — purpose-built, larger, and
+// with a footwell/wheel layout matched to poseRide's actual leg geometry so feet never overlap a
+// wheel. 'generic'-kind rides reuse the existing decorative VEHICLES.bicycle/motorcycle art at a
+// bigger scale, since those already read fine at rider scale (unlike the tiny decorative car).
+const RIDE_VEHICLES = {
+  drivecar: { kind:'car', variant:'sedan' },
+  drivesportscar: { kind:'car', variant:'sports' },
+  drivelimo: { kind:'car', variant:'limo' },
+  ridebike: { kind:'generic', type:'bicycle', scale:1.5 },
+  ridemotorcycle: { kind:'generic', type:'motorcycle', scale:1.7 }
+};
+// Only used to avoid double-placing a decorative vehicle prop when the character is already riding
+// that same kind of vehicle (see parsePromptToScene below) — maps each ride clip to the VEHICLES.js
+// registry key it visually corresponds to, regardless of which draw function actually renders it.
+const RIDE_DECORATIVE_TYPE = { drivecar:'car', drivesportscar:'car', drivelimo:'car', ridebike:'bicycle', ridemotorcycle:'motorcycle' };
 // Presets are templates: actions/speakers are keyed by CHARACTER INDEX (0,1,...), not by id,
 // since the actual character list is open-ended now. resolveIndexedTimeline() below translates
 // indices into whichever real character ids currently occupy those slots (growing the list if needed).
@@ -85,7 +101,9 @@ const ACTION_KEYWORDS = [
   { clipId:'skateboard', words:['skateboard','skateboards','skateboarding'] },
   { clipId:'laptop', words:['laptop','types on a laptop','typing on a laptop','works on a laptop'] },
   { clipId:'camera', words:['takes a photo','takes a picture','photographs','snaps a photo'] },
-  { clipId:'drivecar', words:['drives a car','driving a car','drives the car','drives his car','drives her car'] },
+  { clipId:'drivesportscar', words:['drives a sports car','driving a sports car','drives a sportscar','drives a race car','driving a race car','drives a ferrari','drives a lamborghini'] },
+  { clipId:'drivelimo', words:['drives a limo','driving a limo','rides in a limo','riding in a limo','drives a limousine','riding in a limousine'] },
+  { clipId:'drivecar', words:['drives a car','driving a car','drives the car','drives his car','drives her car','drives a luxury car','driving a luxury car'] },
   { clipId:'ridebike', words:['rides a bike','riding a bike','rides a bicycle','riding a bicycle','rides his bike','rides her bike','rides the bike'] },
   { clipId:'ridemotorcycle', words:['rides a motorcycle','riding a motorcycle','rides a motorbike','riding a motorbike','rides the motorcycle'] },
   { clipId:'walk',  words:['walk','comes in','comes into','enters','arrives'] },
@@ -273,7 +291,7 @@ function parsePromptToScene(rawText){
   const animals = detectAnimals(text);
   // If a character is already driving/riding (seq includes drivecar/ridebike/ridemotorcycle), don't
   // also spawn a redundant decorative copy of that same vehicle type floating separately in the scene.
-  const rideVehicleTypes = seq.filter(id=> RIDE_VEHICLES[id]).map(id=> RIDE_VEHICLES[id]);
+  const rideVehicleTypes = seq.filter(id=> RIDE_DECORATIVE_TYPE[id]).map(id=> RIDE_DECORATIVE_TYPE[id]);
   const vehicles = detectVehicles(text).filter(v=> !rideVehicleTypes.includes(v.type));
   const quoted = extractQuotedLines(rawText);
 
@@ -427,7 +445,11 @@ function renderFrame(frame){
     if(SEATED_CLIPS[c.clipId]){
       if(frame.furniture === 'sofa') drawSofaProp(c.x, GROUND_Y); else drawChairProp(c.x, GROUND_Y);
     }
-    if(RIDE_VEHICLES[c.clipId]) drawVehicleProp(c.x, c.faceDir, RIDE_VEHICLES[c.clipId], frame.localT, 1.15);
+    const rv = RIDE_VEHICLES[c.clipId];
+    if(rv){
+      if(rv.kind === 'car') drawRideCarProp(c.x, c.faceDir, frame.localT, 1, rv.variant);
+      else drawVehicleProp(c.x, c.faceDir, rv.type, frame.localT, rv.scale);
+    }
   });
   const activeStyle = STYLES[frame.style] || STYLES.bold;
   const handsById = {};

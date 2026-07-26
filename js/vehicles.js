@@ -377,3 +377,73 @@ function drawVehicleProp(x, faceDir, type, t, sizeScale){
   const entry = VEHICLES[type] || VEHICLES.car;
   entry.draw(x, faceDir, t, sizeScale);
 }
+
+// ---------- rideable car variants: purpose-built for a character actually SITTING in them (unlike
+// VEHICLES.car above, which is a small decorative background prop). Open-top/convertible silhouette
+// so the seated character's torso+head are naturally visible above the door line with no window cutout
+// needed, sized against poseRide's known geometry (js/poses.js: reuses poseSit's leg angles, so feet
+// land at roughly x + 37*faceDir, right at GROUND_Y) — the footwell and both wheels are deliberately
+// positioned clear of that point so feet never overlap a wheel the way the old tiny car did.
+const RIDE_CAR_VARIANTS = {
+  sedan: { body:'#e0453f', trim:'#7a1f1c', backSpan:58, frontSpan:98, doorTop:46, hoodTop:30, trunkTop:34, wheelR:19, spoiler:false, windows:0 },
+  sports:{ body:'#f59e0b', trim:'#7a4a08', backSpan:44, frontSpan:82, doorTop:36, hoodTop:22, trunkTop:26, wheelR:20, spoiler:true,  windows:0 },
+  limo:  { body:'#1f2430', trim:'#000000', backSpan:72, frontSpan:170, doorTop:46, hoodTop:30, trunkTop:34, wheelR:19, spoiler:false, windows:4 }
+};
+function drawRideCarProp(x, faceDir, t, sizeScale, variant){
+  const v = RIDE_CAR_VARIANTS[variant] || RIDE_CAR_VARIANTS.sedan;
+  const s = sizeScale || 1, INK = '#111', gy = GROUND_Y, fd = faceDir || 1;
+  const backX = x - v.backSpan*s*fd, frontX = x + v.frontSpan*s*fd;
+  const floorY = gy - 4*s, doorY = gy - v.doorTop*s, hoodY = gy - v.hoodTop*s, trunkY = gy - v.trunkTop*s;
+  const spin = t*4;
+  ctx.save();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK;
+  // body: open-top convertible profile (no roof/windshield to draw around) — back bumper up over the
+  // trunk, along the door top (this is the "seat back" height the character's hip sits just above),
+  // down the sloped hood, and along the floor back to the start.
+  ctx.fillStyle = v.body;
+  ctx.beginPath();
+  ctx.moveTo(backX, floorY);
+  ctx.lineTo(backX, trunkY);
+  ctx.quadraticCurveTo(backX + 10*s*fd, doorY, backX + 26*s*fd, doorY);
+  ctx.lineTo(frontX - 30*s*fd, doorY);
+  ctx.quadraticCurveTo(frontX - 6*s*fd, doorY, frontX - 2*s*fd, hoodY);
+  ctx.quadraticCurveTo(frontX + 6*s*fd, hoodY + 4*s, frontX, floorY);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // low dashboard hint just ahead of the seat, roughly where the character's forward-reaching hands
+  // land (poseRide's arms reach forward-and-down from the shoulder) — purely decorative detail.
+  ctx.strokeStyle = v.trim; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(x + 20*s*fd, doorY + 4*s); ctx.lineTo(x + 32*s*fd, doorY - 10*s); ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  if(v.spoiler){
+    ctx.beginPath(); ctx.moveTo(backX, trunkY); ctx.lineTo(backX, trunkY - 14*s); ctx.lineTo(backX + 16*s*fd, trunkY - 14*s); ctx.stroke();
+  }
+  if(v.windows > 0){
+    ctx.fillStyle = '#93c5fd';
+    const span = (frontX - 30*s*fd - (backX + 26*s*fd));
+    for(let i=0;i<v.windows;i++){
+      const wx = backX + 26*s*fd + fd*(Math.abs(span)/(v.windows+1))*(i+1) - 6*s*fd;
+      ctx.fillRect(wx, doorY - 16*s, 10*s, 10*s);
+      ctx.strokeRect(wx, doorY - 16*s, 10*s, 10*s);
+    }
+  }
+  // headlight/taillight accents
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath(); ctx.arc(frontX - 4*s*fd, floorY - 6*s, 3*s, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#f87171';
+  ctx.beginPath(); ctx.arc(backX + 2*s*fd, floorY - 6*s, 3*s, 0, Math.PI*2); ctx.fill();
+  // wheels: rear sits behind the seat, front sits well beyond where the seated character's feet land
+  // (~37px*s forward of x), so neither wheel ever visually overlaps a foot.
+  const wheelXs = variant === 'limo' ? [x - 40*s*fd, x + 20*s*fd, frontX - 30*s*fd] : [x - 32*s*fd, frontX - 26*s*fd];
+  wheelXs.forEach(wx=>{
+    ctx.fillStyle = '#222'; ctx.strokeStyle = INK; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(wx, gy, v.wheelR*s, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for(let i=0;i<4;i++){
+      const ang = spin + i*Math.PI/2;
+      ctx.beginPath(); ctx.moveTo(wx, gy); ctx.lineTo(wx+Math.cos(ang)*v.wheelR*s*0.65, gy+Math.sin(ang)*v.wheelR*s*0.65); ctx.stroke();
+    }
+    ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(wx, gy, v.wheelR*s*0.25, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
