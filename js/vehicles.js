@@ -48,32 +48,71 @@ const VEHICLES = {
   },
   bicycle: {
     label: 'Bicycle',
+    // Reworked from a thin wireframe (bare wheel outlines + single-pixel stick lines) into something
+    // that actually reads as a bicycle: filled rubber tires with a rim and hub, thick colored frame
+    // tubing with a dark edge for the bold-cartoon look, a real fork, a handlebar with a grip, a
+    // rotating crank/pedal, a chain line, and a saddle — same overall wheel spacing/seat/handle
+    // positions as before (so a character already posed for "riding" still lines up), just far more
+    // detailed art.
     draw: (x, faceDir, t, sizeScale)=>{
       const s = sizeScale || 1, INK = '#111', gy = GROUND_Y;
-      const wheelR = 14*s, spin = t*6;
-      const wy = gy, backX = x-16*s, frontX = x+16*s;
+      const wheelR = 15*s, spin = t*6;
+      const wy = gy, backX = x-17*s, frontX = x+17*s;
+      const pedalX = x-2*s, pedalY = wy-wheelR*0.55;
+      const seatX = x-9*s, seatY = wy-wheelR*1.85;
+      const handleX = x+15*s, handleY = wy-wheelR*1.55;
+      const frameColor = '#dc2626';
       ctx.save();
-      ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // tires: filled black rubber ring + a lighter rim, not just a bare outline circle
       [backX, frontX].forEach(wx=>{
-        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.stroke();
-        for(let i=0;i<6;i++){
-          const ang = spin + i*Math.PI/3;
-          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR, wy+Math.sin(ang)*wheelR); ctx.stroke();
+        ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f4f4f5';
+        ctx.beginPath(); ctx.arc(wx, wy, wheelR*0.6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 1;
+        for(let i=0;i<8;i++){
+          const ang = spin + i*Math.PI/4;
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx+Math.cos(ang)*wheelR*0.58, wy+Math.sin(ang)*wheelR*0.58); ctx.stroke();
         }
+        ctx.fillStyle = INK;
+        ctx.beginPath(); ctx.arc(wx, wy, 2.3*s, 0, Math.PI*2); ctx.fill();
       });
-      const seatX = x-4*s, seatY = wy-wheelR-10*s;
-      const pedalX = x, pedalY = wy-wheelR*0.4;
-      const handleX = x+12*s, handleY = wy-wheelR-6*s;
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(backX, wy); ctx.lineTo(pedalX, pedalY); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pedalX, pedalY); ctx.lineTo(seatX, seatY); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(seatX, seatY); ctx.lineTo(backX, wy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pedalX, pedalY); ctx.lineTo(frontX, wy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pedalX, pedalY); ctx.lineTo(handleX, handleY); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(handleX-6*s, handleY); ctx.lineTo(handleX+6*s, handleY); ctx.stroke();
+
+      // frame tubes: thick colored tubing with a dark edge pass, instead of thin plain lines
+      const tubes = [[backX,wy,pedalX,pedalY],[pedalX,pedalY,seatX,seatY],[seatX,seatY,backX,wy],[seatX,seatY,handleX-2*s,handleY+4*s]];
+      ctx.strokeStyle = frameColor; ctx.lineWidth = 5*s;
+      tubes.forEach(([x1,y1,x2,y2])=>{ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); });
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+      tubes.forEach(([x1,y1,x2,y2])=>{ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); });
+
+      // fork + stem
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 3.5*s;
       ctx.beginPath(); ctx.moveTo(handleX, handleY); ctx.lineTo(frontX, wy); ctx.stroke();
-      ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.ellipse(seatX, seatY-2*s, 6*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(handleX-2*s, handleY+4*s); ctx.lineTo(handleX, handleY); ctx.stroke();
+
+      // handlebar + grip
+      ctx.strokeStyle = INK; ctx.lineWidth = 3*s;
+      ctx.beginPath(); ctx.moveTo(handleX-7*s, handleY-1*s); ctx.lineTo(handleX+6*s, handleY-3*s); ctx.stroke();
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(handleX-7*s, handleY-1*s, 2*s, 0, Math.PI*2); ctx.fill();
+
+      // chain ring + rotating crank/pedal + chain
+      ctx.strokeStyle = '#444'; ctx.lineWidth = 2*s;
+      ctx.beginPath(); ctx.arc(pedalX, pedalY, 5*s, 0, Math.PI*2); ctx.stroke();
+      const crankAng = t*8;
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5*s;
+      ctx.beginPath(); ctx.moveTo(pedalX, pedalY); ctx.lineTo(pedalX+Math.cos(crankAng)*7*s, pedalY+Math.sin(crankAng)*7*s); ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.rect(pedalX+Math.cos(crankAng)*7*s-2.5*s, pedalY+Math.sin(crankAng)*7*s-1.5*s, 5*s, 3*s); ctx.fill();
+      ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(pedalX, pedalY+4*s); ctx.lineTo(backX, wy-1*s); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // saddle
+      ctx.fillStyle = '#222'; ctx.strokeStyle = INK; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(seatX-2*s*faceDir, seatY-2.5*s, 7*s, 3*s, -0.15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.restore();
     }
   },
