@@ -22,7 +22,7 @@ function resolveFaceDir(seg, charId, homeFaceDir){
 // move too (a limo is heavier/slower than a sports car; a bike is slower than a motorcycle) — for a
 // really long journey, pair a move segment with a per-segment background/weather override (task #14)
 // to cut to a new backdrop rather than relying on one segment to cross the whole stage.
-const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, drivesportscar: 230, drivelimo: 150, ridebike: 90, ridemotorcycle: 190, flyplane: 200, flyhelicopter: 140 };
+const MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, drivesportscar: 230, drivelimo: 150, ridebike: 90, ridemotorcycle: 190, flyplane: 200, flyhelicopter: 140, swim: 55 };
 function isMoveClip(clipId){ return Object.prototype.hasOwnProperty.call(MOVE_SPEEDS, clipId); }
 // flyplane/flyhelicopter additionally support vertical travel: px/sec climb-or-descend rate, used only
 // when the segment's direction override for that character is 'up' or 'down' (see resolveVerticalDir).
@@ -263,7 +263,7 @@ const ANIMAL_KEYWORDS = [
   { type:'owl',      words:['owl'] },
   { type:'giraffe',  words:['giraffe'] },
   { type:'zebra',    words:['zebra'] },
-  { type:'kangaroo', words:['kangaroo'] },
+  { type:"kangaroo', words:['kangaroo'] },
   { type:'panda',    words:['panda'] },
   { type:'fox',      words:['fox'] },
   { type:'wolf',     words:['wolf'] }
