@@ -1,4 +1,4 @@
-// ---------- Scene Engine (Beta) AI planner (Vercel serverless function) ----------
+// --------- Scene Engine (Beta) AI planner (Vercel serverless function) ----------
 // A separate endpoint from api/generate-scene.js (the main tool's planner) — kept independent on
 // purpose, same as every other engine/ file, so nothing about the main tool's AI flow is touched.
 // Reuses the SAME ANTHROPIC_API_KEY environment variable already configured in the Vercel project
@@ -27,15 +27,35 @@ const BACKGROUND_IDS = [
 ];
 const WEATHER_IDS = ['none','rain','snow','fog','sunny','autumn'];
 
+// Group scenes: up to 5 stickmen. The wrapAroundTorso hug primitive only targets one other
+// character's real skeleton, so hugFromBehind stays scoped to exactly 2 — for 3-5 everyone
+// resolves independently (their own action, side by side), same as pass 1 always did.
+const MAX_CHARACTERS = 5;
+const NAME_POOL = ['Alex', 'Sam', 'Jamie', 'Taylor', 'Casey'];
+const CHAR_KEYS = ['character1', 'character2', 'character3', 'character4', 'character5'];
+
 const SYSTEM_PROMPT =
   'You are the scene planner for the Scene Engine, an experimental part of Stickman Video Studio (a ' +
   'browser tool that renders simple 2D stick-figure animations — never realistic humans, never ' +
   'generated video/image pixels, everything is drawn by code). Given a description, call ' +
-  'build_engine_scene using ONLY the allowed ids in the tool schema — never invent one. Use ' +
-  'characterCount 2 only when the description clearly involves two people (mentions both, or an ' +
-  'interaction like hugging). Set interaction to "hugFromBehind" ONLY when the description clearly ' +
-  'describes one person embracing/hugging the other from behind (including while riding something ' +
-  'together) — otherwise "none". character2 is only used when characterCount is 2.';
+  'build_engine_scene using ONLY the allowed ids in the tool schema — never invent one. Set ' +
+  'characterCount to match how many people the description actually involves, up to a maximum of 5 ' +
+  '(e.g. "three people dancing" -> characterCount 3, "a stickman doing yoga" -> characterCount 1). ' +
+  'When the description implies a group without an exact number (e.g. "a crowd", "a team", "several ' +
+  'people"), pick a reasonable count between 3 and 5. Give each character the action that best matches ' +
+  'what they are doing; if all are doing the same thing, repeat that action for each. Set interaction ' +
+  'to "hugFromBehind" ONLY when characterCount is exactly 2 AND the description clearly describes one ' +
+  'person embracing/hugging the other from behind (including while riding something together) — ' +
+  'otherwise "none". character2 through character5 are only used when characterCount is high enough ' +
+  'to need them.';
+
+const CHARACTER_PROPERTY = {
+  type: 'object',
+  properties: {
+    action: { type: 'string', enum: CLIP_IDS },
+    gender: { type: 'string', enum: ['male', 'female'] }
+  }
+};
 
 const BUILD_SCENE_TOOL = {
   name: 'build_engine_scene',
@@ -45,23 +65,13 @@ const BUILD_SCENE_TOOL = {
     properties: {
       background: { type: 'string', enum: BACKGROUND_IDS },
       weather: { type: 'string', enum: WEATHER_IDS },
-      characterCount: { type: 'integer', enum: [1, 2] },
-      character1: {
-        type: 'object',
-        properties: {
-          action: { type: 'string', enum: CLIP_IDS },
-          gender: { type: 'string', enum: ['male', 'female'] }
-        },
-        required: ['action']
-      },
-      character2: {
-        type: 'object',
-        properties: {
-          action: { type: 'string', enum: CLIP_IDS },
-          gender: { type: 'string', enum: ['male', 'female'] }
-        }
-      },
-      interaction: { type: 'string', enum: ['none', 'hugFromBehind'], description: 'hugFromBehind = character2 hugs character1 from behind.' }
+      characterCount: { type: 'integer', enum: [1, 2, 3, 4, 5] },
+      character1: { ...CHARACTER_PROPERTY, required: ['action'] },
+      character2: CHARACTER_PROPERTY,
+      character3: CHARACTER_PROPERTY,
+      character4: CHARACTER_PROPERTY,
+      character5: CHARACTER_PROPERTY,
+      interaction: { type: 'string', enum: ['none', 'hugFromBehind'], description: 'hugFromBehind = character2 hugs character1 from behind. Only valid when characterCount is 2.' }
     },
     required: ['background', 'weather', 'characterCount', 'character1']
   }
@@ -81,22 +91,19 @@ function isRateLimited(ip) {
 function buildFinalGraph(ai) {
   const background = BACKGROUND_IDS.includes(ai.background) ? ai.background : 'white';
   const weather = WEATHER_IDS.includes(ai.weather) ? ai.weather : 'none';
-  const charCount = ai.characterCount === 2 ? 2 : 1;
-  const c1 = ai.character1 || {};
-  const action1 = CLIP_IDS.includes(c1.action) ? c1.action : 'idle';
-  const gender1 = c1.gender === 'female' ? 'female' : 'male';
+  const charCount = Number.isInteger(ai.characterCount) && ai.characterCount >= 1 && ai.characterCount <= MAX_CHARACTERS
+    ? ai.characterCount : 1;
   const interaction = (charCount === 2 && ai.interaction === 'hugFromBehind') ? 'hugFromBehind' : 'none';
-  const result = {
-    background, weather, characterCount: charCount,
-    character1: { name: 'Alex', action: action1, gender: gender1 }
-  };
-  if (charCount === 2) {
-    const c2 = ai.character2 || {};
-    const action2 = CLIP_IDS.includes(c2.action) ? c2.action : 'idle';
-    const gender2 = c2.gender === 'female' ? 'female' : 'male';
-    result.character2 = { name: 'Sam', action: action2, gender: gender2 };
-    result.interaction = interaction;
+
+  const result = { background, weather, characterCount: charCount };
+  for (let i = 0; i < charCount; i++) {
+    const key = CHAR_KEYS[i];
+    const c = ai[key] || {};
+    const action = CLIP_IDS.includes(c.action) ? c.action : 'idle';
+    const gender = c.gender === 'female' ? 'female' : 'male';
+    result[key] = { name: NAME_POOL[i], action, gender };
   }
+  if (charCount === 2) result.interaction = interaction;
   return result;
 }
 
