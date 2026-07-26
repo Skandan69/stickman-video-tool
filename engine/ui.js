@@ -48,9 +48,13 @@ function localFallbackGraph(text){
   const bgMatch = BACKGROUND_LIST.find(b => b.id !== 'custom' && (lower.includes(b.id) || lower.includes(b.label.toLowerCase())));
   if(bgMatch) background = bgMatch.id;
   const movesLikeVehicle = /\b(jeep|bike|bicycle|cycle|motorcycle|car|drive|ride|4x4)\b/.test(lower);
-  // No dedicated "play cricket/football/tennis" pose exists yet — approximate with the closest
-  // existing action (kick/throw) rather than defaulting sports scenes to idle.
-  const action1 = /\bswim/.test(lower) ? 'swim' : /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
+  // "kite" is checked before the broader "fly" match so "flying a kite" doesn't get misread as piloting
+  // an aircraft. No dedicated "play cricket/football/tennis" pose exists yet — approximate with the
+  // closest existing action (kick/throw) rather than defaulting sports scenes to idle.
+  const action1 = /\bkite\b/.test(lower) ? 'kite' :
+    /\b(helicopter|chopper)\b/.test(lower) ? 'flyhelicopter' :
+    /\b(plane|airplane|jet|aircraft)\b/.test(lower) || /\bfly/.test(lower) ? 'flyplane' :
+    /\bswim/.test(lower) ? 'swim' : /\bwalk/.test(lower) ? 'walk' : /\brun/.test(lower) ? 'run' : /\bdanc/.test(lower) ? 'dance' :
     /\bwave/.test(lower) ? 'wave' : /\b(football|soccer)\b/.test(lower) ? 'kick' : /\b(cricket|tennis)\b/.test(lower) ? 'throw' :
     (wantsHug || movesLikeVehicle) ? 'ridebike' : 'idle';
   const groupCount = detectGroupCount(lower);
