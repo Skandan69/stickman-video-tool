@@ -23,34 +23,55 @@ function keyframeGesture(t, seed, holdTime, palette){
   const period = t / holdTime, idx = Math.floor(period), frac = smoothstep01(period - idx);
   const a = palette[Math.floor(pseudoRandom01(idx, seed) * palette.length) % palette.length];
   const b = palette[Math.floor(pseudoRandom01(idx+1, seed) * palette.length) % palette.length];
-  return { shoulder: a.shoulder + (b.shoulder - a.shoulder) * frac, elbow: a.elbow + (b.elbow - a.elbow) * frac };
+  // A pure linear lerp between two rest angles is what reads as "mechanical" — a real arm swing arcs
+  // through the transition (follow-through) rather than tracing a straight line in angle-space. This
+  // adds a small mid-transition bump to the elbow (peaks at frac=0.5, gone at both ends) so the gesture
+  // gets a natural flick instead of a robotic point-to-point glide.
+  const arc = Math.sin(frac * Math.PI) * 0.18;
+  return { shoulder: a.shoulder + (b.shoulder - a.shoulder) * frac, elbow: a.elbow + (b.elbow - a.elbow) * frac - arc };
 }
 const TALK_GESTURE_PALETTE = [
   { shoulder: 1.05, elbow: -0.55 }, { shoulder: 0.7, elbow: -0.9 },
   { shoulder: 1.35, elbow: -0.3 },  { shoulder: 0.95, elbow: -1.05 },
   { shoulder: 1.15, elbow: -0.65 }
 ];
+// Subtler palette for whichever character is NOT the current dialogue speaker but is still in the
+// Talk pose (i.e. listening) — previously that arm barely moved (tiny drift only), which next to the
+// speaker's big expressive gesture read as "frozen mannequin," the main source of the robotic look.
+// Small natural listening adjustments (loosely resting, occasional shift) instead of near-zero motion.
+const LISTEN_GESTURE_PALETTE = [
+  { shoulder: 0.15, elbow: 0.15 }, { shoulder: 0.35, elbow: -0.1 },
+  { shoulder: 0.05, elbow: 0.25 }, { shoulder: 0.4, elbow: 0.0 }
+];
 function poseIdle(t){
-  const lArm = keyframeDrift(t, 1, 1.6, 0.09), rArm = keyframeDrift(t, 2, 1.9, 0.09);
+  // Amplitudes raised from the original 0.09/0.05 rad — the smaller range read as an almost
+  // imperceptible twitch rather than a relaxed natural sway, which is part of what made idle/talk
+  // characters look stiff/robotic even though the easing itself was already hold-and-transition.
+  const lArm = keyframeDrift(t, 1, 1.6, 0.14), rArm = keyframeDrift(t, 2, 1.9, 0.14);
   return {
-    torsoLean: keyframeDrift(t, 3, 2.4, 0.02),
-    headTilt: keyframeDrift(t, 4, 2.1, 0.035),
+    torsoLean: keyframeDrift(t, 3, 2.4, 0.025),
+    headTilt: keyframeDrift(t, 4, 2.1, 0.04),
     bounceY: Math.sin(t*2)*1.4 + 0.4*Math.sin(t*0.87+0.4),
-    leftShoulderAngle: lArm, leftElbowBend: 0.15 + keyframeDrift(t, 5, 1.7, 0.05),
-    rightShoulderAngle: rArm, rightElbowBend: 0.15 + keyframeDrift(t, 6, 1.5, 0.05),
+    leftShoulderAngle: lArm, leftElbowBend: 0.15 + keyframeDrift(t, 5, 1.7, 0.08),
+    rightShoulderAngle: rArm, rightElbowBend: 0.15 + keyframeDrift(t, 6, 1.5, 0.08),
     leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0
   };
 }
 function poseTalk(t, speaking){
   const gesture = keyframeGesture(t, 7, 0.85, TALK_GESTURE_PALETTE);
+  // The listening character (Talk pose, but not the current dialogue speaker) used to get only a
+  // near-zero-amplitude drift on one arm and a flat, never-moving 0.15 elbow bend on the other — next
+  // to the speaker's big expressive gesture that read as a frozen mannequin standing beside a puppet.
+  // Give it the same keyframe-gesture treatment, just from a subtler "at rest / listening" palette.
+  const listen = keyframeGesture(t, 14, 1.6, LISTEN_GESTURE_PALETTE);
   const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
   return {
     torsoLean: keyframeDrift(t, 8, 2.2, 0.02),
-    headTilt: speaking ? keyframeDrift(t, 9, 0.9, 0.13) : keyframeDrift(t, 9, 2.3, 0.04),
-    bounceY: Math.sin(t*2)*1.5,
-    leftShoulderAngle: keyframeDrift(t, 10, 1.8, 0.08), leftElbowBend: 0.15,
-    rightShoulderAngle: speaking ? gesture.shoulder : keyframeDrift(t, 11, 2.0, 0.1),
-    rightElbowBend: speaking ? gesture.elbow : 0.2 + keyframeDrift(t, 12, 1.6, 0.06),
+    headTilt: speaking ? keyframeDrift(t, 9, 0.9, 0.13) : keyframeDrift(t, 9, 2.3, 0.06),
+    bounceY: Math.sin(t*2)*1.2 + 0.35*Math.sin(t*0.9+0.6),
+    leftShoulderAngle: keyframeDrift(t, 10, 1.8, 0.1), leftElbowBend: 0.15 + keyframeDrift(t, 13, 2.1, 0.06),
+    rightShoulderAngle: speaking ? gesture.shoulder : listen.shoulder,
+    rightElbowBend: speaking ? gesture.elbow : listen.elbow,
     leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
     mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
   };
