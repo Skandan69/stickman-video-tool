@@ -536,7 +536,7 @@ function drawFlyShadow(x, altitude, sizeScale){
   ctx.beginPath(); ctx.ellipse(x, GROUND_Y + 2, 55*sizeScale*shrink, 10*sizeScale*shrink, 0, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
-const MAX_ALTITUDE_HINT = 220; // mirrors scene.js's MAX_ALTITUDE — kept local since vehicles.js loads standalone
+const MAX_ALTITUDE_HINT = 180; // mirrors scene.js's MAX_ALTITUDE — kept local since vehicles.js loads standalone
 
 function drawRidePlaneProp(x, faceDir, t, altitude, sizeScale){
   const s = sizeScale || 1, INK = '#111', gy = GROUND_Y - altitude, fd = faceDir || 1;

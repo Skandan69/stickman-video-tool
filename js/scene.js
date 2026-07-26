@@ -25,7 +25,10 @@ function isMoveClip(clipId){ return Object.prototype.hasOwnProperty.call(MOVE_SP
 // When vertical movement is active for a segment, horizontal movement pauses for that segment (a plane
 // climbing straight up doesn't also cruise forward) — see computeSegmentStartPositions/evaluateScene.
 const VERTICAL_SPEEDS = { flyplane: 90, flyhelicopter: 110 };
-const MAX_ALTITUDE = 220;
+// Kept low enough that a character's head still has clear headroom below the top of the 450px-tall
+// canvas even at max altitude (verified live: HIP_HEIGHT/torso/neck/head add up to ~254px above
+// GROUND_Y=380, so altitude much past ~180 starts crowding the top edge).
+const MAX_ALTITUDE = 180;
 function isFlyClip(clipId){ return Object.prototype.hasOwnProperty.call(VERTICAL_SPEEDS, clipId); }
 function resolveVerticalDir(seg, charId){
   const override = seg && seg.directions && seg.directions[charId];
