@@ -35,7 +35,12 @@ function resolveEngineFrame(scene, t){
   const riderSkeleton = computeSkeleton(riderX, riderFaceDir, scene.riderAppearance, riderPose);
 
   // --- Pass 2: dependent character (hugger). Targets pass 1's REAL resolved torso point. ---
-  const huggerX = riderX, huggerFaceDir = 1;
+  // Drawn at a small offset BEHIND the rider (opposite their facing direction), not the exact same x —
+  // at identical x the hugger's whole body sits directly behind the rider's and is almost entirely
+  // hidden (tried first; looked like overlapping color glitches, not two people). Offsetting back lets
+  // the hugger's head/shoulders peek out realistically while their arms still IK-target the rider's
+  // REAL torso position, so the wrap still reads as reaching onto the rider rather than floating.
+  const huggerX = riderX - 22 * riderFaceDir, huggerFaceDir = riderFaceDir;
   applyBodyScale(scene.huggerAppearance.bodyType, scene.huggerAppearance.sizeScale, scene.huggerAppearance.build);
   const torsoTarget = { x: (riderSkeleton.hip.x + riderSkeleton.shoulder.x) / 2, y: (riderSkeleton.hip.y + riderSkeleton.shoulder.y) / 2 };
   // Legs/torso/head resolved first from a plain standing stance so there's a real shoulder position to
