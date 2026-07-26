@@ -2,8 +2,15 @@
 // background/weather default to null, meaning "inherit the scene-wide setting" — set them to a real
 // id to override just this segment (e.g. so a multi-segment "driving" sequence can cut from a summer
 // street to a snowy highway to sell a long journey without any literal point-to-point movement).
-function makeSegment(duration, actions, dialogue, background, weather){
-  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null };
+function makeSegment(duration, actions, dialogue, background, weather, directions, povCamera){
+  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null, directions: directions || {}, povCamera: !!povCamera };
+}
+// Resolves a character's effective facing/movement direction for a segment: an explicit per-segment
+// override ('left'/'right') if the user set one, else the character's normal layout-assigned faceDir
+// (characters face "inward" toward each other by default — see computePositions below).
+function resolveFaceDir(seg, charId, homeFaceDir){
+  const override = seg && seg.directions && seg.directions[charId];
+  return override === 'left' ? -1 : override === 'right' ? 1 : homeFaceDir;
 }
 // Clips that actually translate the character's x position across the segment (as opposed to
 // animating in place). px/sec — tuned so a default ~4s segment covers a believable chunk of the
@@ -53,7 +60,9 @@ function resolveIndexedTimeline(indexedSegments, charCount){
     actions: Object.fromEntries(Object.entries(s.actions||{}).map(([idx,clip])=>[ids[idx], clip])),
     dialogue: s.dialogue ? { speakerId: ids[s.dialogue.speakerIdx], text: s.dialogue.text } : null,
     background: s.background || null,
-    weather: s.weather || null
+    weather: s.weather || null,
+    directions: {},
+    povCamera: !!s.povCamera
   }));
 }
 
@@ -393,8 +402,9 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
     scene.characters.forEach((c,i)=>{
       const clipId = (seg.actions && seg.actions[c.id]) || 'idle';
       if(isMoveClip(clipId)){
+        const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir);
         const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
-        runningX[i] = clamp(runningX[i] + dist*homePositions[i].faceDir, 60, W-60);
+        runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
       }
     });
     return startX;
@@ -422,9 +432,10 @@ function evaluateScene(scene, t){
     const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // must be active before the pose is computed (arm IK reads current geometry)
     const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
     pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
-    const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*positions[i].faceDir : 0;
+    const faceDir = resolveFaceDir(active, appearance.id, positions[i].faceDir);
+    const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0;
     const x = clamp(activeStartX[i] + travelled, 60, W-60);
-    return { id: appearance.id, x: x, faceDir: positions[i].faceDir, appearance: appearance, clipId: clipId, pose: pose };
+    return { id: appearance.id, x: x, faceDir: faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
   const animalPositions = computeAnimalPositions((scene.animals || []).length);
@@ -433,10 +444,24 @@ function evaluateScene(scene, t){
   const vehiclePositions = computeVehiclePositions((scene.vehicles || []).length);
   const vehicles = (scene.vehicles || []).map((v, i)=> ({ id: v.id, type: v.type, x: vehiclePositions[i].x, faceDir: vehiclePositions[i].faceDir, sizeScale: v.sizeScale || 1 }));
 
-  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total };
+  // Driver POV camera (task #25): only meaningful if the segment has it toggled on AND at least one
+  // character is actually in a ride/drive clip this frame — first such character found becomes "the
+  // driver" whose seat we're viewing from. speed feeds the scrolling-road animation.
+  const povChar = active.povCamera ? characters.find(c=> RIDE_VEHICLES[c.clipId]) : null;
+  const povDriver = povChar ? { speed: MOVE_SPEEDS[povChar.clipId] || 0, faceDir: povChar.faceDir, clipId: povChar.clipId } : null;
+
+  return { characters: characters, animals: animals, vehicles: vehicles, dialogue: active.dialogue, background: active.background || scene.background, weather: active.weather || scene.weather || 'none', furniture: scene.furniture || 'chair', food: scene.food || 'sandwich', style: scene.style || 'bold', localT: localT, totalDuration: total, povDriver: povDriver };
 }
 
 function renderFrame(frame){
+  if(frame.povDriver){
+    // First-person cockpit view replaces the whole normal scene render for this frame — no side-view
+    // stickman/background to draw, just the windshield/road/mirror (weather still overlays on top so
+    // rain/snow reads as falling in front of the windshield).
+    drawDriverPOV(frame.localT, frame.povDriver.speed, frame.povDriver.faceDir, frame.weather);
+    drawWeatherOverlay(frame.weather, frame.localT);
+    return;
+  }
   drawBackground(frame.background);
   drawWeatherOverlay(frame.weather, frame.localT);
   frame.vehicles.forEach(v=> drawVehicleProp(v.x, v.faceDir, v.type, frame.localT, v.sizeScale));

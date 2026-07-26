@@ -536,6 +536,17 @@ function renderSegmentList(){
         '<div class="field"><label>Background (this segment)</label><select data-field="segBackground" data-id="'+seg.id+'">'+bgOverrideOptions+'</select></div>' +
         '<div class="field"><label>Weather (this segment)</label><select data-field="segWeather" data-id="'+seg.id+'">'+weatherOverrideOptions+'</select></div>' +
       '</div>';
+    // Direction override: "Auto" keeps each character's normal layout-assigned facing (inward toward
+    // others); Right/Left forces which way they face AND, for a move/ride clip, which way they travel
+    // this segment — this is what lets the same "walk"/"drivecar" action go either direction on screen.
+    const directionFieldsHtml = state.scene.characters.map(c=>{
+      const dirVal = (seg.directions && seg.directions[c.id]) || 'auto';
+      return '<div class="field"><label>' + escapeHtml(c.name) + ' direction</label><select data-field="direction_'+c.id+'" data-id="'+seg.id+'">' +
+        '<option value="auto"'+(dirVal==='auto'?' selected':'')+'>Auto</option>' +
+        '<option value="right"'+(dirVal==='right'?' selected':'')+'>Right &rarr;</option>' +
+        '<option value="left"'+(dirVal==='left'?' selected':'')+'>&larr; Left</option>' +
+        '</select></div>';
+    }).join('');
     return (
       '<div class="segment-card" draggable="true" data-seg-id="'+seg.id+'">' +
         '<div class="segment-head">' +
@@ -552,7 +563,9 @@ function renderSegmentList(){
           '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
           actionFieldsHtml +
         '</div>' +
+        '<div class="row">' + directionFieldsHtml + '</div>' +
         sceneOverrideHtml +
+        '<div class="checkbox-field"><input type="checkbox" data-field="povCamera" data-id="'+seg.id+'" '+(seg.povCamera?'checked':'')+'> <label>Driver POV camera (windshield view, if someone is riding/driving)</label></div>' +
         '<div class="checkbox-field"><input type="checkbox" data-field="hasDialogue" data-id="'+seg.id+'" '+(seg.dialogue?'checked':'')+'> <label>Dialogue in this segment</label></div>' +
         dialogueHtml +
       '</div>'
@@ -568,10 +581,10 @@ function renderSegmentList(){
 }
 
 // Canva/CapCut-style visual timeline strip: same segments as the detailed cards below, rendered as
-// proportionally-sized colored blocks with a live playhead — a navigational overview on top of the
-// cards, which stay the actual editing surface. Clicking a block jumps playback there; dragging one
-// reorders the timeline (shares dragSegId with the segment-card drag handlers above, since only one
-// drag can be in flight at a time).
+// proportionally-sized colored blocks with a live playhead — this is a real scrubbable timeline, not
+// just a static overview: click-drag anywhere on the strip background to scrub playback, drag a
+// block's ⋮⋮ handle to reorder it (shares dragSegId with the segment-card drag handlers above, since
+// only one drag can be in flight at a time), and drag a block's right edge to trim its duration.
 const STRIP_COLORS = ['#6366f1','#0891b2','#16a34a','#d97706','#db2777','#7c3aed','#dc2626','#0d9488','#4f46e5','#059669'];
 function segLabel(seg){
   const firstChar = state.scene.characters[0];
@@ -579,23 +592,59 @@ function segLabel(seg){
   const clip = (typeof CLIPS !== 'undefined' && CLIPS[clipId]) || null;
   return clip ? clip.label : 'Idle';
 }
+function stripTimeAt(clientX){
+  const rect = timelineStrip.getBoundingClientRect();
+  const total = state.scene.timeline.reduce((s,seg)=> s + Math.max(0.1, seg.duration), 0) || 1;
+  const frac = clamp((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+  return frac * total;
+}
 function renderTimelineStrip(){
   timelineStrip.innerHTML = '';
   const timeline = state.scene.timeline;
-  let acc = 0;
   timeline.forEach((seg, idx)=>{
     const block = document.createElement('div');
     block.className = 'timeline-strip-block';
     block.style.flex = Math.max(0.1, seg.duration) + ' 1 0%';
     block.style.background = STRIP_COLORS[idx % STRIP_COLORS.length];
-    block.title = 'Segment ' + (idx+1) + ' (' + seg.duration + 's) — click to jump, drag to reorder';
-    block.textContent = (idx+1) + '. ' + segLabel(seg);
-    block.setAttribute('draggable', 'true');
+    block.title = 'Segment ' + (idx+1) + ' (' + seg.duration + 's)';
     block.setAttribute('data-seg-id', seg.id);
-    const segStart = acc;
-    block.addEventListener('click', ()=>{ elapsed = segStart + 0.01; forceRedraw(); updateTimelineStripPlayhead(); });
-    block.addEventListener('dragstart', ()=>{ dragSegId = seg.id; block.classList.add('dragging'); });
-    block.addEventListener('dragend', ()=>{ block.classList.remove('dragging'); dragSegId = null; });
+
+    const handle = document.createElement('span');
+    handle.className = 'strip-drag-handle';
+    handle.setAttribute('draggable', 'true');
+    handle.title = 'Drag to reorder';
+    handle.textContent = '⋮⋮';
+    handle.addEventListener('mousedown', (e)=> e.stopPropagation());
+    handle.addEventListener('dragstart', (e)=>{ e.stopPropagation(); dragSegId = seg.id; block.classList.add('dragging'); });
+    handle.addEventListener('dragend', (e)=>{ e.stopPropagation(); block.classList.remove('dragging'); dragSegId = null; });
+    block.appendChild(handle);
+
+    const label = document.createElement('span');
+    label.className = 'strip-label';
+    label.textContent = (idx+1) + '. ' + segLabel(seg);
+    block.appendChild(label);
+
+    const resize = document.createElement('span');
+    resize.className = 'strip-resize-handle';
+    resize.title = 'Drag to trim duration';
+    resize.addEventListener('mousedown', (e)=>{
+      e.stopPropagation(); e.preventDefault();
+      const total = state.scene.timeline.reduce((s,sg)=> s + Math.max(0.1, sg.duration), 0) || 1;
+      const stripWidth = timelineStrip.getBoundingClientRect().width || 1;
+      const secsPerPx = total / stripWidth;
+      const startX = e.clientX, startDuration = seg.duration;
+      function onMove(ev){
+        seg.duration = Math.max(0.5, startDuration + (ev.clientX - startX) * secsPerPx);
+        renderTimelineStrip();
+        renderSegmentList();
+        forceRedraw();
+      }
+      function onUp(){ document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    block.appendChild(resize);
+
     block.addEventListener('dragover', (e)=>{ e.preventDefault(); block.classList.add('drag-over'); });
     block.addEventListener('dragleave', ()=> block.classList.remove('drag-over'));
     block.addEventListener('drop', (e)=>{
@@ -611,7 +660,6 @@ function renderTimelineStrip(){
       forceRedraw();
     });
     timelineStrip.appendChild(block);
-    acc += Math.max(0.1, seg.duration);
   });
   const playhead = document.createElement('div');
   playhead.className = 'timeline-strip-playhead';
@@ -619,6 +667,24 @@ function renderTimelineStrip(){
   timelineStrip.appendChild(playhead);
   updateTimelineStripPlayhead();
 }
+// Click-drag scrubbing: mousedown anywhere on the strip's own background (not a block's drag/resize
+// handle, which stopPropagation their own mousedowns) starts scrubbing — playback pauses for the
+// duration of the drag, like a real editor, and resumes to wherever it was left (paused or not).
+timelineStrip.addEventListener('mousedown', (e)=>{
+  const wasPlaying = state.playing;
+  state.playing = false;
+  elapsed = stripTimeAt(e.clientX);
+  forceRedraw(); updateTimelineStripPlayhead();
+  function onMove(ev){ elapsed = stripTimeAt(ev.clientX); forceRedraw(); updateTimelineStripPlayhead(); }
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    state.playing = wasPlaying;
+    if(playPauseBtn) playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
 function updateTimelineStripPlayhead(){
   const playhead = document.getElementById('timelineStripPlayhead');
   if(!playhead) return;
@@ -642,7 +708,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera };
     state.scene.timeline.splice(idx+1, 0, copy);
   }
   renderSegmentList();
@@ -661,6 +727,12 @@ function onSegmentFieldChange(e){
     const charId = field.slice('action_'.length);
     if(!seg.actions) seg.actions = {};
     seg.actions[charId] = e.target.value;
+  } else if(field.indexOf('direction_') === 0){
+    const charId = field.slice('direction_'.length);
+    if(!seg.directions) seg.directions = {};
+    seg.directions[charId] = e.target.value;
+  } else if(field === 'povCamera'){
+    seg.povCamera = e.target.checked;
   } else if(field === 'hasDialogue'){
     const firstId = state.scene.characters[0] && state.scene.characters[0].id;
     seg.dialogue = e.target.checked ? { speakerId: firstId, text: 'New line' } : null;

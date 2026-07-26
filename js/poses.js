@@ -1,34 +1,56 @@
 // ---------- animation clips: pure functions of (localT, opts) -> BonePose ----------
-// Idle/talk arms deliberately layer 2-3 sine terms at non-multiple frequencies (rather than one clean
-// oscillation) — a single sine reads as a metronome/robotic tick, while several slightly-offbeat waves
-// summed together produce the small, irregular-looking drift real held-still gestures have. Also used
-// by poseTalk below for the speaking gesture and by the mouth-open curve, which is now a continuous
-// shaped wave instead of a hard on/off step (previously: fully open or fully 0.2, snapping between the
-// two every ~0.3s — now eases through the range instead).
+// ---- gesture keyframe helpers: real 2D animation holds a pose then eases to the next one, rather
+// than oscillating continuously — a pure sine (even several summed together) still reads as "vibrating
+// in place" because it never actually STOPS anywhere. These pick a new target every `holdTime` seconds
+// (deterministic pseudo-random per seed, so left/right arms and different characters don't sync) and
+// smoothstep-ease between the current and next target, which is what makes it read as a natural,
+// occasionally-shifting gesture instead of a mechanical wobble.
+function smoothstep01(f){ return f*f*(3 - 2*f); }
+function pseudoRandom01(i, seed){
+  const v = Math.sin(i*127.1 + seed*311.7 + 0.7) * 43758.5453;
+  return v - Math.floor(v);
+}
+// Eases between scalar keyframe values drawn from [-1,1], scaled by amplitude.
+function keyframeDrift(t, seed, holdTime, amplitude){
+  const period = t / holdTime, idx = Math.floor(period), frac = smoothstep01(period - idx);
+  const a = pseudoRandom01(idx, seed) * 2 - 1, b = pseudoRandom01(idx+1, seed) * 2 - 1;
+  return (a + (b - a) * frac) * amplitude;
+}
+// Eases between whole {shoulder, elbow} keyframes picked from a small palette — used for the talking
+// gesture so it visibly changes shape (raised near chest / extended out / chopping down / palm up)
+// instead of one position wobbling, the way a person's hands actually move while speaking.
+function keyframeGesture(t, seed, holdTime, palette){
+  const period = t / holdTime, idx = Math.floor(period), frac = smoothstep01(period - idx);
+  const a = palette[Math.floor(pseudoRandom01(idx, seed) * palette.length) % palette.length];
+  const b = palette[Math.floor(pseudoRandom01(idx+1, seed) * palette.length) % palette.length];
+  return { shoulder: a.shoulder + (b.shoulder - a.shoulder) * frac, elbow: a.elbow + (b.elbow - a.elbow) * frac };
+}
+const TALK_GESTURE_PALETTE = [
+  { shoulder: 1.05, elbow: -0.55 }, { shoulder: 0.7, elbow: -0.9 },
+  { shoulder: 1.35, elbow: -0.3 },  { shoulder: 0.95, elbow: -1.05 },
+  { shoulder: 1.15, elbow: -0.65 }
+];
 function poseIdle(t){
+  const lArm = keyframeDrift(t, 1, 1.6, 0.09), rArm = keyframeDrift(t, 2, 1.9, 0.09);
   return {
-    torsoLean: 0.018*Math.sin(t*1.2) + 0.008*Math.sin(t*0.53+1.3),
-    headTilt: 0.03*Math.sin(t*0.9+0.6) + 0.015*Math.sin(t*2.3+2),
+    torsoLean: keyframeDrift(t, 3, 2.4, 0.02),
+    headTilt: keyframeDrift(t, 4, 2.1, 0.035),
     bounceY: Math.sin(t*2)*1.4 + 0.4*Math.sin(t*0.87+0.4),
-    leftShoulderAngle: 0.05*Math.sin(t*1.05) + 0.025*Math.sin(t*0.47+1.1),
-    leftElbowBend: 0.15 + 0.04*Math.sin(t*0.6+0.8),
-    rightShoulderAngle: 0.05*Math.sin(t*1.05+1) + 0.025*Math.sin(t*0.47+2.4),
-    rightElbowBend: 0.15 + 0.04*Math.sin(t*0.6+2.1),
+    leftShoulderAngle: lArm, leftElbowBend: 0.15 + keyframeDrift(t, 5, 1.7, 0.05),
+    rightShoulderAngle: rArm, rightElbowBend: 0.15 + keyframeDrift(t, 6, 1.5, 0.05),
     leftHipAngle:0, leftKneeBend:0, rightHipAngle:0, rightKneeBend:0, mouthOpen:0
   };
 }
 function poseTalk(t, speaking){
-  // Two non-harmonic gesture waves (5.3 and 2.7 rad/s, not integer multiples of each other) summed
-  // together so the speaking-hand-raise drifts and varies instead of ticking on one fixed beat.
-  const gestureA = Math.sin(t*5.3), gestureB = Math.sin(t*2.7+0.9);
+  const gesture = keyframeGesture(t, 7, 0.85, TALK_GESTURE_PALETTE);
   const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
   return {
-    torsoLean: 0.03*Math.sin(t*1.1) + (speaking ? 0.018*Math.sin(t*2.2+0.5) : 0),
-    headTilt: speaking ? 0.1*gestureA + 0.05*gestureB : 0.05*Math.sin(t*1.5),
+    torsoLean: keyframeDrift(t, 8, 2.2, 0.02),
+    headTilt: speaking ? keyframeDrift(t, 9, 0.9, 0.13) : keyframeDrift(t, 9, 2.3, 0.04),
     bounceY: Math.sin(t*2)*1.5,
-    leftShoulderAngle: 0.1*Math.sin(t*1.3+1) + (speaking ? 0.05*Math.sin(t*3.1+2) : 0), leftElbowBend: 0.15,
-    rightShoulderAngle: speaking ? 1.1 + 0.35*gestureA + 0.15*gestureB : 0.15*Math.sin(t*1.2),
-    rightElbowBend: speaking ? -0.55 + 0.25*gestureB + 0.12*gestureA : 0.2,
+    leftShoulderAngle: keyframeDrift(t, 10, 1.8, 0.08), leftElbowBend: 0.15,
+    rightShoulderAngle: speaking ? gesture.shoulder : keyframeDrift(t, 11, 2.0, 0.1),
+    rightElbowBend: speaking ? gesture.elbow : 0.2 + keyframeDrift(t, 12, 1.6, 0.06),
     leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
     mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
   };

@@ -68,12 +68,37 @@ const STYLES = {
       [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
         ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
       });
-      // silhouette head: glowing ring only, no fill/face — matches the reference's dark-figure look
-      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R*0.85, 0, Math.PI*2); ctx.stroke();
       [sk.lHand, sk.rHand, sk.lFoot, sk.rFoot].forEach(p=>{
         ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
       });
+      // head: dark-glass fill (glow silhouette look) with a glowing outline ring, THEN the same
+      // shared hair/face/accessories every other style uses drawn on top — previously this was an
+      // empty ring with no face at all; now eyes/hair/accessories show up against the dark fill while
+      // the glow aesthetic (dark body, neon rim light) is preserved.
+      ctx.fillStyle = 'rgba(8,10,20,0.88)';
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R*0.85, 0, Math.PI*2); ctx.fill();
+      ctx.shadowColor = glow; ctx.shadowBlur = 14; ctx.strokeStyle = glow; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R*0.85, 0, Math.PI*2); ctx.stroke();
       ctx.shadowBlur = 0;
+      drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+      drawFace(sk.head, faceDir, sk.eyeStyle, sk.emotion, pose.mouthOpen);
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
       ctx.fillStyle = '#ddd'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
       ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
       ctx.restore();

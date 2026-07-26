@@ -378,6 +378,79 @@ function drawVehicleProp(x, faceDir, type, t, sizeScale){
   entry.draw(x, faceDir, t, sizeScale);
 }
 
+// ---------- Driver POV camera: first-person cockpit view (windshield + scrolling road + rearview
+// mirror), swapped in for the whole normal scene render when a segment has "Driver POV camera" ticked
+// and a character is actually in a ride/drive clip (js/scene.js evaluateScene sets frame.povDriver).
+// This is a genuinely different way to sell "traveling" than the side-view stickman: looking OUT of
+// the vehicle at a road rushing toward you, rather than watching the vehicle move across the stage.
+const POV_SKY = { rain:'#7d8694', snow:'#c7d2df', fog:'#b7bec7', sunny:'#7fc4ff', autumn:'#d9a86c', none:'#8fc7ff' };
+function drawPerspectiveRoad(cx, horizonY, floorY, roadHalfW, offsetNorm){
+  // Road is a simple trapezoid (1-point perspective): narrow at the horizon, wide at the bottom edge.
+  ctx.fillStyle = '#4b5259';
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, horizonY); ctx.lineTo(cx + 10, horizonY);
+  ctx.lineTo(cx + roadHalfW, floorY); ctx.lineTo(cx - roadHalfW, floorY);
+  ctx.closePath(); ctx.fill();
+  // shoulder strips
+  ctx.fillStyle = '#3a3f45';
+  ctx.beginPath(); ctx.moveTo(cx-10,horizonY); ctx.lineTo(cx-14,horizonY); ctx.lineTo(cx-roadHalfW-16,floorY); ctx.lineTo(cx-roadHalfW,floorY); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx+10,horizonY); ctx.lineTo(cx+14,horizonY); ctx.lineTo(cx+roadHalfW+16,floorY); ctx.lineTo(cx+roadHalfW,floorY); ctx.closePath(); ctx.fill();
+  // dashed center line, scrolling toward the camera: each dash's normalized depth (0=horizon,
+  // 1=floor) cycles with offsetNorm, and perspective-foreshortens via depth^2.2 like the road edges.
+  ctx.fillStyle = '#f4d35e';
+  const dashCount = 7;
+  for(let i=0;i<dashCount;i++){
+    let depth = ((i/dashCount) + offsetNorm) % 1;
+    const shaped = Math.pow(depth, 2.2);
+    const y = horizonY + shaped*(floorY-horizonY);
+    const halfW = 2 + shaped*6;
+    const h = 4 + shaped*16;
+    ctx.fillRect(cx-halfW, y, halfW*2, h);
+  }
+}
+function drawDriverPOV(t, speedPxPerSec, faceDir, weatherId){
+  const cx = W/2, horizonY = 195, floorY = H;
+  ctx.save();
+  // sky
+  ctx.fillStyle = POV_SKY[weatherId] || POV_SKY.none;
+  ctx.fillRect(0, 0, W, horizonY);
+  // sun/glow hint
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.arc(cx + 180*faceDir, 70, 30, 0, Math.PI*2); ctx.fill();
+  // scrolling road (offset driven by distance actually traveled, matching the character's real speed)
+  const offsetNorm = ((t * (speedPxPerSec||40) * 0.006) % 1 + 1) % 1;
+  drawPerspectiveRoad(cx, horizonY, floorY, 340, offsetNorm);
+  // windshield pillars (A-pillars) framing the view, dark like real interior trim
+  ctx.fillStyle = '#1b1f27';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(70,0); ctx.lineTo(15,H*0.62); ctx.lineTo(0,H*0.62); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W-70,0); ctx.lineTo(W-15,H*0.62); ctx.lineTo(W,H*0.62); ctx.closePath(); ctx.fill();
+  // dashboard + steering wheel
+  ctx.fillStyle = '#20242c';
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0,H*0.74); ctx.quadraticCurveTo(cx,H*0.66,W,H*0.74); ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  const wheelX = cx - 90*faceDir, wheelY = H*0.87;
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(wheelX, wheelY, 46, Math.PI*1.15, Math.PI*1.85); ctx.stroke();
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(wheelX, wheelY); ctx.lineTo(wheelX, wheelY-40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(wheelX, wheelY); ctx.lineTo(wheelX-32, wheelY+22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(wheelX, wheelY); ctx.lineTo(wheelX+32, wheelY+22); ctx.stroke();
+  // rearview mirror: small inset showing a mini receding-road view (opposite perspective — narrows
+  // toward the TOP since it represents the road shrinking away behind), plus a following-car dot.
+  const mx = cx-70, my = 18, mw = 140, mh = 46;
+  ctx.fillStyle = '#12151a'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(mx-6,my-6,mw+12,mh+16,6) : ctx.rect(mx-6,my-6,mw+12,mh+16); ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip();
+  ctx.fillStyle = POV_SKY[weatherId] || POV_SKY.none; ctx.fillRect(mx, my, mw, mh);
+  ctx.fillStyle = '#565d64';
+  ctx.beginPath(); ctx.moveTo(mx+mw/2-3, my); ctx.lineTo(mx+mw/2+3, my); ctx.lineTo(mx+mw*0.85, my+mh); ctx.lineTo(mx+mw*0.15, my+mh); ctx.closePath(); ctx.fill();
+  const behindBob = Math.sin(t*3)*1.5;
+  ctx.fillStyle = '#e0453f';
+  ctx.beginPath(); ctx.ellipse(mx+mw/2, my+mh*0.55+behindBob, 7, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.strokeRect(mx, my, mw, mh);
+  ctx.restore();
+}
+
 // ---------- rideable car variants: purpose-built for a character actually SITTING in them (unlike
 // VEHICLES.car above, which is a small decorative background prop). Open-top/convertible silhouette
 // so the seated character's torso+head are naturally visible above the door line with no window cutout
