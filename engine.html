@@ -22,14 +22,16 @@
   <p class="subtitle">A separate, experimental page — the main tool above is untouched. This proves out one idea: composing a pose from physical building blocks (reach, wrap-around) instead of only picking from the ~50 pre-built actions.</p>
 
   <div class="engine-note">
-    <strong>What you're looking at:</strong> a duo ride with one character hugging the other from
-    behind — this exact pose does not exist anywhere in the main tool's action library. The rider uses
-    a real, unmodified ride action. The hugger's arms are computed live every frame with inverse
-    kinematics, reaching toward wherever the rider's torso actually is — not a fixed pre-tuned position.
-    Try a description below: it currently reacts to a <strong>vehicle</strong> (say "jeep" or "4x4" for
-    a jeep, anything else defaults to a bicycle) and a <strong>background</strong> (name any of the
-    main tool's backgrounds, e.g. "beach", "forest", "desert"). The hug interaction itself is still
-    fixed for now — full AI-composed scenes (any interaction, not just this one) are the next phase.
+    <strong>What you're looking at:</strong> type any description below and Claude AI plans the scene —
+    background, weather, up to two characters, and any of the ~50 existing actions (walk, dance, yoga,
+    drive, whatever fits). Say "hugging from behind" (with two people involved) and the second
+    character's arms are computed live every frame with inverse kinematics, reaching toward wherever
+    the first character's torso actually is — a pose that doesn't exist anywhere in the main tool's
+    action library. Mention "jeep" or "4x4" to re-skin a ride action with jeep art instead of the
+    default. Still early: <strong>hugging from behind is the only cross-character interaction built so
+    far</strong> — everything else (any single action, any two independent actions side by side) works,
+    but other interactions (sitting together, face-to-face, etc.) aren't wired up yet. If the AI call
+    isn't configured or fails, a simple keyword-matched scene shows instead so the page still responds.
   </div>
 
   <div class="field" style="max-width:600px; margin:0 auto 10px;">
