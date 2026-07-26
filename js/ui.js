@@ -881,6 +881,14 @@ function onSegmentFieldChange(e){
     const charId = field.slice('action_'.length);
     if(!seg.actions) seg.actions = {};
     seg.actions[charId] = e.target.value;
+    // Selecting "Talk" with no dialogue set yet would otherwise render a silent, closed-mouth
+    // character — poseTalk (js/poses.js) only opens the mouth and evaluateScene only draws a speech
+    // bubble when a segment actually has dialogue text for that speaker. Presets/AI-generated scenes
+    // already fill this in automatically; a manually-picked Talk action should "just work" the same
+    // way instead of silently requiring a separate checkbox + text field to discover.
+    if(e.target.value === 'talk' && !seg.dialogue){
+      seg.dialogue = { speakerId: charId, text: "Hey, how's it going?" };
+    }
     // Re-render so the direction select's Up/Down (climb/descend) options show up immediately when
     // switching a character into flyplane/flyhelicopter, and disappear when switching back out.
     renderSegmentList();
