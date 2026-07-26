@@ -116,7 +116,13 @@ function resolveEngineFrame(graph, t){
     }
   });
 
-  return { background: graph.background, weather: graph.weather, localT: t, characters: resolved, vehicleByIdx };
+  // Swimming always renders against an aquatic backdrop — poseSwim (js/poses.js) lies the character
+  // flat, so it'd look wrong floating over a non-water background the AI or fallback matcher picked
+  // (e.g. "swimming in a competition" defaulting to a plain beach/white background).
+  const hasSwimmer = specs.some(s => s && s.action === 'swim');
+  const background = hasSwimmer ? 'underwater' : graph.background;
+
+  return { background, weather: graph.weather, localT: t, characters: resolved, vehicleByIdx };
 }
 
 function renderEngineFrame(frame){
