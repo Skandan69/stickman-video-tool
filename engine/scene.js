@@ -13,15 +13,34 @@
 var EngineScene = {}; // var (not const) so it's reachable via window.EngineScene in tests/debugging
 
 // Decorative vehicle art (js/vehicles.js's generic drawVehicleProp path only — the main tool's special
-// seated-in-car/flying visuals aren't reused here yet) auto-attaches to whichever character is doing a
+// seated-in-car visuals aren't reused here yet) auto-attaches to whichever character is doing a
 // ride-type action. "jeep" is a pure alt-skin, not its own action — riding a bike or driving a car can
 // both be re-skinned as a jeep if the description says so (see engine/ui.js's vehicleOverride).
 var ENGINE_VEHICLE_ART = { bicycle: { scale: 1.5 }, jeep: { scale: 1.3 }, motorcycle: { scale: 1.7 }, car: { scale: 1 } };
 var RIDE_ART_FOR_ACTION = { ridebike: 'bicycle', ridemotorcycle: 'motorcycle', drivecar: 'car' };
 var JEEP_ELIGIBLE_ACTIONS = { ridebike: true, drivecar: true };
-// Same idea as js/scene.js's MOVE_SPEEDS table (px/sec) — kept as an independent copy per the engine's
-// "stays fully separate from the existing tool" design, not because the concept differs.
-var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190, swim: 55 };
+// Flying DOES reuse the main tool's purpose-built cockpit art (drawRideFlyProp, js/vehicles.js) rather
+// than the generic decorative path above — that function already handles the altitude-based shrink/
+// shadow perspective, so there was no reason to reinvent a simpler version for the engine.
+var FLY_ART_FOR_ACTION = { flyplane: 'airplane', flyhelicopter: 'helicopter' };
+// Same idea as js/scene.js's MOVE_SPEEDS/VERTICAL_SPEEDS/MAX_ALTITUDE — kept as independent copies per
+// the engine's "stays fully separate from the existing tool" design, not because the concept differs.
+var MOVE_SPEEDS = { walk: 45, run: 100, skateboard: 130, drivecar: 180, ridebike: 90, ridemotorcycle: 190, swim: 55, flyplane: 200, flyhelicopter: 140 };
+var VERTICAL_SPEEDS = { flyplane: 90, flyhelicopter: 110 };
+var MAX_ALTITUDE = 180;
+// The main tool exposes an explicit up/down direction control per segment; the engine has no segment
+// timeline to hang that on (just one continuously-evaluated t), so flight altitude here is automatic:
+// climb smoothly from the ground to a fixed cruise height over the first couple seconds, then hold
+// it while cruising horizontally via travelX/MOVE_SPEEDS like any other moving action.
+var FLY_CLIMB_TIME = 2.2;
+var FLY_CRUISE_ALTITUDE = 150;
+function computeAltitude(action, t){
+  if(!VERTICAL_SPEEDS[action]) return 0;
+  if(t >= FLY_CLIMB_TIME) return FLY_CRUISE_ALTITUDE;
+  const frac = Math.max(0, t) / FLY_CLIMB_TIME;
+  const eased = frac*frac*(3 - 2*frac); // smoothstep
+  return FLY_CRUISE_ALTITUDE * eased;
+}
 // Group scenes: up to 12 stickmen (small squads — a tennis doubles match, a cricket XI, a football
 // drill — not full 11v11/22-player matches, which would shrink figures past the point of reading as
 // anything but dots; see engine.html's copy for that explicit scope note). hugFromBehind (the one
@@ -101,6 +120,9 @@ function resolveEngineFrame(graph, t){
     const faceDir = positions[i].faceDir;
     const x = travelX(positions[i].x, spec.action, t);
     const pose = EnginePrimitives.useClip(spec.action, t, {});
+    // Must be set before computeSkeleton — it reads pose.altitude to lift the whole skeleton up off
+    // GROUND_Y for flyplane/flyhelicopter (see js/render.js's computeSkeleton), same as the main tool.
+    pose.altitude = computeAltitude(spec.action, t);
     const skeleton = computeSkeleton(x, faceDir, appearance, pose);
     resolved[i] = { id:'c'+i, x, faceDir, appearance, pose, action: spec.action, skeleton };
   });
@@ -122,10 +144,13 @@ function resolveEngineFrame(graph, t){
 
   // Vehicle art auto-attaches to EVERY resolved character doing a ride-type action (not just one) —
   // matters now that group scenes can have several riders at once, e.g. "5 people riding bikes".
-  const vehicleByIdx = {};
+  const vehicleByIdx = {}, flyByIdx = {};
   resolved.forEach((c, i)=>{
-    if(c && RIDE_ART_FOR_ACTION[c.action]){
+    if(!c) return;
+    if(RIDE_ART_FOR_ACTION[c.action]){
       vehicleByIdx[i] = (graph.vehicleOverride && JEEP_ELIGIBLE_ACTIONS[c.action]) ? graph.vehicleOverride : RIDE_ART_FOR_ACTION[c.action];
+    } else if(FLY_ART_FOR_ACTION[c.action]){
+      flyByIdx[i] = FLY_ART_FOR_ACTION[c.action];
     }
   });
 
@@ -135,7 +160,7 @@ function resolveEngineFrame(graph, t){
   const hasSwimmer = specs.some(s => s && s.action === 'swim');
   const background = hasSwimmer ? 'underwater' : graph.background;
 
-  return { background, weather: graph.weather, localT: t, characters: resolved, vehicleByIdx };
+  return { background, weather: graph.weather, localT: t, characters: resolved, vehicleByIdx, flyByIdx };
 }
 
 function renderEngineFrame(frame){
@@ -153,8 +178,13 @@ function renderEngineFrame(frame){
     const c = frame.characters[i];
     if(!c) return;
     const vehicleArt = frame.vehicleByIdx && frame.vehicleByIdx[i];
+    const flyArt = frame.flyByIdx && frame.flyByIdx[i];
     if(vehicleArt){
       drawVehicleProp(c.x, c.faceDir, vehicleArt, frame.localT, (ENGINE_VEHICLE_ART[vehicleArt] || {scale:1}).scale);
+    } else if(flyArt){
+      // Purpose-built cockpit art (js/vehicles.js) — already handles the altitude-based shrink/shadow
+      // perspective, unlike the generic drawVehicleProp path used for bike/motorcycle/car above.
+      drawRideFlyProp(c.x, c.faceDir, frame.localT, flyArt, c.pose.altitude || 0);
     }
     STYLES.bold.drawStickman(c.x, c.faceDir, c.appearance, c.pose);
   });
