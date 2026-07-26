@@ -16,10 +16,11 @@ const CLIP_IDS = [
   'idle','talk','walk','wave','dance','kite','sit','drink','phone','jump','eat','run','fight','argue',
   'hug','highfive','kick','throw','swim','sleep','read','clap','bow','yoga','cry','point','salute',
   'shrug','stretch','fall','pushup','cheer','drum','cartwheel','paint','write','fish','shake','guitar',
-  'umbrella','skateboard','laptop','camera','drivecar','ridebike','ridemotorcycle'
+  'umbrella','skateboard','laptop','camera','drivecar','ridebike','ridemotorcycle','flyplane','flyhelicopter'
 ];
-// Flying (flyplane/flyhelicopter) and some car variants are intentionally left out for now — the
-// engine's renderer doesn't yet have the altitude/cockpit handling those need (see engine/scene.js).
+// Some car variants (sports car, limo) are intentionally left out for now — the engine's decorative
+// vehicle-art registry (engine/scene.js's ENGINE_VEHICLE_ART) doesn't have distinct art for them yet,
+// unlike flying, which now reuses the main tool's purpose-built cockpit art directly.
 const BACKGROUND_IDS = [
   'white','sky','grid','cafe','office','bedroom','street','beach','forest','gym','school','space',
   'restaurant','farm','mountain','lake','desert','castle','stadium','underwater','airport','hospital',
@@ -48,7 +49,9 @@ const SYSTEM_PROMPT =
   '"a cricket team fielding" -> characterCount around 11). There is no dedicated "play cricket/football/ ' +
   'tennis" action in the library — for sports scenes, approximate with the closest existing action ' +
   '(run, kick, throw, walk, idle, jump, cheer are usually the best fits) rather than leaving characters ' +
-  'idle by default. When the description implies a group without an exact number (e.g. "a crowd", "a ' +
+  'idle by default. Use "flyplane"/"flyhelicopter" for a character piloting/flying an actual aircraft ' +
+  '(they climb to a cruising altitude automatically) — reserve "kite" specifically for flying a kite. ' +
+  'When the description implies a group without an exact number (e.g. "a crowd", "a ' +
   'team", "several people"), pick a reasonable count for that context (a handful for "a few people", ' +
   '9-12 for "a team" or "a squad"). Give each character the action that best matches what they are ' +
   'doing; if all are doing the same thing, repeat that action for each. Set interaction to ' +
