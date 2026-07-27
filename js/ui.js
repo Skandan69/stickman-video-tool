@@ -973,14 +973,32 @@ const designer = {
   playing: false, elapsed: 0, stageOriginalParent: null, stageOriginalNextSibling: null
 };
 
+// Full-scene-context preview: rather than an isolated character floating on a plain background, reuse
+// the real evaluateScene pipeline for the exact segment being edited — real background/weather, every
+// other character in their normal pose (including their OWN saved custom move, if they have one),
+// vehicles, furniture — and swap in only the one pose actually being designed. This is what lets you
+// see, live, how a hand-designed move will actually look in the finished scene (e.g. two boxers facing
+// off) instead of guessing from a blank-background single figure.
 function buildDesignerFrame(pose){
-  const character = findCharacter(designer.charId) || state.scene.characters[0];
-  return {
-    characters: [{ id: character.id, x: W/2, faceDir: 1, appearance: character, clipId: 'idle', pose: pose }],
-    animals: [], vehicles: [], dialogue: null, background: 'white', weather: 'none',
-    furniture: 'chair', food: 'sandwich', style: state.scene.style || 'bold',
-    localT: designer.elapsed, totalDuration: 1, povDriver: null
-  };
+  const seg = findSegment(designer.segId);
+  let offset = 0;
+  for(let i=0;i<state.scene.timeline.length;i++){
+    if(state.scene.timeline[i].id === designer.segId) break;
+    offset += Math.max(0.1, state.scene.timeline[i].duration);
+  }
+  const segDuration = seg ? Math.max(0.1, seg.duration) : 1;
+  // Stay strictly inside this segment (never spill into the next one) regardless of how long the
+  // in-progress move's Play-sequence loop runs.
+  const localT = Math.min(segDuration - 0.02, Math.max(0, designer.elapsed));
+  const frame = evaluateScene(state.scene, offset + localT);
+  frame.characters = frame.characters.map(c=>{
+    if(c.id !== designer.charId) return c;
+    // Preserve whatever altitude the real scene already computed for this character (e.g. mid-flight)
+    // rather than forcing them back to ground level just because the designer's pose object has no
+    // altitude field of its own.
+    return Object.assign({}, c, { pose: Object.assign({}, pose, { altitude: c.pose.altitude || 0 }) });
+  });
+  return frame;
 }
 
 function renderDesignerSliders(){
@@ -1132,6 +1150,73 @@ designerPlayBtn.addEventListener('click', ()=>{
 designerSaveBtn.addEventListener('click', saveDesignerMove);
 designerCancelBtn.addEventListener('click', cancelPoseDesigner);
 designerCloseBtn.addEventListener('click', cancelPoseDesigner);
+
+// ---------- Move Library (saved to this browser via localStorage) ----------
+// Mirrors the Character Library pattern above exactly (same localStorage approach, same
+// select+load+delete shape) but for a reusable KEYFRAME SEQUENCE rather than a whole character — save
+// a move once (e.g. "Boxing Jab-Cross"), then load it onto any character, in any scene, later.
+const MOVE_LIB_KEY = 'stickmanMoveLibrary';
+const designerMoveLibSelect = document.getElementById('designerMoveLibSelect');
+const designerLoadMoveBtn = document.getElementById('designerLoadMoveBtn');
+const designerDeleteMoveBtn = document.getElementById('designerDeleteMoveBtn');
+const designerSaveToLibBtn = document.getElementById('designerSaveToLibBtn');
+function loadMoveLibrary(){ try { return JSON.parse(localStorage.getItem(MOVE_LIB_KEY) || '[]'); } catch(e){ return []; } }
+function saveMoveLibrary(list){ try { localStorage.setItem(MOVE_LIB_KEY, JSON.stringify(list)); } catch(e){} }
+function refreshMoveLibSelect(){
+  const list = loadMoveLibrary();
+  designerMoveLibSelect.innerHTML = list.length
+    ? list.map((m,i)=> '<option value="'+i+'">'+escapeHtml(m.label)+' ('+m.keyframes.length+' keyframes)</option>').join('')
+    : '<option value="">(none saved yet)</option>';
+}
+designerSaveToLibBtn.addEventListener('click', ()=>{
+  if(!designer.keyframes.length){ alert('Add at least one keyframe before saving this move to the library.'); return; }
+  const name = (prompt('Name this move (e.g. "Boxing Jab-Cross"):', '') || '').trim();
+  if(!name) return;
+  const list = loadMoveLibrary();
+  list.push({ label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) });
+  saveMoveLibrary(list);
+  refreshMoveLibSelect();
+  designerMoveLibSelect.value = String(list.length - 1);
+});
+designerLoadMoveBtn.addEventListener('click', ()=>{
+  const list = loadMoveLibrary();
+  const idx = parseInt(designerMoveLibSelect.value, 10);
+  if(isNaN(idx) || !list[idx]) return;
+  designer.keyframes = list[idx].keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }));
+  designer.editingIdx = designer.keyframes.length ? 0 : -1;
+  designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
+  designer.playing = false;
+  designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe pose';
+  renderDesignerSliders();
+  renderDesignerKeyframeList();
+});
+designerDeleteMoveBtn.addEventListener('click', ()=>{
+  const list = loadMoveLibrary();
+  const idx = parseInt(designerMoveLibSelect.value, 10);
+  if(isNaN(idx) || !list[idx]) return;
+  if(!confirm('Delete the saved move "' + list[idx].label + '"? This cannot be undone.')) return;
+  list.splice(idx, 1);
+  saveMoveLibrary(list);
+  refreshMoveLibSelect();
+});
+refreshMoveLibSelect();
+
+// ---------- Design Your Own Scene: prominent entry point ----------
+// A visible callout (rather than only a buried dropdown option) that jumps straight into the Pose
+// Designer for the first character/segment — the fastest way to actually see what the feature does.
+// Building a full multi-character scene from here is just: use this to try it once, then add more
+// characters via the Characters panel and repeat per character/segment as described in the callout.
+const startSceneDesignBtn = document.getElementById('startSceneDesignBtn');
+if(startSceneDesignBtn){
+  startSceneDesignBtn.addEventListener('click', ()=>{
+    const seg = state.scene.timeline[0];
+    const character = state.scene.characters[0];
+    if(!seg || !character) return;
+    const layoutEl = document.querySelector('.layout');
+    if(layoutEl && layoutEl.scrollIntoView) layoutEl.scrollIntoView({ behavior:'smooth', block:'start' });
+    openPoseDesigner(seg.id, character.id);
+  });
+}
 
 // ---------- export ----------
 exportBtn.addEventListener('click', ()=>{
