@@ -154,7 +154,7 @@
       <h2 id="designerTitle">Design a Move</h2>
       <button type="button" id="designerCloseBtn" class="icon-btn" title="Close">&times;</button>
     </div>
-    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">Pose the character with the sliders below, then "Add keyframe". Add a few keyframes (e.g. guard &rarr; jab &rarr; kick &rarr; guard) and the tool smoothly animates between them, looping, so your move plays like a real designed sequence.</p>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">Drag the purple dots on the hands, feet, and head directly on the preview to pose the character &mdash; or use the sliders for precise control. Once you're happy with a pose, click "Add keyframe". Add a few keyframes (e.g. guard &rarr; jab &rarr; kick &rarr; guard) and the tool smoothly animates between them, looping, so your move plays like a real designed sequence.</p>
     <div class="designer-body">
       <div class="designer-preview" id="designerPreviewMount">
         <div class="designer-preview-controls">
@@ -168,6 +168,17 @@
           <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
           <div id="designerKeyframeList"></div>
           <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="width:100%; margin-top:6px;">+ Add keyframe from current pose</button>
+
+          <h3 style="margin:14px 0 6px; font-size:13px;">Movement</h3>
+          <div class="checkbox-field" style="margin:0 0 6px;">
+            <input type="checkbox" id="designerMoveCheckbox">
+            <label for="designerMoveCheckbox">This move travels forward across the screen (like walking), instead of staying in place</label>
+          </div>
+          <div id="designerMoveSpeedRow" class="row" style="align-items:center; gap:8px; display:none; margin-bottom:6px;">
+            <label style="flex:0 0 auto; font-size:12px; color:var(--muted);">Speed</label>
+            <input type="range" id="designerMoveSpeedSlider" min="10" max="150" step="5" value="45" style="flex:1;">
+            <span id="designerMoveSpeedVal" style="font-size:12px; color:var(--text); min-width:52px; text-align:right;">45 px/s</span>
+          </div>
 
           <h3 style="margin:14px 0 6px; font-size:13px;">Move Library</h3>
           <p style="font-size:11px; color:var(--muted); margin:0 0 6px; line-height:1.4;">Save a move you like to reuse on any character, in any scene, later &mdash; saved to this browser.</p>

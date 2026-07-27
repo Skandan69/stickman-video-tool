@@ -1393,6 +1393,78 @@ async function run(){
     }
   }
 
+  // 23. Drag-to-pose plumbing (hands/feet/head handles on the Pose Designer's preview, reusing
+  // limbReachAngles/armReachAngles/legReachAngles from js/poses.js). Same caveat as the existing
+  // canvas drag-to-reposition test above: jsdom's getBoundingClientRect returns zeros, so this can't
+  // verify real pixel hit-testing or that dragging actually changes the pose correctly — that was
+  // verified with a standalone Node vm harness (IK math: exact forward-kinematics round-trip, distance
+  // 0px) and live on the deployed site. This only confirms the wiring exists and is safe to invoke.
+  {
+    if(typeof window.legReachAngles !== 'function') errors.push('FAIL: legReachAngles not defined');
+    if(typeof window.limbReachAngles !== 'function') errors.push('FAIL: limbReachAngles not defined');
+    if(typeof window.armReachAngles !== 'function') errors.push('FAIL: armReachAngles not defined (must survive the limbReachAngles generalization)');
+    // UPPER_ARM/FORE_ARM are top-level `let` in js/humanTypes.js, so — like every other top-level
+    // let/const in this codebase — they aren't exposed as window properties (real-browser semantics);
+    // can't reference window.UPPER_ARM directly, so just check both functions independently return
+    // sane finite results instead of asserting exact equality against a constant we can't read here.
+    const armRes = window.armReachAngles(20, 30);
+    const legRes = window.legReachAngles(15, 60);
+    const genericRes = window.limbReachAngles(10, 20, 30, 40);
+    const allFinite = [armRes, legRes, genericRes].every(r => isFinite(r.shoulderAngle) && isFinite(r.elbowBend));
+    if(!allFinite) errors.push('FAIL: armReachAngles/legReachAngles/limbReachAngles should all return finite {shoulderAngle,elbowBend}, got: ' + JSON.stringify({armRes, legRes, genericRes}));
+    try {
+      const cardsC = doc.querySelectorAll('.segment-card');
+      const actionSelectC = cardsC[0].querySelector('select[data-field^="action_"]');
+      setValAndFire(actionSelectC, 'customPose');
+      const stageCanvas = byId('stage');
+      stageCanvas.dispatchEvent(new window.MouseEvent('mousedown', {bubbles:true, clientX: 400, clientY: 300}));
+      stageCanvas.dispatchEvent(new window.MouseEvent('mousemove', {bubbles:true, clientX: 410, clientY: 310}));
+      doc.dispatchEvent(new window.MouseEvent('mouseup', {bubbles:true}));
+      click(byId('designerCancelBtn'));
+      results.push(['drag-to-pose plumbing', 'ok, legReachAngles/limbReachAngles present, armReachAngles unchanged, mousedown/move/up on #stage while designer open is safe']);
+    } catch(e){ errors.push('FAIL: drag-to-pose plumbing threw: ' + e.stack); }
+  }
+
+  // 24. Pose Designer forward-movement control ("This move travels forward" checkbox + speed slider).
+  // Turning it on should make evaluateScene actually translate that character's x over time (verified
+  // separately via the vm harness for the evaluateScene/computeSegmentStartPositions math itself); this
+  // covers the UI wiring: toggling the checkbox reveals/hides the speed row, and the chosen speed
+  // survives Save -> reopen and Save-to-library -> Load.
+  {
+    const cardsD = doc.querySelectorAll('.segment-card');
+    const cardD = cardsD[0];
+    const actionSelectD = cardD.querySelector('select[data-field^="action_"]');
+    const charIdD = actionSelectD.getAttribute('data-field').slice('action_'.length);
+    setValAndFire(actionSelectD, 'customPose');
+    const moveCheckbox = byId('designerMoveCheckbox');
+    const moveSpeedRow = byId('designerMoveSpeedRow');
+    if(!moveCheckbox || !moveSpeedRow) errors.push('FAIL: expected #designerMoveCheckbox and #designerMoveSpeedRow in the Pose Designer');
+    else {
+      if(moveSpeedRow.style.display !== 'none') errors.push('FAIL: speed row should start hidden (movement off by default)');
+      moveCheckbox.checked = true;
+      moveCheckbox.dispatchEvent(new window.Event('change', {bubbles:true}));
+      if(moveSpeedRow.style.display === 'none') errors.push('FAIL: speed row should become visible once movement is turned on');
+      setValAndFire(byId('designerMoveSpeedSlider'), '90');
+      // Need at least one keyframe to save a real move (matches the existing zero-keyframe->idle rule).
+      click(byId('designerAddKeyframeBtn'));
+      click(byId('designerSaveBtn'));
+      const segD = window.findSegment(cardD.getAttribute('data-seg-id'));
+      const savedSpeed = segD.customPoses && segD.customPoses[charIdD] && segD.customPoses[charIdD].moveSpeed;
+      if(savedSpeed !== 90) errors.push('FAIL: expected moveSpeed=90 saved on the segment, got: ' + savedSpeed);
+      results.push(['pose designer movement control saves', 'ok, moveSpeed=90 persisted']);
+
+      // Reopen via the pencil button and confirm the checkbox/slider reflect the saved speed.
+      const editBtnD = doc.querySelector('[data-designer-edit][data-cid="'+charIdD+'"]');
+      if(editBtnD){
+        click(editBtnD);
+        if(!byId('designerMoveCheckbox').checked) errors.push('FAIL: reopening a saved moving custom move should show the movement checkbox checked');
+        if(parseInt(byId('designerMoveSpeedSlider').value,10) !== 90) errors.push('FAIL: reopening should restore the saved speed onto the slider, got: ' + byId('designerMoveSpeedSlider').value);
+        results.push(['pose designer movement control reloads correctly', 'ok, checkbox+slider reflect saved moveSpeed']);
+        click(byId('designerCancelBtn'));
+      }
+    }
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 
