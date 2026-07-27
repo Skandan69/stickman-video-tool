@@ -213,18 +213,27 @@ function poseDance(t, offset){
 // 2-bone IK: given a target point (dx,dy) offset from the shoulder in the pose's local,
 // pre-faceDir frame (same convention as upPoint/downPoint: x=sin(angle)*len, y=cos(angle)*len),
 // solve for shoulderAngle/elbowBend so the hand actually reaches that point (law of cosines).
-function armReachAngles(dx, dy){
+// 2-bone IK, generalized over bone lengths so the same law-of-cosines solve works for an arm
+// (shoulder+elbow) or a leg (hip+knee) — armReachAngles/legReachAngles below are just this called with
+// the two different bone-length pairs. Used both by the hand/food/phone reach poses above AND by the
+// Pose Designer's drag-to-pose handles (js/ui.js), which is why this needed to stop being arm-specific.
+function limbReachAngles(dx, dy, boneA, boneB){
   let dist = Math.sqrt(dx*dx + dy*dy);
-  const maxReach = UPPER_ARM + FORE_ARM - 1;
-  const minReach = Math.abs(UPPER_ARM - FORE_ARM) + 1;
+  const maxReach = boneA + boneB - 1;
+  const minReach = Math.abs(boneA - boneB) + 1;
   dist = Math.max(minReach, Math.min(maxReach, dist));
   const targetAngle = Math.atan2(dx, dy);
-  const cosElbow = (UPPER_ARM*UPPER_ARM + FORE_ARM*FORE_ARM - dist*dist) / (2*UPPER_ARM*FORE_ARM);
+  const cosElbow = (boneA*boneA + boneB*boneB - dist*dist) / (2*boneA*boneB);
   const elbowInterior = Math.acos(Math.max(-1, Math.min(1, cosElbow)));
-  const cosShoulderOff = (UPPER_ARM*UPPER_ARM + dist*dist - FORE_ARM*FORE_ARM) / (2*UPPER_ARM*dist);
+  const cosShoulderOff = (boneA*boneA + dist*dist - boneB*boneB) / (2*boneA*dist);
   const shoulderOffset = Math.acos(Math.max(-1, Math.min(1, cosShoulderOff)));
   return { shoulderAngle: targetAngle - shoulderOffset, elbowBend: (Math.PI - elbowInterior) };
 }
+function armReachAngles(dx, dy){ return limbReachAngles(dx, dy, UPPER_ARM, FORE_ARM); }
+// Leg IK for the Pose Designer's drag-to-pose foot handles — result fields are still named
+// shoulderAngle/elbowBend (matching limbReachAngles' generic return shape) but map onto
+// hipAngle/kneeBend for a leg; callers rename them on assignment.
+function legReachAngles(dx, dy){ return limbReachAngles(dx, dy, UPPER_LEG, LOWER_LEG); }
 function headPointsRelToShoulder(headTilt){
   const neckX = Math.sin(headTilt)*NECK_LEN, neckY = -Math.cos(headTilt)*NECK_LEN;
   const headX = neckX + Math.sin(headTilt)*(HEAD_R*0.9), headY = neckY - Math.cos(headTilt)*(HEAD_R*0.9);
