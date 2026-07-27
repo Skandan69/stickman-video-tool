@@ -1186,6 +1186,100 @@ async function run(){
     }
   }
 
+  // 20. Pose Designer: general-purpose keyframe move builder. Selecting "Design your own..." on a
+  // segment's action dropdown should open the overlay, reparent the shared #stage canvas into it,
+  // populate one slider per BonePose field, let you build 2 keyframes, and Save should commit them to
+  // seg.customPoses + set seg.actions to 'customPose' — with the canvas moved back and overlay hidden.
+  {
+    const cards3 = doc.querySelectorAll('.segment-card');
+    const card3 = cards3[0];
+    const segId3 = card3.getAttribute('data-seg-id');
+    const seg3 = window.findSegment(segId3);
+    const actionSelect3 = card3.querySelector('select[data-field^="action_"]');
+    const charId3 = actionSelect3.getAttribute('data-field').slice('action_'.length);
+    const stageBefore = doc.getElementById('stage');
+    const stageParentBefore = stageBefore.parentNode;
+
+    setValAndFire(actionSelect3, 'customPose');
+    const overlay = byId('poseDesignerOverlay');
+    if(!overlay || overlay.style.display !== 'flex') errors.push('FAIL: selecting "Design your own..." should open the Pose Designer overlay (display:flex)');
+    if(doc.getElementById('designerPreviewMount').contains(stageBefore) !== true) errors.push('FAIL: #stage canvas should be reparented into #designerPreviewMount while the designer is open');
+    // DESIGNER_SLIDERS (js/ui.js) is a top-level `const`, not a function declaration, so it isn't
+    // exposed as a window property (matches real-browser script-scope semantics) — hardcode the
+    // expected count (one slider per BonePose field the designer exposes) instead of reading it back.
+    const EXPECTED_DESIGNER_SLIDER_COUNT = 12;
+    const sliders = doc.querySelectorAll('#designerSliders input[type=range]');
+    if(sliders.length !== EXPECTED_DESIGNER_SLIDER_COUNT) errors.push('FAIL: expected ' + EXPECTED_DESIGNER_SLIDER_COUNT + ' pose sliders, got ' + sliders.length);
+    results.push(['pose designer opens on select', 'ok, overlay visible, canvas reparented, ' + sliders.length + ' sliders']);
+
+    // Pose 1: tweak a couple of sliders, then add a keyframe from the current pose.
+    const shoulderSlider = doc.querySelector('#designerSliders input[data-designer-slider="rightShoulderAngle"]');
+    setValAndFire(shoulderSlider, '1.6');
+    click(byId('designerAddKeyframeBtn'));
+    let kfRows = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    if(kfRows.length !== 1) errors.push('FAIL: expected 1 keyframe row after first Add keyframe, got ' + kfRows.length);
+
+    // Pose 2: change the same slider further, add a second keyframe.
+    setValAndFire(shoulderSlider, '-1.6');
+    const torsoSlider = doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]');
+    setValAndFire(torsoSlider, '0.4');
+    click(byId('designerAddKeyframeBtn'));
+    kfRows = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    if(kfRows.length !== 2) errors.push('FAIL: expected 2 keyframe rows after second Add keyframe, got ' + kfRows.length);
+    results.push(['pose designer add keyframe', 'ok, 2 keyframes built from slider-posed snapshots']);
+
+    // Preview play should not throw across several frames with a real 2-keyframe sequence loaded.
+    click(byId('designerPlayBtn'));
+    try { flushRaf(6); results.push(['pose designer preview playback', 'ok, no throw across 6 frames']); }
+    catch(e){ errors.push('FAIL: preview playback threw: ' + e.stack); }
+
+    click(byId('designerSaveBtn'));
+    if(overlay.style.display !== 'none') errors.push('FAIL: Save should close the Pose Designer overlay');
+    if(doc.getElementById('stage').parentNode !== stageParentBefore) errors.push('FAIL: #stage canvas should be moved back to its original parent after closing the designer');
+    const savedKF = seg3.customPoses && seg3.customPoses[charId3] && seg3.customPoses[charId3].keyframes;
+    if(!savedKF || savedKF.length !== 2) errors.push('FAIL: Save should commit 2 keyframes into seg.customPoses[charId], got: ' + JSON.stringify(savedKF));
+    if((seg3.actions && seg3.actions[charId3]) !== 'customPose') errors.push('FAIL: seg.actions[charId] should be "customPose" after saving a move, got: ' + (seg3.actions && seg3.actions[charId3]));
+    results.push(['pose designer save', 'ok, ' + (savedKF ? savedKF.length : 0) + ' keyframes committed, action=customPose, overlay closed, canvas restored']);
+
+    // Scene should render several frames of the saved custom move without throwing.
+    flushRaf(6);
+    results.push(['scene renders with a saved custom move', 'ok, no throw across 6 frames']);
+
+    // Re-opening via the pencil edit button, then Cancel, should NOT discard the already-saved move.
+    const editBtn = card3.querySelector('[data-designer-edit]') || doc.querySelector('[data-designer-edit][data-segid="'+segId3+'"][data-cid="'+charId3+'"]');
+    if(!editBtn) errors.push('FAIL: expected a pencil "edit this move" button once action=customPose');
+    else {
+      click(editBtn);
+      if(byId('poseDesignerOverlay').style.display !== 'flex') errors.push('FAIL: pencil edit button should reopen the designer');
+      const preloadedRows = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+      if(preloadedRows.length !== 2) errors.push('FAIL: reopening an existing move should preload its saved keyframes, got ' + preloadedRows.length + ' rows');
+      click(byId('designerCancelBtn'));
+      if(byId('poseDesignerOverlay').style.display !== 'none') errors.push('FAIL: Cancel should close the overlay');
+      const stillSaved = seg3.customPoses && seg3.customPoses[charId3] && seg3.customPoses[charId3].keyframes;
+      if(!stillSaved || stillSaved.length !== 2) errors.push('FAIL: Cancelling out of re-editing an existing move should not discard it, got: ' + JSON.stringify(stillSaved));
+      if((seg3.actions && seg3.actions[charId3]) !== 'customPose') errors.push('FAIL: Cancel on a re-edit should leave action as customPose, got: ' + (seg3.actions && seg3.actions[charId3]));
+      results.push(['pose designer re-edit + cancel preserves saved move', 'ok, 2 keyframes intact, action still customPose']);
+    }
+
+    // Saving with zero keyframes (fresh pick, immediately Save with nothing posed) should fall back to
+    // idle rather than leaving the action pointed at an empty custom move. Deliberately picks a
+    // DIFFERENT character than charId3 above (which already has 2 saved keyframes) — reusing the same
+    // character/segment would make openPoseDesigner preload those existing keyframes instead of
+    // starting empty, defeating the point of this check.
+    const freshSelect = Array.from(doc.querySelectorAll('#segmentList select[data-field^="action_"]'))
+      .find(el => el.getAttribute('data-field').slice('action_'.length) !== charId3);
+    if(!freshSelect) errors.push('FAIL: expected at least 2 distinct characters to test a fresh customPose selection');
+    else {
+    const charId4 = freshSelect.getAttribute('data-field').slice('action_'.length);
+    const segId4 = freshSelect.closest('.segment-card').getAttribute('data-seg-id');
+    setValAndFire(freshSelect, 'customPose');
+    click(byId('designerSaveBtn'));
+    const seg4 = window.findSegment(segId4);
+    if((seg4.actions && seg4.actions[charId4]) !== 'idle') errors.push('FAIL: saving with zero keyframes should fall back to idle, got: ' + (seg4.actions && seg4.actions[charId4]));
+    results.push(['pose designer save with zero keyframes falls back to idle', 'ok']);
+    }
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 

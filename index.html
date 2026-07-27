@@ -134,6 +134,39 @@
 
 </div>
 
+<!-- Pose Designer: general-purpose keyframe move builder (js/ui.js). Hidden by default; opened from a
+     segment's action dropdown ("Design your own...") or its pencil edit button. Reuses the single
+     #stage canvas above for its live preview by reparenting it into #designerPreviewMount while open. -->
+<div id="poseDesignerOverlay" class="designer-overlay" style="display:none;">
+  <div class="designer-panel">
+    <div class="designer-head">
+      <h2 id="designerTitle">Design a Move</h2>
+      <button type="button" id="designerCloseBtn" class="icon-btn" title="Close">&times;</button>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">Pose the character with the sliders below, then "Add keyframe". Add a few keyframes (e.g. guard &rarr; jab &rarr; kick &rarr; guard) and the tool smoothly animates between them, looping, so your move plays like a real designed sequence.</p>
+    <div class="designer-body">
+      <div class="designer-preview" id="designerPreviewMount">
+        <div class="designer-preview-controls">
+          <button type="button" id="designerPlayBtn" class="secondary small">Play sequence</button>
+          <span id="designerPreviewLabel" style="font-size:11px; color:var(--muted);">Editing keyframe pose</span>
+        </div>
+      </div>
+      <div class="designer-controls">
+        <div class="designer-sliders" id="designerSliders"></div>
+        <div class="designer-keyframes">
+          <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
+          <div id="designerKeyframeList"></div>
+          <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="width:100%; margin-top:6px;">+ Add keyframe from current pose</button>
+        </div>
+      </div>
+    </div>
+    <div class="designer-foot">
+      <button type="button" id="designerCancelBtn" class="secondary">Cancel</button>
+      <button type="button" id="designerSaveBtn" class="ai-btn">Save move</button>
+    </div>
+  </div>
+</div>
+
 <p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes", seating like "sofa", animals like "dog" or "cat", and vehicles like "car" or "bicycle" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <script src="js/humanTypes.js"></script>

@@ -110,3 +110,42 @@ hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
   position:absolute; top:0; bottom:0; width:2px; background:#111;
   pointer-events:none; transition:left .05s linear; z-index:2;
 }
+
+/* Pose Designer overlay (js/ui.js): the one auxiliary "modal" surface in this app, introduced for this
+   feature specifically since there's a real reason to leave the normal editing layout entirely (posing
+   sliders + a live preview need focus/room a permanently-docked panel wouldn't have). Everything else
+   in this app is an always-in-flow .panel; this stays the exception, on purpose. */
+.designer-overlay{
+  position:fixed; inset:0; background:rgba(15,17,23,0.55); z-index:50;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.designer-panel{
+  background:var(--panel); border-radius:14px; padding:18px 20px; width:100%; max-width:820px;
+  max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.35);
+}
+.designer-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
+.designer-head h2{font-size:16px; margin:0;}
+.designer-body{display:flex; gap:18px; flex-wrap:wrap;}
+.designer-preview{
+  flex:0 0 240px; display:flex; flex-direction:column; align-items:center; gap:8px;
+  background:#fafbfc; border:1px solid var(--border); border-radius:10px; padding:10px;
+}
+.designer-preview canvas{max-width:100%;}
+.designer-preview-controls{display:flex; flex-direction:column; align-items:center; gap:4px; width:100%;}
+.designer-controls{flex:1; min-width:280px; display:flex; flex-direction:column; gap:4px;}
+.designer-sliders{
+  display:grid; grid-template-columns:1fr 1fr; gap:4px 14px;
+  max-height:260px; overflow-y:auto; padding-right:4px;
+}
+.designer-slider-row{font-size:11px; color:var(--text);}
+.designer-slider-row label{display:flex; justify-content:space-between; color:var(--muted); margin-bottom:2px;}
+.designer-slider-val{color:var(--text); font-weight:600;}
+.designer-keyframes{border-top:1px dashed var(--border); padding-top:8px; margin-top:6px;}
+.designer-kf-row{
+  display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 6px; border-radius:6px;
+  margin-bottom:4px; background:#fafbfc; border:1px solid var(--border);
+}
+.designer-kf-row.active{border-color:var(--accent); background:#eef2ff;}
+.designer-kf-row input[type=number]{width:52px; padding:3px 5px; font-size:12px;}
+.designer-kf-s{color:var(--muted); font-size:11px;}
+.designer-foot{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
