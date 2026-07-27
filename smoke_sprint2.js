@@ -1350,6 +1350,49 @@ async function run(){
     }
   }
 
+  // 22. Regression tests for two bugs found during live testing of the round-2 enhancements:
+  // (a) "Add keyframe" used to silently overwrite keyframe 0 on every click after the first, because
+  // designer.editingIdx never got invalidated when a slider actually changed — you could never build a
+  // real multi-pose move through the UI. (b) Cancel on a freshly-picked "Design your own..." used to be
+  // a no-op because the prior action was read AFTER it had already been overwritten to 'customPose'.
+  {
+    const cardsB = doc.querySelectorAll('.segment-card');
+    const cardB = cardsB[0];
+    const actionSelectB = cardB.querySelector('select[data-field^="action_"]');
+    const charIdB = actionSelectB.getAttribute('data-field').slice('action_'.length);
+
+    // 22a. Three Add-keyframe clicks, each preceded by an actual slider change, should produce THREE
+    // distinct keyframes with three different poses — not one keyframe repeatedly overwritten.
+    setValAndFire(actionSelectB, 'customPose');
+    const torsoSlider = doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]');
+    setValAndFire(torsoSlider, '0.2'); click(byId('designerAddKeyframeBtn'));
+    setValAndFire(torsoSlider, '0.6'); click(byId('designerAddKeyframeBtn'));
+    setValAndFire(torsoSlider, '1.0'); click(byId('designerAddKeyframeBtn'));
+    const rowsB = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    if(rowsB.length !== 3) errors.push('FAIL: expected 3 distinct keyframes after 3 Add-keyframe clicks with slider changes in between, got ' + rowsB.length + ' (regression of the editingIdx overwrite bug)');
+    click(byId('designerSaveBtn'));
+    const segB = window.findSegment(cardB.getAttribute('data-seg-id'));
+    const savedTorsos = ((segB.customPoses && segB.customPoses[charIdB] && segB.customPoses[charIdB].keyframes) || []).map(k=>k.pose.torsoLean);
+    const distinctTorsos = new Set(savedTorsos.map(v=>v.toFixed(2))).size;
+    if(savedTorsos.length !== 3 || distinctTorsos !== 3) errors.push('FAIL: expected 3 keyframes with 3 distinct torsoLean values saved, got: ' + JSON.stringify(savedTorsos));
+    results.push(['add-keyframe builds a real multi-pose sequence (not overwritten)', 'ok, 3 distinct keyframes: ' + JSON.stringify(savedTorsos.map(v=>v.toFixed(2)))]);
+
+    // 22b. Cancel on a FRESH "Design your own..." pick (not re-editing an existing saved move) should
+    // revert the action back to whatever it truly was before, not stay stuck on 'customPose'.
+    const freshSelect2 = Array.from(doc.querySelectorAll('#segmentList select[data-field^="action_"]'))
+      .find(el => el.getAttribute('data-field').slice('action_'.length) !== charIdB);
+    if(!freshSelect2) errors.push('FAIL: expected a second distinct character to test the Cancel-revert fix');
+    else {
+      const charIdC = freshSelect2.getAttribute('data-field').slice('action_'.length);
+      const segC = window.findSegment(freshSelect2.closest('.segment-card').getAttribute('data-seg-id'));
+      setValAndFire(freshSelect2, 'walk'); // known baseline, distinct from 'idle' and 'customPose'
+      setValAndFire(freshSelect2, 'customPose'); // fresh pick -> should capture 'walk' as previousAction
+      click(byId('designerCancelBtn'));
+      if((segC.actions && segC.actions[charIdC]) !== 'walk') errors.push('FAIL: Cancel on a fresh "Design your own..." pick should revert to the true prior action (walk), got: ' + (segC.actions && segC.actions[charIdC]));
+      results.push(['cancel on a fresh pick reverts to the true prior action', 'ok, reverted to walk']);
+    }
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 
