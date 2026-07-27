@@ -17,9 +17,9 @@ function loop(now){
 requestAnimationFrame(loop);
 // Forces an immediate repaint outside the rAF loop. Needed because rAF is throttled/paused by the
 // browser when the tab isn't focused/visible (and doesn't tick at all while playback is paused), so
-// changing a dropdown (Art Style, Background, Weather, Furniture, Food) or uploading a custom rig part
-// could otherwise sit invisibly in state until the next natural animation frame. Every listener that
-// mutates state.scene outside of normal playback should call this right after.
+// changing a dropdown (Art Style, Background, Weather, Furniture, Food) could otherwise sit invisibly
+// in state until the next natural animation frame. Every listener that mutates state.scene outside of
+// normal playback should call this right after.
 function forceRedraw(){ lastFrame = evaluateScene(state.scene, elapsed); renderFrame(lastFrame); if(canvasDrag) drawCanvasDragGhost(); }
 
 // ---------- Scene panel wiring ----------
@@ -282,32 +282,6 @@ function characterCardHtml(c, idx){
         '<div class="field"><label>Hair color</label><div class="color-row"><input type="color" data-cfield="hairColor" data-cid="'+c.id+'" value="'+c.hairColor+'"></div></div>' +
       '</div>' +
       '<div class="field"><label>Accessory</label><select data-cfield="accessory" data-cid="'+c.id+'">'+accessoryOptionsHtml(c.accessory)+'</select></div>' +
-      customRigFieldsHtml(c) +
-    '</div>'
-  );
-}
-
-// "My Own Stickman" (custom art rig) upload fields — only meaningful when Art Style is set to
-// "My Own Drawing" (js/styles.js), but shown on every card so the parts can be prepped in advance.
-// Torso/arms/legs should be drawn pointing right; the head should be drawn upright/facing-forward.
-const RIG_PARTS = [
-  ['head', 'Head (upright)'], ['torso', 'Torso (pointing →)'],
-  ['leftArm', 'Left arm (→)'], ['rightArm', 'Right arm (→)'],
-  ['leftLeg', 'Left leg (→)'], ['rightLeg', 'Right leg (→)']
-];
-function customRigFieldsHtml(c){
-  const rig = c.customRig || {};
-  return (
-    '<div class="field rig-fields">' +
-      '<label>My Own Stickman (used when Art Style = "My Own Drawing")</label>' +
-      '<div class="rig-grid">' +
-        RIG_PARTS.map(([part,label])=>
-          '<div class="rig-part">' +
-            '<span>'+label+(rig[part] ? ' &#10003;' : '')+'</span>' +
-            '<input type="file" accept="image/*" data-rigpart="'+part+'" data-cid="'+c.id+'">' +
-          '</div>'
-        ).join('') +
-      '</div>' +
     '</div>'
   );
 }
@@ -321,24 +295,7 @@ function renderCharacterList(){
     el.addEventListener(evt, onCharacterFieldChange);
   });
   characterList.querySelectorAll('[data-cact]').forEach(btn=> btn.addEventListener('click', onCharacterAction));
-  characterList.querySelectorAll('[data-rigpart]').forEach(input=> input.addEventListener('change', onRigPartUpload));
   addCharacterBtn.disabled = state.scene.characters.length >= MAX_CHARACTERS;
-}
-
-function onRigPartUpload(e){
-  const id = e.target.getAttribute('data-cid');
-  const part = e.target.getAttribute('data-rigpart');
-  const c = findCharacter(id);
-  const file = e.target.files && e.target.files[0];
-  if(!c || !file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    if(!c.customRig) c.customRig = { head:null, torso:null, leftArm:null, rightArm:null, leftLeg:null, rightLeg:null };
-    c.customRig[part] = ev.target.result; // data: URL — JSON/localStorage-safe, image lazily loaded at draw time
-    renderCharacterList(); // re-render so the checkmark next to this part shows up
-    forceRedraw();
-  };
-  reader.readAsDataURL(file);
 }
 
 function onCharacterFieldChange(e){

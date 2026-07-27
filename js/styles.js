@@ -4,46 +4,6 @@
 // a new style: add one entry with a drawStickman(x,faceDir,appearance,pose) function that returns
 // { leftHand, rightHand, head } (used to attach hand-held props like coffee cups/food); it
 // automatically appears in the Art Style dropdown via STYLE_LIST.
-// ---------- "My Own Drawing" style: user-uploaded paper-doll parts, positioned by the shared
-// skeleton math so a hand-drawn/uploaded character gets every pose/action fully animated. ----------
-// Each character's customRig (js/character.js) holds up to 6 data: URL strings — head, torso,
-// leftArm, rightArm, leftLeg, rightLeg — set via the "My Own Stickman" upload fields on its card
-// (js/ui.js). Torso/arm/leg images should be drawn pointing RIGHT (they get rotated+stretched along
-// the actual bone direction); the head image should be drawn upright/facing-forward (it gets rotated
-// relative to neutral-upright so head tilts still look natural). Any part left unset for a character
-// falls back to that same limb from the Bold Cartoon renderer, so a partial rig never looks broken.
-const _rigImageCache = {};
-function getRigImage(dataUrl){
-  if(!dataUrl) return null;
-  let img = _rigImageCache[dataUrl];
-  if(!img){ img = new Image(); img.src = dataUrl; _rigImageCache[dataUrl] = img; }
-  return (img.complete && img.naturalWidth) ? img : null;
-}
-function drawRigLimb(img, p1, p2){
-  // Draws img stretched from p1 to p2, rotated to match that segment's direction. Image is assumed
-  // authored pointing right (0 deg); its own aspect ratio sets the drawn thickness.
-  const dx = p2.x-p1.x, dy = p2.y-p1.y;
-  const len = Math.max(4, Math.sqrt(dx*dx+dy*dy));
-  const angle = Math.atan2(dy, dx);
-  const h = len * (img.naturalHeight / img.naturalWidth);
-  ctx.save();
-  ctx.translate(p1.x, p1.y);
-  ctx.rotate(angle);
-  ctx.drawImage(img, 0, -h/2, len, h);
-  ctx.restore();
-}
-function drawRigHead(img, head, neck){
-  // Image is assumed authored upright/facing-forward; rotated relative to the neutral straight-up
-  // neck->head direction so it tilts naturally with torsoLean/headTilt without looking sideways.
-  const angle = Math.atan2(head.y-neck.y, head.x-neck.x) + Math.PI/2;
-  const size = HEAD_R*2.6;
-  const h = size * (img.naturalHeight / img.naturalWidth);
-  ctx.save();
-  ctx.translate(head.x, head.y);
-  ctx.rotate(angle);
-  ctx.drawImage(img, -size/2, -h/2, size, h);
-  ctx.restore();
-}
 
 const STYLES = {
   bold: {
@@ -170,54 +130,6 @@ const STYLES = {
       if(sk.accessory === 'mask') drawMask(sk.head);
       if(sk.accessory === 'earrings') drawEarrings(sk.head);
       ctx.fillStyle = '#333'; ctx.font = '13px Arial, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
-      ctx.restore();
-      return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
-    }
-  },
-  custom: {
-    label: 'My Own Drawing',
-    drawStickman: (x, faceDir, appearance, pose)=>{
-      const sk = computeSkeleton(x, faceDir, appearance, pose);
-      const rig = appearance.customRig || {};
-      const headImg = getRigImage(rig.head);
-      const torsoImg = getRigImage(rig.torso);
-      const lArmImg = getRigImage(rig.leftArm);
-      const rArmImg = getRigImage(rig.rightArm);
-      const lLegImg = getRigImage(rig.leftLeg);
-      const rLegImg = getRigImage(rig.rightLeg);
-      ctx.save();
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.strokeStyle = sk.outfit; ctx.lineWidth = LW;
-
-      // legs (draw uploaded art if present, else fall back to a plain bold-style line so an
-      // in-progress rig never looks broken/blank)
-      if(lLegImg) drawRigLimb(lLegImg, sk.hip, sk.lFoot);
-      else { ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.lKnee.x,sk.lKnee.y); ctx.lineTo(sk.lFoot.x,sk.lFoot.y); ctx.stroke(); drawShoeBlob(sk.lFoot, faceDir); }
-      if(rLegImg) drawRigLimb(rLegImg, sk.hip, sk.rFoot);
-      else { ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.rKnee.x,sk.rKnee.y); ctx.lineTo(sk.rFoot.x,sk.rFoot.y); ctx.stroke(); drawShoeBlob(sk.rFoot, faceDir); }
-
-      // torso
-      if(torsoImg) drawRigLimb(torsoImg, sk.hip, sk.shoulder);
-      else { ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.shoulder.x,sk.shoulder.y); ctx.stroke(); }
-
-      // arms
-      if(lArmImg) drawRigLimb(lArmImg, sk.shoulder, sk.lHand);
-      else { ctx.beginPath(); ctx.moveTo(sk.shoulder.x,sk.shoulder.y); ctx.lineTo(sk.lElbow.x,sk.lElbow.y); ctx.lineTo(sk.lHand.x,sk.lHand.y); ctx.stroke(); drawHandBlob(sk.lHand, sk.skin); }
-      if(rArmImg) drawRigLimb(rArmImg, sk.shoulder, sk.rHand);
-      else { ctx.beginPath(); ctx.moveTo(sk.shoulder.x,sk.shoulder.y); ctx.lineTo(sk.rElbow.x,sk.rElbow.y); ctx.lineTo(sk.rHand.x,sk.rHand.y); ctx.stroke(); drawHandBlob(sk.rHand, sk.skin); }
-
-      // head (falls back to the same skin+outline+hair+face+accessories as bold cartoon)
-      if(headImg){
-        drawRigHead(headImg, sk.head, sk.neck);
-      } else {
-        ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R, 0, Math.PI*2);
-        ctx.fillStyle = sk.skin; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = LW*0.85; ctx.stroke();
-        drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
-        drawFace(sk.head, faceDir, sk.eyeStyle, sk.emotion, pose.mouthOpen);
-      }
-
-      ctx.fillStyle = '#444'; ctx.font = '13px "Comic Sans MS", cursive, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
       ctx.restore();
       return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
