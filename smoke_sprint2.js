@@ -1465,6 +1465,31 @@ async function run(){
     }
   }
 
+  // 25. Regression: "Add keyframe from current pose" while "Play sequence" is actively running used to
+  // silently do nothing (currentPose stays frozen from before Play started, and editingIdx still
+  // pointed at the last keyframe, so the click just re-saved that same pose over itself with zero
+  // visible change) — read by the user as "I can't add more than 2 keyframes." Fixed to snapshot the
+  // live animated pose and pause first; verify a 3rd keyframe really appears.
+  {
+    const cardsE = doc.querySelectorAll('.segment-card');
+    const cardE = cardsE[0];
+    const actionSelectE = cardE.querySelector('select[data-field^="action_"]');
+    setValAndFire(actionSelectE, 'customPose');
+    const torsoSliderE = doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]');
+    setValAndFire(torsoSliderE, '0.3'); click(byId('designerAddKeyframeBtn'));
+    setValAndFire(torsoSliderE, '-0.9'); click(byId('designerAddKeyframeBtn'));
+    if(doc.querySelectorAll('#designerKeyframeList .designer-kf-row').length !== 2) errors.push('FAIL: expected 2 keyframes built before testing the Play+Add interaction');
+    click(byId('designerPlayBtn')); // starts playback (2 keyframes is enough for Play to activate)
+    if(!byId('poseDesignerOverlay')) errors.push('FAIL: designer should still be open');
+    flushRaf(3); // let some playback time elapse, mirroring how a real user would pause mid-animation
+    click(byId('designerAddKeyframeBtn')); // this is the exact click that used to silently do nothing
+    const rowsE = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    if(rowsE.length !== 3) errors.push('FAIL: expected Add-keyframe to append a 3rd keyframe even while Play sequence was running, got ' + rowsE.length + ' rows (regression of the "stuck at 2 keyframes" bug)');
+    if(byId('designerPlayBtn').textContent !== 'Play sequence') errors.push('FAIL: clicking Add while playing should pause playback (button should read "Play sequence" again), got: ' + byId('designerPlayBtn').textContent);
+    results.push(['add-keyframe-while-playing appends a real 3rd keyframe (not stuck at 2)', 'ok, ' + rowsE.length + ' keyframes, playback paused']);
+    click(byId('designerCancelBtn'));
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 
