@@ -15,6 +15,8 @@ function loop(now){
     const pose = designer.playing ? evalKeyframePose(designer.elapsed, designer.keyframes) : Object.assign({}, designer.currentPose);
     pose.altitude = 0;
     renderFrame(buildDesignerFrame(pose));
+    // Drag handles only make sense over a single held pose, not mid-animation during Play sequence.
+    if(!designer.playing && typeof drawDesignerHandles === 'function') drawDesignerHandles();
   } else {
     if(state.playing) elapsed += dt*state.speed;
     lastFrame = evaluateScene(state.scene, elapsed);
@@ -788,6 +790,11 @@ function drawCanvasDragGhost(){
   ctx.restore();
 }
 canvas.addEventListener('mousedown', (e)=>{
+  // The Pose Designer physically reparents this same canvas into its own overlay while open (see
+  // openPoseDesigner below) and installs its own drag-to-pose handles on it — this listener's
+  // "drag a character's end position" logic is for the NORMAL scene canvas and would otherwise
+  // misfire against a stale `lastFrame` snapshot from before the designer opened.
+  if(typeof designer !== 'undefined' && designer.active) return;
   if(!lastFrame) return;
   const pt = canvasPointFromEvent(e);
   const hit = hitTestCharacterAt(pt.x, pt.y);
@@ -827,6 +834,7 @@ canvas.addEventListener('mousedown', (e)=>{
   document.addEventListener('mouseup', onUp);
 });
 canvas.addEventListener('mousemove', (e)=>{
+  if(typeof designer !== 'undefined' && designer.active) return; // designer installs its own cursor/hover logic
   if(canvasDrag) return; // an active drag is driven by the document-level listener installed above
   const pt = canvasPointFromEvent(e);
   canvas.style.cursor = hitTestCharacterAt(pt.x, pt.y) ? 'grab' : '';
@@ -845,7 +853,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) }])) };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0 }])) };
     state.scene.timeline.splice(idx+1, 0, copy);
   } else if(act === 'clearDrag'){
     const charId = e.currentTarget.getAttribute('data-char');
@@ -975,7 +983,16 @@ const DESIGNER_SLIDERS = [
 const designer = {
   active: false, segId: null, charId: null, previousAction: 'idle',
   keyframes: [], currentPose: Object.assign({}, DEFAULT_DESIGNER_POSE), editingIdx: -1,
-  playing: false, elapsed: 0, stageOriginalParent: null, stageOriginalNextSibling: null
+  playing: false, elapsed: 0, stageOriginalParent: null, stageOriginalNextSibling: null,
+  // previewAnchor: { x, faceDir } for the character being edited, refreshed every frame by
+  // buildDesignerFrame — the drag-to-pose handles (below) need this to know where on the canvas the
+  // character's hip/shoulder actually are this frame, since that depends on the real scene layout.
+  previewAnchor: null,
+  // moveSpeed: px/sec this move should also travel across the stage while playing, 0 = stay in place
+  // (the default, matching every existing saved move). Lets a hand-designed walk/run/approach-style
+  // move actually cross the screen instead of only animating in place — see js/scene.js's evaluateScene
+  // and computeSegmentStartPositions, which read this alongside the normal MOVE_SPEEDS mechanism.
+  moveSpeed: 0
 };
 
 // Full-scene-context preview: rather than an isolated character floating on a plain background, reuse
@@ -998,6 +1015,9 @@ function buildDesignerFrame(pose){
   const frame = evaluateScene(state.scene, offset + localT);
   frame.characters = frame.characters.map(c=>{
     if(c.id !== designer.charId) return c;
+    // Refresh where the drag-to-pose handles (below) should think this character's anchor is —
+    // x/faceDir come from the real scene layout, so this must be re-read every frame, not just once.
+    designer.previewAnchor = { x: c.x, faceDir: c.faceDir };
     // Preserve whatever altitude the real scene already computed for this character (e.g. mid-flight)
     // rather than forcing them back to ground level just because the designer's pose object has no
     // altitude field of its own.
@@ -1005,6 +1025,127 @@ function buildDesignerFrame(pose){
   });
   return frame;
 }
+
+// ---------- Drag-to-pose: pose the character by dragging its hands/feet/head directly on the preview,
+// instead of only via the abstract sliders. Reuses the same 2-bone IK (limbReachAngles/armReachAngles/
+// legReachAngles, js/poses.js) the "reach for a coffee cup" poses already use, just driven by a mouse
+// position instead of a fixed target. Only active in static edit mode (not while Play sequence is
+// animating, since there's no single pose to grab onto mid-animation). ----------
+const DESIGNER_HANDLE_HIT_RADIUS = 30; // canvas-internal px (preview is displayed smaller via CSS)
+const DESIGNER_HANDLE_DRAW_RADIUS = 12;
+let designerDragPart = null; // 'leftHand'|'rightHand'|'leftFoot'|'rightFoot'|'head' while dragging
+function designerLiveSkeleton(){
+  if(!designer.active || !designer.previewAnchor) return null;
+  const character = findCharacter(designer.charId);
+  if(!character) return null;
+  return computeSkeleton(designer.previewAnchor.x, designer.previewAnchor.faceDir, character, Object.assign({}, designer.currentPose, { altitude: 0 }));
+}
+function designerHandlePoints(){
+  const sk = designerLiveSkeleton();
+  if(!sk) return null;
+  return { leftHand: sk.lHand, rightHand: sk.rHand, leftFoot: sk.lFoot, rightFoot: sk.rFoot, head: sk.head, shoulder: sk.shoulder, hip: sk.hip };
+}
+function designerHandleHitTest(px, py){
+  if(!designer.active || designer.playing) return null;
+  const pts = designerHandlePoints();
+  if(!pts) return null;
+  let best = null, bestDist = DESIGNER_HANDLE_HIT_RADIUS;
+  ['leftHand','rightHand','leftFoot','rightFoot','head'].forEach(name=>{
+    const d = Math.hypot(px - pts[name].x, py - pts[name].y);
+    if(d < bestDist){ bestDist = d; best = name; }
+  });
+  return best;
+}
+// Reflects designer.currentPose back onto the slider inputs without a full innerHTML rebuild (cheap
+// enough to call on every mousemove tick of a drag, unlike renderDesignerSliders' full re-render).
+function syncDesignerSlidersFromCurrentPose(){
+  DESIGNER_SLIDERS.forEach(s=>{
+    const v = designer.currentPose[s.field] || 0;
+    const inp = designerSlidersEl.querySelector('[data-designer-slider="'+s.field+'"]');
+    const label = designerSlidersEl.querySelector('[data-valfor="'+s.field+'"]');
+    if(inp) inp.value = v;
+    if(label) label.textContent = v.toFixed(2);
+  });
+}
+function applyDesignerDrag(part, canvasX, canvasY){
+  const pts = designerHandlePoints();
+  if(!pts) return;
+  const faceDir = designer.previewAnchor.faceDir;
+  const anchor = (part === 'leftHand' || part === 'rightHand' || part === 'head') ? pts.shoulder : pts.hip;
+  // Local (pre-faceDir) offset — matches the convention downPoint/upPoint use internally (js/helpers.js:
+  // x = origin.x + sin(angle)*len*faceDir), so dividing faceDir back out here (multiplying, since
+  // faceDir is +-1) is what makes armReachAngles/legReachAngles solve the correct real-world direction
+  // regardless of which way the character is currently facing.
+  const localDx = (canvasX - anchor.x) * faceDir;
+  const localDy = canvasY - anchor.y;
+  if(part === 'leftHand'){
+    const r = armReachAngles(localDx, localDy);
+    designer.currentPose.leftShoulderAngle = r.shoulderAngle; designer.currentPose.leftElbowBend = r.elbowBend;
+  } else if(part === 'rightHand'){
+    const r = armReachAngles(localDx, localDy);
+    designer.currentPose.rightShoulderAngle = r.shoulderAngle; designer.currentPose.rightElbowBend = r.elbowBend;
+  } else if(part === 'leftFoot'){
+    const r = legReachAngles(localDx, localDy);
+    designer.currentPose.leftHipAngle = r.shoulderAngle; designer.currentPose.leftKneeBend = r.elbowBend;
+  } else if(part === 'rightFoot'){
+    const r = legReachAngles(localDx, localDy);
+    designer.currentPose.rightHipAngle = r.shoulderAngle; designer.currentPose.rightKneeBend = r.elbowBend;
+  } else if(part === 'head'){
+    // Only the angle matters here (head/neck are a fixed-length chain from the shoulder), so this
+    // ignores drag distance entirely and just points headTilt at wherever the cursor is.
+    designer.currentPose.headTilt = Math.atan2(localDx, -localDy);
+  }
+  designer.playing = false;
+  if(designer.editingIdx !== -1){
+    designer.editingIdx = -1;
+    const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
+    if(activeRow) activeRow.classList.remove('active');
+  }
+  syncDesignerSlidersFromCurrentPose();
+}
+// Small purple handles drawn on top of the normal render at each draggable point — only shown in
+// static edit mode (see loop() below), both so users can see exactly where to grab and to visually
+// distinguish "this is an editable pose" from the normal read-only scene preview.
+function drawDesignerHandles(){
+  const pts = designerHandlePoints();
+  if(!pts) return;
+  ctx.save();
+  ['leftHand','rightHand','leftFoot','rightFoot','head'].forEach(name=>{
+    const p = pts[name];
+    ctx.beginPath(); ctx.arc(p.x, p.y, DESIGNER_HANDLE_DRAW_RADIUS, 0, Math.PI*2);
+    ctx.fillStyle = designerDragPart === name ? 'rgba(192,38,211,0.9)' : 'rgba(124,58,237,0.75)';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  });
+  ctx.restore();
+}
+canvas.addEventListener('mousedown', (e)=>{
+  if(!designer.active || designer.playing) return;
+  const pt = canvasPointFromEvent(e);
+  const handle = designerHandleHitTest(pt.x, pt.y);
+  if(!handle) return;
+  designerDragPart = handle;
+  canvas.style.cursor = 'grabbing';
+  applyDesignerDrag(handle, pt.x, pt.y);
+  function onMove(ev){
+    if(!designerDragPart) return;
+    const p = canvasPointFromEvent(ev);
+    applyDesignerDrag(designerDragPart, p.x, p.y);
+  }
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    designerDragPart = null;
+    canvas.style.cursor = '';
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+canvas.addEventListener('mousemove', (e)=>{
+  if(!designer.active || designerDragPart) return; // dragging is driven by the document-level listener above
+  const pt = canvasPointFromEvent(e);
+  canvas.style.cursor = designerHandleHitTest(pt.x, pt.y) ? 'grab' : '';
+});
 
 function renderDesignerSliders(){
   designerSlidersEl.innerHTML = DESIGNER_SLIDERS.map(s=>
@@ -1075,6 +1216,32 @@ function renderDesignerKeyframeList(){
   }));
 }
 
+// Movement: off by default (every custom move just animates in place, matching every prior saved
+// move). Turning it on makes the character actually travel across the stage while this move plays —
+// same MOVE_SPEEDS-style px/sec mechanic every named clip like Walk/Run already uses, just editable
+// per-move instead of being fixed per-action-id (js/scene.js's evaluateScene/computeSegmentStartPositions).
+const designerMoveCheckbox = document.getElementById('designerMoveCheckbox');
+const designerMoveSpeedRow = document.getElementById('designerMoveSpeedRow');
+const designerMoveSpeedSlider = document.getElementById('designerMoveSpeedSlider');
+const designerMoveSpeedVal = document.getElementById('designerMoveSpeedVal');
+function renderDesignerMovementControl(){
+  if(!designerMoveCheckbox) return;
+  designerMoveCheckbox.checked = designer.moveSpeed > 0;
+  designerMoveSpeedRow.style.display = designer.moveSpeed > 0 ? 'flex' : 'none';
+  designerMoveSpeedSlider.value = designer.moveSpeed > 0 ? designer.moveSpeed : 45;
+  designerMoveSpeedVal.textContent = (designer.moveSpeed > 0 ? designer.moveSpeed : 45) + ' px/s';
+}
+if(designerMoveCheckbox){
+  designerMoveCheckbox.addEventListener('change', ()=>{
+    designer.moveSpeed = designerMoveCheckbox.checked ? parseInt(designerMoveSpeedSlider.value, 10) : 0;
+    renderDesignerMovementControl();
+  });
+  designerMoveSpeedSlider.addEventListener('input', ()=>{
+    designer.moveSpeed = parseInt(designerMoveSpeedSlider.value, 10);
+    designerMoveSpeedVal.textContent = designer.moveSpeed + ' px/s';
+  });
+}
+
 function openPoseDesigner(segId, charId, explicitPreviousAction){
   const seg = findSegment(segId);
   const character = findCharacter(charId);
@@ -1094,6 +1261,7 @@ function openPoseDesigner(segId, charId, explicitPreviousAction){
     : [];
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
   if(designer.keyframes.length) designer.editingIdx = 0;
+  designer.moveSpeed = (existing && existing.moveSpeed) || 0;
   designerTitleEl.textContent = 'Design a Move — ' + character.name;
   designerPlayBtn.textContent = 'Play sequence';
   designerPreviewLabel.textContent = 'Editing keyframe pose';
@@ -1103,6 +1271,7 @@ function openPoseDesigner(segId, charId, explicitPreviousAction){
   designerPreviewMount.insertBefore(canvas, designerPreviewMount.firstChild);
   renderDesignerSliders();
   renderDesignerKeyframeList();
+  renderDesignerMovementControl();
   designerOverlay.style.display = 'flex';
 }
 
@@ -1140,7 +1309,7 @@ function saveDesignerMove(){
       seg.actions[designer.charId] = 'idle';
       delete seg.customPoses[designer.charId];
     } else {
-      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) };
+      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0 };
       seg.actions[designer.charId] = 'customPose';
     }
   }
@@ -1197,7 +1366,7 @@ designerSaveToLibBtn.addEventListener('click', ()=>{
   const name = (prompt('Name this move (e.g. "Boxing Jab-Cross"):', '') || '').trim();
   if(!name) return;
   const list = loadMoveLibrary();
-  list.push({ label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) });
+  list.push({ label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0 });
   saveMoveLibrary(list);
   refreshMoveLibSelect();
   designerMoveLibSelect.value = String(list.length - 1);
@@ -1210,9 +1379,11 @@ designerLoadMoveBtn.addEventListener('click', ()=>{
   designer.editingIdx = designer.keyframes.length ? 0 : -1;
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
   designer.playing = false;
+  designer.moveSpeed = list[idx].moveSpeed || 0;
   designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe pose';
   renderDesignerSliders();
   renderDesignerKeyframeList();
+  renderDesignerMovementControl();
 });
 designerDeleteMoveBtn.addEventListener('click', ()=>{
   const list = loadMoveLibrary();

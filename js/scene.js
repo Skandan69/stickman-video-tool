@@ -433,15 +433,20 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
       // end of this segment) takes priority over everything else, including for non-movement clips like
       // idle/talk — it's a direct position override, not just another kind of "movement".
       const dragTarget = seg.dragTargets && seg.dragTargets[c.id];
+      // Mirrors the customSpeed lookup in evaluateScene above — a custom keyframe move with its
+      // "travels forward" option on needs the same start-of-NEXT-segment carry-over every other moving
+      // clip already gets, or the character would snap back after a segment boundary.
+      const customKF = clipId === 'customPose' ? (seg.customPoses && seg.customPoses[c.id]) : null;
+      const customSpeed = (customKF && customKF.moveSpeed) || 0;
       if(dragTarget){
         runningX[i] = clamp(dragTarget.x, 60, W-60);
-      } else if(isMoveClip(clipId)){
+      } else if(customSpeed > 0 || isMoveClip(clipId)){
         // A flying character in a climb/descend segment (direction 'up'/'down') travels vertically
         // instead of horizontally this segment — see computeSegmentStartAltitudes for the altitude side.
         const vdir = isFlyClip(clipId) ? resolveVerticalDir(seg, c.id) : 0;
         if(vdir === 0){
           const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir);
-          const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
+          const dist = (customSpeed > 0 ? customSpeed : MOVE_SPEEDS[clipId]) * Math.max(0.1, seg.duration);
           runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
         }
       }
@@ -522,7 +527,12 @@ function evaluateScene(scene, t){
       x = clamp(activeStartX[i], 60, W-60);
       altitude = clamp(activeStartAlt[i] + VERTICAL_SPEEDS[clipId]*localT*vdir, 0, MAX_ALTITUDE);
     } else {
-      const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0;
+      // A custom keyframe move can optionally travel across the stage too (Pose Designer: "This move
+      // travels forward" checkbox + speed slider), stored per-character as customKF.moveSpeed (px/sec,
+      // 0 = stay in place, the default so existing saved moves with no moveSpeed field are unaffected).
+      // Falls through to the normal MOVE_SPEEDS lookup for every real named clip id, same as before.
+      const customSpeed = (customKF && customKF.moveSpeed) || 0;
+      const travelled = customSpeed > 0 ? customSpeed*localT*faceDir : (isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0);
       x = clamp(activeStartX[i] + travelled, 60, W-60);
       altitude = activeStartAlt[i];
     }
