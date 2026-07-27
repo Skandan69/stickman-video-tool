@@ -7,11 +7,21 @@ let lastFrame = null;
 function loop(now){
   const dt = (now - lastNow)/1000;
   lastNow = now;
-  if(state.playing) elapsed += dt*state.speed;
-  lastFrame = evaluateScene(state.scene, elapsed);
-  renderFrame(lastFrame);
-  if(canvasDrag) drawCanvasDragGhost();
-  updateTimelineStripPlayhead();
+  // While the Pose Designer is open, it takes over the single shared canvas (reparented into the
+  // designer panel, see openPoseDesigner below) to preview the move being built, instead of the normal
+  // scene — same renderFrame pipeline either way, just a different (synthesized) frame object.
+  if(typeof designer !== 'undefined' && designer.active){
+    if(designer.playing) designer.elapsed += dt;
+    const pose = designer.playing ? evalKeyframePose(designer.elapsed, designer.keyframes) : Object.assign({}, designer.currentPose);
+    pose.altitude = 0;
+    renderFrame(buildDesignerFrame(pose));
+  } else {
+    if(state.playing) elapsed += dt*state.speed;
+    lastFrame = evaluateScene(state.scene, elapsed);
+    renderFrame(lastFrame);
+    if(canvasDrag) drawCanvasDragGhost();
+    updateTimelineStripPlayhead();
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -504,8 +514,14 @@ document.getElementById('deleteLibBtn').addEventListener('click', ()=>{
 refreshLibSelect();
 
 // ---------- Timeline / segment editor ----------
+// 'customPose' is a reserved id, appended after the real CLIP_LIST entries — deliberately NOT added to
+// CLIP_LIST itself, since that array is also read by the AI scene planner/Scene Engine schemas, and
+// picking "Design your own..." only makes sense with per-segment keyframe data a human just posed by
+// hand (see js/scene.js's evaluateScene + the Pose Designer below), not something an AI should ever
+// pick blind.
 function clipOptionsHtml(selected){
-  return CLIP_LIST.map(c=> `<option value="${c.id}" ${c.id===selected?'selected':''}>${c.label}</option>`).join('');
+  return CLIP_LIST.map(c=> `<option value="${c.id}" ${c.id===selected?'selected':''}>${c.label}</option>`).join('')
+    + `<option value="customPose" ${selected==='customPose'?'selected':''}>&#9998; Design your own...</option>`;
 }
 
 function renderSegmentList(){
@@ -513,9 +529,19 @@ function renderSegmentList(){
   timelineTotal.textContent = 'Total: ' + total.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
 
   segmentList.innerHTML = state.scene.timeline.map((seg, idx)=>{
-    const actionFieldsHtml = state.scene.characters.map(c=>
-      '<div class="field"><label>' + escapeHtml(c.name) + '</label><select data-field="action_'+c.id+'" data-id="'+seg.id+'">'+clipOptionsHtml((seg.actions&&seg.actions[c.id])||'idle')+'</select></div>'
-    ).join('');
+    const actionFieldsHtml = state.scene.characters.map(c=>{
+      const clipVal = (seg.actions&&seg.actions[c.id])||'idle';
+      const kfCount = (seg.customPoses && seg.customPoses[c.id] && seg.customPoses[c.id].keyframes) ? seg.customPoses[c.id].keyframes.length : 0;
+      const editBtn = clipVal === 'customPose'
+        ? '<button type="button" class="icon-btn" data-designer-edit data-segid="'+seg.id+'" data-cid="'+c.id+'" title="Edit this move" style="width:auto; padding:0 6px; white-space:nowrap;">&#9998; ' + kfCount + '</button>'
+        : '';
+      return '<div class="field"><label>' + escapeHtml(c.name) + '</label>' +
+        '<div class="row" style="align-items:center; gap:4px;">' +
+          '<select data-field="action_'+c.id+'" data-id="'+seg.id+'" style="flex:1;">'+clipOptionsHtml(clipVal)+'</select>' +
+          editBtn +
+        '</div>' +
+      '</div>';
+    }).join('');
     const speakerOptions = state.scene.characters.map(c=>
       '<option value="'+c.id+'"'+(seg.dialogue&&seg.dialogue.speakerId===c.id?' selected':'')+'>'+escapeHtml(c.name)+'</option>'
     ).join('');
@@ -597,6 +623,9 @@ function renderSegmentList(){
   segmentList.querySelectorAll('input[data-field]').forEach(el=>{
     el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', onSegmentFieldChange);
   });
+  segmentList.querySelectorAll('[data-designer-edit]').forEach(btn=> btn.addEventListener('click', (e)=>{
+    openPoseDesigner(e.currentTarget.getAttribute('data-segid'), e.currentTarget.getAttribute('data-cid'));
+  }));
   renderTimelineStrip();
 }
 
@@ -609,6 +638,7 @@ const STRIP_COLORS = ['#6366f1','#0891b2','#16a34a','#d97706','#db2777','#7c3aed
 function segLabel(seg){
   const firstChar = state.scene.characters[0];
   const clipId = (firstChar && seg.actions && seg.actions[firstChar.id]) || 'idle';
+  if(clipId === 'customPose') return 'Custom move';
   const clip = (typeof CLIPS !== 'undefined' && CLIPS[clipId]) || null;
   return clip ? clip.label : 'Idle';
 }
@@ -815,7 +845,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets) };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) }])) };
     state.scene.timeline.splice(idx+1, 0, copy);
   } else if(act === 'clearDrag'){
     const charId = e.currentTarget.getAttribute('data-char');
@@ -845,6 +875,11 @@ function onSegmentFieldChange(e){
     // way instead of silently requiring a separate checkbox + text field to discover.
     if(e.target.value === 'talk' && !seg.dialogue){
       seg.dialogue = { speakerId: charId, text: "Hey, how's it going?" };
+    }
+    // Picking "Design your own..." opens the Pose Designer right away — with no keyframes saved yet
+    // it'd otherwise silently fall back to idle (js/scene.js's evaluateScene) with no obvious next step.
+    if(e.target.value === 'customPose'){
+      openPoseDesigner(seg.id, charId);
     }
     // Re-render so the direction select's Up/Down (climb/descend) options show up immediately when
     // switching a character into flyplane/flyhelicopter, and disappear when switching back out.
@@ -885,6 +920,218 @@ addSegmentBtn.addEventListener('click', ()=>{
   renderSegmentList();
   forceRedraw();
 });
+
+// ---------- Pose Designer: general-purpose keyframe move builder ----------
+// Lets a user build any custom action (a fight combo, a dance move, a sports move — not just combat)
+// by hand: pose the character with per-limb sliders, save that pose as a keyframe, add another, and the
+// tool smoothly interpolates between them in order (js/poses.js's evalKeyframePose), looping. This is
+// how "the fight action looks like dancing" gets solved for good on a per-user basis: instead of only
+// ever picking a hand-coded clip like Fight, a character/segment can point at a fully custom sequence
+// the user designed themselves. Reuses the single shared #stage canvas for its live preview by
+// physically reparenting it into the designer panel while open (js/render.js's ctx/canvas are
+// module-level consts closed over by every draw function, so a second canvas would need a much bigger
+// refactor to support — moving the one real canvas costs nothing and loses no 2D context state).
+const designerOverlay = document.getElementById('poseDesignerOverlay');
+const designerTitleEl = document.getElementById('designerTitle');
+const designerPreviewMount = document.getElementById('designerPreviewMount');
+const designerSlidersEl = document.getElementById('designerSliders');
+const designerKeyframeListEl = document.getElementById('designerKeyframeList');
+const designerAddKeyframeBtn = document.getElementById('designerAddKeyframeBtn');
+const designerPlayBtn = document.getElementById('designerPlayBtn');
+const designerPreviewLabel = document.getElementById('designerPreviewLabel');
+const designerSaveBtn = document.getElementById('designerSaveBtn');
+const designerCancelBtn = document.getElementById('designerCancelBtn');
+const designerCloseBtn = document.getElementById('designerCloseBtn');
+
+// A light, neutral standing pose to start a brand-new move from — mirrors the engine's standingStance.
+const DEFAULT_DESIGNER_POSE = {
+  torsoLean: 0, headTilt: 0, bounceY: 0,
+  leftShoulderAngle: 0.1, leftElbowBend: 0.15, rightShoulderAngle: 0.1, rightElbowBend: 0.15,
+  leftHipAngle: 0.05, leftKneeBend: 0.06, rightHipAngle: -0.05, rightKneeBend: 0.06, mouthOpen: 0
+};
+// Ranges are generous enough to cover every hand-authored pose already in js/poses.js (checked against
+// poseFight/poseKick/poseSleep/poseYoga's actual angle values) without letting a slider produce a
+// physically nonsensical joint angle.
+const DESIGNER_SLIDERS = [
+  { field:'torsoLean', label:'Torso lean', min:-1.6, max:1.6, step:0.01 },
+  { field:'headTilt', label:'Head tilt', min:-1.2, max:1.2, step:0.01 },
+  { field:'bounceY', label:'Body height (crouch / lift)', min:-20, max:170, step:1 },
+  { field:'leftShoulderAngle', label:'Left shoulder', min:-3.2, max:3.2, step:0.01 },
+  { field:'leftElbowBend', label:'Left elbow bend', min:-2.5, max:2.5, step:0.01 },
+  { field:'rightShoulderAngle', label:'Right shoulder', min:-3.2, max:3.2, step:0.01 },
+  { field:'rightElbowBend', label:'Right elbow bend', min:-2.5, max:2.5, step:0.01 },
+  { field:'leftHipAngle', label:'Left hip', min:-2, max:2, step:0.01 },
+  { field:'leftKneeBend', label:'Left knee bend', min:-0.3, max:2.8, step:0.01 },
+  { field:'rightHipAngle', label:'Right hip', min:-2, max:2, step:0.01 },
+  { field:'rightKneeBend', label:'Right knee bend', min:-0.3, max:2.8, step:0.01 },
+  { field:'mouthOpen', label:'Mouth open', min:0, max:1, step:0.05 }
+];
+
+const designer = {
+  active: false, segId: null, charId: null, previousAction: 'idle',
+  keyframes: [], currentPose: Object.assign({}, DEFAULT_DESIGNER_POSE), editingIdx: -1,
+  playing: false, elapsed: 0, stageOriginalParent: null, stageOriginalNextSibling: null
+};
+
+function buildDesignerFrame(pose){
+  const character = findCharacter(designer.charId) || state.scene.characters[0];
+  return {
+    characters: [{ id: character.id, x: W/2, faceDir: 1, appearance: character, clipId: 'idle', pose: pose }],
+    animals: [], vehicles: [], dialogue: null, background: 'white', weather: 'none',
+    furniture: 'chair', food: 'sandwich', style: state.scene.style || 'bold',
+    localT: designer.elapsed, totalDuration: 1, povDriver: null
+  };
+}
+
+function renderDesignerSliders(){
+  designerSlidersEl.innerHTML = DESIGNER_SLIDERS.map(s=>
+    '<div class="designer-slider-row">' +
+      '<label>' + s.label + ' <span class="designer-slider-val" data-valfor="'+s.field+'">' + (designer.currentPose[s.field]||0).toFixed(2) + '</span></label>' +
+      '<input type="range" data-designer-slider="'+s.field+'" min="'+s.min+'" max="'+s.max+'" step="'+s.step+'" value="'+(designer.currentPose[s.field]||0)+'">' +
+    '</div>'
+  ).join('');
+  designerSlidersEl.querySelectorAll('[data-designer-slider]').forEach(inp=>{
+    inp.addEventListener('input', (e)=>{
+      const field = e.target.getAttribute('data-designer-slider');
+      designer.currentPose[field] = parseFloat(e.target.value);
+      designer.playing = false; // a manual slider tweak always drops back into live single-pose editing
+      designerPlayBtn.textContent = 'Play sequence';
+      designerPreviewLabel.textContent = 'Editing keyframe pose';
+      const label = designerSlidersEl.querySelector('[data-valfor="'+field+'"]');
+      if(label) label.textContent = designer.currentPose[field].toFixed(2);
+    });
+  });
+}
+
+function renderDesignerKeyframeList(){
+  designerKeyframeListEl.innerHTML = designer.keyframes.length ? designer.keyframes.map((k,idx)=>
+    '<div class="designer-kf-row'+(idx===designer.editingIdx?' active':'')+'">' +
+      '<span>'+(idx+1)+'.</span>' +
+      '<input type="number" min="0.1" step="0.1" value="'+k.duration+'" data-kf-duration="'+idx+'" title="Seconds to hold/transition"><span class="designer-kf-s">s</span>' +
+      '<button type="button" class="icon-btn" data-kf-load="'+idx+'" title="Load onto sliders to edit">&#9998;</button>' +
+      '<button type="button" class="icon-btn" data-kf-up="'+idx+'" '+(idx===0?'disabled':'')+' title="Move earlier">&uarr;</button>' +
+      '<button type="button" class="icon-btn" data-kf-down="'+idx+'" '+(idx===designer.keyframes.length-1?'disabled':'')+' title="Move later">&darr;</button>' +
+      '<button type="button" class="icon-btn danger" data-kf-delete="'+idx+'" title="Delete">&times;</button>' +
+    '</div>'
+  ).join('') : '<p style="font-size:12px; color:var(--muted); margin:4px 0;">No keyframes yet — pose the character with the sliders, then "Add keyframe". A single keyframe just holds that pose; two or more animate between them, looping.</p>';
+
+  designerKeyframeListEl.querySelectorAll('[data-kf-duration]').forEach(inp=> inp.addEventListener('input', e=>{
+    const idx = parseInt(e.target.getAttribute('data-kf-duration'),10);
+    designer.keyframes[idx].duration = Math.max(0.1, parseFloat(e.target.value)||0.1);
+  }));
+  designerKeyframeListEl.querySelectorAll('[data-kf-load]').forEach(btn=> btn.addEventListener('click', e=>{
+    const idx = parseInt(e.currentTarget.getAttribute('data-kf-load'),10);
+    designer.currentPose = Object.assign({}, designer.keyframes[idx].pose);
+    designer.editingIdx = idx; designer.playing = false;
+    designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe pose';
+    renderDesignerSliders(); renderDesignerKeyframeList();
+  }));
+  designerKeyframeListEl.querySelectorAll('[data-kf-up]').forEach(btn=> btn.addEventListener('click', e=>{
+    const idx = parseInt(e.currentTarget.getAttribute('data-kf-up'),10);
+    if(idx>0){ const t=designer.keyframes[idx-1]; designer.keyframes[idx-1]=designer.keyframes[idx]; designer.keyframes[idx]=t; if(designer.editingIdx===idx) designer.editingIdx=idx-1; else if(designer.editingIdx===idx-1) designer.editingIdx=idx; renderDesignerKeyframeList(); }
+  }));
+  designerKeyframeListEl.querySelectorAll('[data-kf-down]').forEach(btn=> btn.addEventListener('click', e=>{
+    const idx = parseInt(e.currentTarget.getAttribute('data-kf-down'),10);
+    if(idx<designer.keyframes.length-1){ const t=designer.keyframes[idx+1]; designer.keyframes[idx+1]=designer.keyframes[idx]; designer.keyframes[idx]=t; if(designer.editingIdx===idx) designer.editingIdx=idx+1; else if(designer.editingIdx===idx+1) designer.editingIdx=idx; renderDesignerKeyframeList(); }
+  }));
+  designerKeyframeListEl.querySelectorAll('[data-kf-delete]').forEach(btn=> btn.addEventListener('click', e=>{
+    const idx = parseInt(e.currentTarget.getAttribute('data-kf-delete'),10);
+    designer.keyframes.splice(idx,1);
+    if(designer.editingIdx===idx) designer.editingIdx=-1;
+    else if(designer.editingIdx>idx) designer.editingIdx -= 1;
+    renderDesignerKeyframeList();
+  }));
+}
+
+function openPoseDesigner(segId, charId){
+  const seg = findSegment(segId);
+  const character = findCharacter(charId);
+  if(!seg || !character) return;
+  designer.active = true; designer.segId = segId; designer.charId = charId;
+  designer.playing = false; designer.elapsed = 0; designer.editingIdx = -1;
+  designer.previousAction = (seg.actions && seg.actions[charId]) || 'idle';
+  const existing = seg.customPoses && seg.customPoses[charId];
+  designer.keyframes = (existing && existing.keyframes && existing.keyframes.length)
+    ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }))
+    : [];
+  designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
+  if(designer.keyframes.length) designer.editingIdx = 0;
+  designerTitleEl.textContent = 'Design a Move — ' + character.name;
+  designerPlayBtn.textContent = 'Play sequence';
+  designerPreviewLabel.textContent = 'Editing keyframe pose';
+  // Physically move the one shared canvas into the designer panel — see the block comment above.
+  designer.stageOriginalParent = canvas.parentNode;
+  designer.stageOriginalNextSibling = canvas.nextSibling;
+  designerPreviewMount.insertBefore(canvas, designerPreviewMount.firstChild);
+  renderDesignerSliders();
+  renderDesignerKeyframeList();
+  designerOverlay.style.display = 'flex';
+}
+
+function closePoseDesignerOverlay(){
+  designer.active = false; designer.playing = false;
+  if(designer.stageOriginalParent){
+    if(designer.stageOriginalNextSibling) designer.stageOriginalParent.insertBefore(canvas, designer.stageOriginalNextSibling);
+    else designer.stageOriginalParent.appendChild(canvas);
+  }
+  designerOverlay.style.display = 'none';
+}
+
+function cancelPoseDesigner(){
+  const seg = findSegment(designer.segId);
+  // Only snap the action back to whatever it was before opening if this was a fresh "Design your
+  // own..." pick (previousAction wasn't already 'customPose') — cancelling out of re-editing an
+  // existing saved move should leave that existing move exactly as it was, not revert to some earlier
+  // unrelated action.
+  if(seg && designer.previousAction !== 'customPose' && seg.actions){
+    seg.actions[designer.charId] = designer.previousAction;
+  }
+  closePoseDesignerOverlay();
+  renderSegmentList();
+  forceRedraw();
+}
+
+function saveDesignerMove(){
+  const seg = findSegment(designer.segId);
+  if(seg){
+    if(!seg.customPoses) seg.customPoses = {};
+    if(!seg.actions) seg.actions = {};
+    if(designer.keyframes.length === 0){
+      // Saved with nothing posed — there's nothing to animate, so don't leave the action pointed at an
+      // empty custom move; fall back to idle exactly like evaluateScene already would at render time.
+      seg.actions[designer.charId] = 'idle';
+      delete seg.customPoses[designer.charId];
+    } else {
+      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })) };
+      seg.actions[designer.charId] = 'customPose';
+    }
+  }
+  closePoseDesignerOverlay();
+  renderSegmentList();
+  forceRedraw();
+}
+
+designerAddKeyframeBtn.addEventListener('click', ()=>{
+  if(designer.editingIdx >= 0 && designer.editingIdx < designer.keyframes.length){
+    // A keyframe is currently loaded onto the sliders and may have been tweaked — update it in place
+    // rather than appending a duplicate, so "load, adjust, Add keyframe" reads as "update this one".
+    designer.keyframes[designer.editingIdx].pose = Object.assign({}, designer.currentPose);
+  } else {
+    designer.keyframes.push({ pose: Object.assign({}, designer.currentPose), duration: 0.6 });
+    designer.editingIdx = designer.keyframes.length - 1;
+  }
+  renderDesignerKeyframeList();
+});
+designerPlayBtn.addEventListener('click', ()=>{
+  if(designer.keyframes.length < 2) return; // nothing to animate between yet
+  designer.playing = !designer.playing;
+  designer.elapsed = 0;
+  designerPlayBtn.textContent = designer.playing ? 'Pause preview' : 'Play sequence';
+  designerPreviewLabel.textContent = designer.playing ? 'Previewing full sequence (looping)' : 'Editing keyframe pose';
+});
+designerSaveBtn.addEventListener('click', saveDesignerMove);
+designerCancelBtn.addEventListener('click', cancelPoseDesigner);
+designerCloseBtn.addEventListener('click', cancelPoseDesigner);
 
 // ---------- export ----------
 exportBtn.addEventListener('click', ()=>{

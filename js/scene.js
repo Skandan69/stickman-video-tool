@@ -6,8 +6,12 @@
 // where they should END UP by the end of THIS segment. When present for a character, it overrides the
 // normal direction/speed-based movement entirely for that character this segment: they linearly slide
 // from wherever the previous segment left them to dragTargets[charId].x over the segment's duration.
-function makeSegment(duration, actions, dialogue, background, weather, directions, povCamera, dragTargets){
-  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null, directions: directions || {}, povCamera: !!povCamera, dragTargets: dragTargets || {} };
+// customPoses: { charId: { keyframes: [{ pose, duration }, ...] } } — set by the Pose Designer
+// (js/ui.js) when a character's action for this segment is the reserved id 'customPose'. Each keyframe
+// is a full BonePose snapshot (see js/poses.js's evalKeyframePose) the user posed by hand; the segment
+// carries this alongside `actions` the same way it carries `directions`/`dragTargets`.
+function makeSegment(duration, actions, dialogue, background, weather, directions, povCamera, dragTargets, customPoses){
+  return { id: uid(), duration: duration, actions: actions || {}, dialogue: dialogue || null, background: background || null, weather: weather || null, directions: directions || {}, povCamera: !!povCamera, dragTargets: dragTargets || {}, customPoses: customPoses || {} };
 }
 // Resolves a character's effective facing/movement direction for a segment: an explicit per-segment
 // override ('left'/'right') if the user set one, else the character's normal layout-assigned faceDir
@@ -83,7 +87,8 @@ function resolveIndexedTimeline(indexedSegments, charCount){
     weather: s.weather || null,
     directions: {},
     povCamera: !!s.povCamera,
-    dragTargets: {}
+    dragTargets: {},
+    customPoses: {}
   }));
 }
 
@@ -488,7 +493,15 @@ function evaluateScene(scene, t){
     const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
     const speaking = clipId === 'talk' && active.dialogue && active.dialogue.speakerId === appearance.id;
     const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // must be active before the pose is computed (arm IK reads current geometry)
-    const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
+    // 'customPose' is a reserved clip id, not a real CLIPS entry: it means "use this segment's
+    // hand-designed keyframes for this character" (Pose Designer, js/ui.js) instead of a named clip
+    // function. If no keyframes were ever saved (e.g. right after picking "Design your own…" before
+    // hitting Save), customKF is undefined and this falls through to the normal CLIPS lookup, which
+    // safely resolves to CLIPS.idle since 'customPose' isn't a real key there either.
+    const customKF = clipId === 'customPose' ? (active.customPoses && active.customPoses[appearance.id]) : null;
+    const pose = (customKF && customKF.keyframes && customKF.keyframes.length)
+      ? evalKeyframePose(localT, customKF.keyframes)
+      : (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
     pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
     const faceDir = resolveFaceDir(active, appearance.id, positions[i].faceDir);
     // Flying characters climbing/descending this segment (vdir!=0) hold x still and travel on the

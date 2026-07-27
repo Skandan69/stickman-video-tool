@@ -715,3 +715,38 @@ const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, w
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
 // resolveIndexedTimeline/parsePromptToScene special-case this instead of defaulting partner to idle.
 const INTERACTIVE_CLIPS = { fight:true, argue:true, hug:true, highfive:true, dance:true, shake:true };
+
+// ---------- Pose Designer keyframe interpolation ----------
+// A user-authored move (js/ui.js's Pose Designer) isn't a hand-coded pose function like everything
+// above — it's a plain list of BonePose snapshots ("keyframes") the user posed by hand via sliders,
+// each with a hold/transition duration. evalKeyframePose is the one shared function that turns that
+// data into a per-frame pose, exactly the same way a CLIPS entry's pose(t) would, so it can drop into
+// evaluateScene (js/scene.js) as a peer of every other clip. Looping over the total duration of all
+// keyframes, smoothstep-eased between each consecutive pair, so 3-4 posed keyframes (e.g. guard -> jab
+// -> kick -> guard) already read as a real, deliberately-designed move rather than a jump-cut.
+const POSE_LERP_FIELDS = ['torsoLean','headTilt','bounceY','leftShoulderAngle','leftElbowBend','rightShoulderAngle','rightElbowBend','leftHipAngle','leftKneeBend','rightHipAngle','rightKneeBend','mouthOpen'];
+function evalKeyframePose(t, keyframes){
+  if(!keyframes || !keyframes.length) return poseIdle(t, 0);
+  if(keyframes.length === 1) return Object.assign({}, keyframes[0].pose);
+  const total = keyframes.reduce((s,k)=> s + Math.max(0.1, k.duration || 1), 0);
+  const tt = ((t % total) + total) % total;
+  let acc = 0;
+  for(let i=0;i<keyframes.length;i++){
+    const k = keyframes[i];
+    const d = Math.max(0.1, k.duration || 1);
+    if(tt < acc + d || i === keyframes.length - 1){
+      const next = keyframes[(i+1) % keyframes.length];
+      const frac = Math.min(1, Math.max(0, (tt - acc) / d));
+      const eased = frac*frac*(3 - 2*frac); // smoothstep
+      const out = {};
+      POSE_LERP_FIELDS.forEach(f=>{
+        const a = (k.pose && k.pose[f] != null) ? k.pose[f] : 0;
+        const b = (next.pose && next.pose[f] != null) ? next.pose[f] : 0;
+        out[f] = a + (b - a) * eased;
+      });
+      return out;
+    }
+    acc += d;
+  }
+  return Object.assign({}, keyframes[keyframes.length - 1].pose);
+}
