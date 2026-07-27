@@ -1319,12 +1319,29 @@ function saveDesignerMove(){
 }
 
 designerAddKeyframeBtn.addEventListener('click', ()=>{
+  // Clicking Add while "Play sequence" is running used to silently do nothing useful: designer.currentPose
+  // stays frozen at whatever it was BEFORE Play was clicked (the render loop computes the animated
+  // preview pose locally without writing it back), and editingIdx was still pointing at the last
+  // keyframe you'd loaded/added — so a click here just re-saved that same old pose over itself, with no
+  // visible change and no error, which read as "I can't add more than 2 keyframes." Fixed by treating
+  // Add-while-playing as "grab the exact pose being shown RIGHT NOW out of the animation": pause
+  // playback, snapshot the live interpolated pose into currentPose/sliders, and force the append path
+  // below (this snapshot is inherently a new in-between pose, never something already saved verbatim).
+  if(designer.playing){
+    designer.currentPose = evalKeyframePose(designer.elapsed, designer.keyframes);
+    designer.playing = false;
+    designerPlayBtn.textContent = 'Play sequence';
+    designerPreviewLabel.textContent = 'Editing keyframe pose';
+    designer.editingIdx = -1;
+    syncDesignerSlidersFromCurrentPose();
+  }
   // editingIdx means "the sliders currently reflect this exact saved keyframe" — true right after
   // loading one (pencil button) or right after appending one (below), and invalidated the instant any
-  // slider actually moves (see renderDesignerSliders' input handler). Without that invalidation this
-  // branch would keep re-triggering after the FIRST Add forever, silently overwriting keyframe 0 on
-  // every later click instead of ever appending a second/third pose — that was a real bug, fixed here
-  // by making sure editingIdx only stays "live" while the sliders truly still match that keyframe.
+  // slider actually moves (see renderDesignerSliders' input handler) or the snapshot-from-Play above.
+  // Without that invalidation this branch would keep re-triggering after the FIRST Add forever, silently
+  // overwriting keyframe 0 on every later click instead of ever appending a second/third pose — that was
+  // a real bug, fixed by making sure editingIdx only stays "live" while the sliders truly still match
+  // that keyframe.
   if(designer.editingIdx >= 0 && designer.editingIdx < designer.keyframes.length){
     designer.keyframes[designer.editingIdx].pose = Object.assign({}, designer.currentPose);
   } else {
