@@ -867,6 +867,11 @@ function onSegmentFieldChange(e){
   } else if(field.indexOf('action_') === 0){
     const charId = field.slice('action_'.length);
     if(!seg.actions) seg.actions = {};
+    // Captured BEFORE overwriting below — openPoseDesigner needs the TRUE prior action (e.g. 'idle')
+    // to revert to if the user Cancels out of a freshly-opened designer. Reading seg.actions[charId]
+    // from inside openPoseDesigner itself would see 'customPose' (already written a few lines down),
+    // making Cancel a no-op on a fresh pick — that was a real bug, fixed by passing this through.
+    const priorAction = seg.actions[charId] || 'idle';
     seg.actions[charId] = e.target.value;
     // Selecting "Talk" with no dialogue set yet would otherwise render a silent, closed-mouth
     // character — poseTalk (js/poses.js) only opens the mouth and evaluateScene only draws a speech
@@ -879,7 +884,7 @@ function onSegmentFieldChange(e){
     // Picking "Design your own..." opens the Pose Designer right away — with no keyframes saved yet
     // it'd otherwise silently fall back to idle (js/scene.js's evaluateScene) with no obvious next step.
     if(e.target.value === 'customPose'){
-      openPoseDesigner(seg.id, charId);
+      openPoseDesigner(seg.id, charId, priorAction);
     }
     // Re-render so the direction select's Up/Down (climb/descend) options show up immediately when
     // switching a character into flyplane/flyhelicopter, and disappear when switching back out.
@@ -1013,6 +1018,15 @@ function renderDesignerSliders(){
       const field = e.target.getAttribute('data-designer-slider');
       designer.currentPose[field] = parseFloat(e.target.value);
       designer.playing = false; // a manual slider tweak always drops back into live single-pose editing
+      // The sliders no longer exactly match whichever keyframe was loaded (if any) the moment a value
+      // actually changes — clear editingIdx so "Add keyframe" appends a NEW keyframe instead of
+      // silently overwriting the one that used to be loaded (avoid a full list re-render on every drag
+      // tick; just drop the 'active' highlight directly).
+      if(designer.editingIdx !== -1){
+        designer.editingIdx = -1;
+        const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
+        if(activeRow) activeRow.classList.remove('active');
+      }
       designerPlayBtn.textContent = 'Play sequence';
       designerPreviewLabel.textContent = 'Editing keyframe pose';
       const label = designerSlidersEl.querySelector('[data-valfor="'+field+'"]');
@@ -1061,13 +1075,19 @@ function renderDesignerKeyframeList(){
   }));
 }
 
-function openPoseDesigner(segId, charId){
+function openPoseDesigner(segId, charId, explicitPreviousAction){
   const seg = findSegment(segId);
   const character = findCharacter(charId);
   if(!seg || !character) return;
   designer.active = true; designer.segId = segId; designer.charId = charId;
   designer.playing = false; designer.elapsed = 0; designer.editingIdx = -1;
-  designer.previousAction = (seg.actions && seg.actions[charId]) || 'idle';
+  // explicitPreviousAction is passed by the action-dropdown handler (onSegmentFieldChange), which
+  // must capture the TRUE prior action before it overwrites seg.actions[charId] with 'customPose' —
+  // reading seg.actions[charId] here directly would already see 'customPose' in that case, breaking
+  // Cancel's revert-to-prior-action behavior. Callers that open the designer without having just
+  // changed the action (the pencil edit button, the "Start designing" banner) omit this argument and
+  // fall back to reading the current value, which is correct for them.
+  designer.previousAction = explicitPreviousAction != null ? explicitPreviousAction : ((seg.actions && seg.actions[charId]) || 'idle');
   const existing = seg.customPoses && seg.customPoses[charId];
   designer.keyframes = (existing && existing.keyframes && existing.keyframes.length)
     ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }))
@@ -1130,9 +1150,13 @@ function saveDesignerMove(){
 }
 
 designerAddKeyframeBtn.addEventListener('click', ()=>{
+  // editingIdx means "the sliders currently reflect this exact saved keyframe" — true right after
+  // loading one (pencil button) or right after appending one (below), and invalidated the instant any
+  // slider actually moves (see renderDesignerSliders' input handler). Without that invalidation this
+  // branch would keep re-triggering after the FIRST Add forever, silently overwriting keyframe 0 on
+  // every later click instead of ever appending a second/third pose — that was a real bug, fixed here
+  // by making sure editingIdx only stays "live" while the sliders truly still match that keyframe.
   if(designer.editingIdx >= 0 && designer.editingIdx < designer.keyframes.length){
-    // A keyframe is currently loaded onto the sliders and may have been tweaked — update it in place
-    // rather than appending a duplicate, so "load, adjust, Add keyframe" reads as "update this one".
     designer.keyframes[designer.editingIdx].pose = Object.assign({}, designer.currentPose);
   } else {
     designer.keyframes.push({ pose: Object.assign({}, designer.currentPose), duration: 0.6 });
