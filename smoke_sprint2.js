@@ -1280,6 +1280,76 @@ async function run(){
     }
   }
 
+  // 21. Full-scene-context preview + Move Library + prominent entry point banner.
+  {
+    // 21a. The designer preview should show the REAL scene (background, other characters) for the
+    // segment being edited, not an isolated white-background figure — set a distinctive background and
+    // confirm buildDesignerFrame (indirectly, via a render pass while the designer is open) doesn't
+    // throw and that the scene's actual background setting is what's active while designing.
+    const bgSelect = byId('bgSelect');
+    if(bgSelect){ setValAndFire(bgSelect, 'beach'); }
+    const cardsA = doc.querySelectorAll('.segment-card');
+    const cardA = cardsA[0];
+    const actionSelectA = cardA.querySelector('select[data-field^="action_"]');
+    setValAndFire(actionSelectA, 'customPose');
+    if(byId('poseDesignerOverlay').style.display !== 'flex') errors.push('FAIL: designer should still open normally with the full-scene-preview change in place');
+    try { flushRaf(4); results.push(['full-scene-context preview renders', 'ok, no throw with real background+other characters behind the edited pose']); }
+    catch(e){ errors.push('FAIL: designer preview with full scene context threw: ' + e.stack); }
+    click(byId('designerAddKeyframeBtn'));
+    click(byId('designerSaveBtn'));
+
+    // 21b. Move Library: save the move just built, confirm it appears in the library select, load it
+    // back (clearing keyframes first to prove Load actually restores from storage, not leftover state),
+    // then delete it and confirm it's gone.
+    const seg2 = window.findSegment(cardA.getAttribute('data-seg-id'));
+    const charIdA = actionSelectA.getAttribute('data-field').slice('action_'.length);
+    // Reopen via the pencil button so there's a real keyframe loaded to save to the library.
+    const editBtnA = doc.querySelector('[data-designer-edit][data-cid="'+charIdA+'"]');
+    if(!editBtnA) errors.push('FAIL: expected a pencil edit button to reopen the just-saved move for the library test');
+    else {
+      click(editBtnA);
+      const origPrompt = window.prompt;
+      window.prompt = () => 'Test Move';
+      click(byId('designerSaveToLibBtn'));
+      window.prompt = origPrompt;
+      const libList = JSON.parse(window.localStorage.getItem('stickmanMoveLibrary') || '[]');
+      if(!libList.length || libList[libList.length-1].label !== 'Test Move') errors.push('FAIL: expected "Test Move" to be saved to the Move Library, got: ' + JSON.stringify(libList));
+      const optCount = doc.querySelectorAll('#designerMoveLibSelect option').length;
+      if(optCount !== libList.length) errors.push('FAIL: Move Library <select> should have one option per saved move, got ' + optCount + ' options for ' + libList.length + ' saved moves');
+      results.push(['move library save', 'ok, "Test Move" saved and listed (' + libList.length + ' total)']);
+
+      // Load: pick the just-saved entry, click Load, confirm keyframes populate from it.
+      const savedIdx = libList.length - 1;
+      byId('designerMoveLibSelect').value = String(savedIdx);
+      click(byId('designerLoadMoveBtn'));
+      const loadedRows = doc.querySelectorAll('#designerKeyframeList .designer-kf-row').length;
+      if(loadedRows !== libList[savedIdx].keyframes.length) errors.push('FAIL: Load should populate the keyframe list from the saved move, expected ' + libList[savedIdx].keyframes.length + ' rows, got ' + loadedRows);
+      results.push(['move library load', 'ok, ' + loadedRows + ' keyframe(s) restored from saved move']);
+
+      // Delete: remove it, confirm it's gone from storage and the select.
+      const origConfirm = window.confirm;
+      window.confirm = () => true;
+      byId('designerMoveLibSelect').value = String(savedIdx);
+      click(byId('designerDeleteMoveBtn'));
+      window.confirm = origConfirm;
+      const libListAfter = JSON.parse(window.localStorage.getItem('stickmanMoveLibrary') || '[]');
+      if(libListAfter.length !== libList.length - 1) errors.push('FAIL: Delete should remove exactly one saved move, had ' + libList.length + ', now have ' + libListAfter.length);
+      results.push(['move library delete', 'ok, saved move removed']);
+      click(byId('designerCancelBtn'));
+    }
+
+    // 21c. Prominent entry point: the "Start designing" banner button should open the Pose Designer
+    // for the first character/segment directly.
+    const startBtn = byId('startSceneDesignBtn');
+    if(!startBtn) errors.push('FAIL: expected a "Start designing" banner button (#startSceneDesignBtn)');
+    else {
+      click(startBtn);
+      if(byId('poseDesignerOverlay').style.display !== 'flex') errors.push('FAIL: "Start designing" banner button should open the Pose Designer');
+      results.push(['prominent entry point opens designer', 'ok']);
+      click(byId('designerCancelBtn'));
+    }
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 

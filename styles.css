@@ -111,6 +111,20 @@ hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
   pointer-events:none; transition:left .05s linear; z-index:2;
 }
 
+/* Headline-feature callout for the Pose Designer (see index.html) — distinct violet theme matching
+   .ai-btn so it reads as "the smart/premium capability" the way the AI generate button already does. */
+.scene-designer-cta{
+  width:100%; max-width:1150px; margin:0 auto 18px; box-sizing:border-box;
+  background:linear-gradient(135deg,#f5f3ff,#fdf4ff); border:1px solid #ddd6fe; border-radius:12px;
+  padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+}
+.scene-designer-cta-text strong{font-size:14px; color:#4c1d95;}
+.scene-designer-cta-text p{font-size:12px; color:#5b21b6; margin:4px 0 0; line-height:1.5; max-width:720px;}
+.scene-designer-cta button{
+  flex-shrink:0; background:linear-gradient(135deg,#7c3aed,#c026d3); color:#fff; padding:10px 18px;
+}
+.scene-designer-cta button:hover{background:linear-gradient(135deg,#6d28d9,#a21caf);}
+
 /* Pose Designer overlay (js/ui.js): the one auxiliary "modal" surface in this app, introduced for this
    feature specifically since there's a real reason to leave the normal editing layout entirely (posing
    sliders + a live preview need focus/room a permanently-docked panel wouldn't have). Everything else

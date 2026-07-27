@@ -13,6 +13,17 @@
      below is completely unchanged; this page's behavior is not affected by that page in any way. -->
 <p style="text-align:center; font-size:12px; margin:-8px 0 20px;"><a href="engine.html" style="color:#7c3aed; font-weight:600; text-decoration:none;">&#129514; Try the experimental Scene Engine (Beta) &rarr;</a></p>
 
+<!-- Prominent entry point for the Pose Designer (js/ui.js's openPoseDesigner) — the dropdown option
+     ("Design your own...") still exists in every segment's action select, but this callout makes the
+     capability itself discoverable rather than requiring someone to already know it's there. -->
+<div class="scene-designer-cta">
+  <div class="scene-designer-cta-text">
+    <strong>&#127912; Design Your Own Scene</strong>
+    <p>Add as many characters as you want below, then hand-design each one's moves frame by frame &mdash; a boxing match, a dance routine, anything you can picture &mdash; instead of only picking from the built-in action list. The live preview shows the real background and every other character while you work, and you can save any move you build to reuse later.</p>
+  </div>
+  <button type="button" id="startSceneDesignBtn">Start designing &rarr;</button>
+</div>
+
 <div class="layout">
 
   <div class="panel">
@@ -157,6 +168,15 @@
           <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
           <div id="designerKeyframeList"></div>
           <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="width:100%; margin-top:6px;">+ Add keyframe from current pose</button>
+
+          <h3 style="margin:14px 0 6px; font-size:13px;">Move Library</h3>
+          <p style="font-size:11px; color:var(--muted); margin:0 0 6px; line-height:1.4;">Save a move you like to reuse on any character, in any scene, later &mdash; saved to this browser.</p>
+          <div class="row" style="gap:6px; align-items:center; margin-bottom:6px;">
+            <select id="designerMoveLibSelect" style="flex:1;"><option value="">(none saved yet)</option></select>
+            <button type="button" id="designerLoadMoveBtn" class="secondary small">Load</button>
+            <button type="button" id="designerDeleteMoveBtn" class="icon-btn danger" style="width:auto; padding:0 8px;" title="Delete this saved move">&times;</button>
+          </div>
+          <button type="button" id="designerSaveToLibBtn" class="secondary small" style="width:100%;">&#128190; Save this move to library...</button>
         </div>
       </div>
     </div>
