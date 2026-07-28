@@ -1440,6 +1440,7 @@ designerAddKeyframeBtn.addEventListener('click', ()=>{
     designer.keyframes.push({ pose: Object.assign({}, designer.currentPose), duration: 0.6 });
     designer.editingIdx = designer.keyframes.length - 1;
   }
+  designerPreviewLabel.textContent = 'Editing keyframe ' + (designer.editingIdx+1) + ' — adjust sliders or drag the preview, then Update or Add as new';
   renderDesignerKeyframeList();
 });
 // Only shown/enabled while a keyframe is loaded (editingIdx>=0) — lets you explicitly append the
@@ -1457,6 +1458,7 @@ if(designerAddNewKeyframeBtn){
     }
     designer.keyframes.push({ pose: Object.assign({}, designer.currentPose), duration: 0.6 });
     designer.editingIdx = designer.keyframes.length - 1;
+    designerPreviewLabel.textContent = 'Editing keyframe ' + (designer.editingIdx+1) + ' — adjust sliders or drag the preview, then Update or Add as new';
     renderDesignerKeyframeList();
   });
 }
