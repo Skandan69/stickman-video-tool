@@ -1318,18 +1318,20 @@ async function run(){
       if(optCount !== libList.length) errors.push('FAIL: Move Library <select> should have one option per saved move, got ' + optCount + ' options for ' + libList.length + ' saved moves');
       results.push(['move library save', 'ok, "Test Move" saved and listed (' + libList.length + ' total)']);
 
-      // Load: pick the just-saved entry, click Load, confirm keyframes populate from it.
-      const savedIdx = libList.length - 1;
-      byId('designerMoveLibSelect').value = String(savedIdx);
+      // Load: pick the just-saved entry (referenced by its stable id, not array index — entries are
+      // keyed by id so the dropdown and the main action-select "saved move" options stay valid even if
+      // the library is reordered or another entry is deleted), click Load, confirm keyframes populate.
+      const savedEntry = libList[libList.length - 1];
+      byId('designerMoveLibSelect').value = savedEntry.id;
       click(byId('designerLoadMoveBtn'));
       const loadedRows = doc.querySelectorAll('#designerKeyframeList .designer-kf-row').length;
-      if(loadedRows !== libList[savedIdx].keyframes.length) errors.push('FAIL: Load should populate the keyframe list from the saved move, expected ' + libList[savedIdx].keyframes.length + ' rows, got ' + loadedRows);
+      if(loadedRows !== savedEntry.keyframes.length) errors.push('FAIL: Load should populate the keyframe list from the saved move, expected ' + savedEntry.keyframes.length + ' rows, got ' + loadedRows);
       results.push(['move library load', 'ok, ' + loadedRows + ' keyframe(s) restored from saved move']);
 
       // Delete: remove it, confirm it's gone from storage and the select.
       const origConfirm = window.confirm;
       window.confirm = () => true;
-      byId('designerMoveLibSelect').value = String(savedIdx);
+      byId('designerMoveLibSelect').value = savedEntry.id;
       click(byId('designerDeleteMoveBtn'));
       window.confirm = origConfirm;
       const libListAfter = JSON.parse(window.localStorage.getItem('stickmanMoveLibrary') || '[]');
@@ -1488,6 +1490,117 @@ async function run(){
     if(byId('designerPlayBtn').textContent !== 'Play sequence') errors.push('FAIL: clicking Add while playing should pause playback (button should read "Play sequence" again), got: ' + byId('designerPlayBtn').textContent);
     results.push(['add-keyframe-while-playing appends a real 3rd keyframe (not stuck at 2)', 'ok, ' + rowsE.length + ' keyframes, playback paused']);
     click(byId('designerCancelBtn'));
+  }
+
+  // 26. Forward/backward direction on horizontal movement, plus the new independent up/down vertical
+  // movement control. Actual translation/altitude math is covered by the standalone vm harness against
+  // js/scene.js directly; this covers the UI wiring: both checkboxes reveal their own row with a
+  // direction select + speed slider, and moveDir/vertSpeed/vertDir all survive Save -> reopen.
+  {
+    const cardsF = doc.querySelectorAll('.segment-card');
+    const cardF = cardsF[0];
+    const actionSelectF = cardF.querySelector('select[data-field^="action_"]');
+    const charIdF = actionSelectF.getAttribute('data-field').slice('action_'.length);
+    setValAndFire(actionSelectF, 'customPose');
+
+    const moveCheckboxF = byId('designerMoveCheckbox');
+    const moveDirSelectF = byId('designerMoveDirSelect');
+    const vertCheckboxF = byId('designerVertCheckbox');
+    const vertSpeedRowF = byId('designerVertSpeedRow');
+    const vertDirSelectF = byId('designerVertDirSelect');
+    if(!moveDirSelectF || !vertCheckboxF || !vertSpeedRowF || !vertDirSelectF) errors.push('FAIL: expected #designerMoveDirSelect/#designerVertCheckbox/#designerVertSpeedRow/#designerVertDirSelect in the Pose Designer');
+    else {
+      if(vertSpeedRowF.style.display !== 'none') errors.push('FAIL: vertical speed row should start hidden (vertical movement off by default)');
+
+      moveCheckboxF.checked = true;
+      moveCheckboxF.dispatchEvent(new window.Event('change', {bubbles:true}));
+      setValAndFire(moveDirSelectF, 'backward');
+      setValAndFire(byId('designerMoveSpeedSlider'), '70');
+
+      vertCheckboxF.checked = true;
+      vertCheckboxF.dispatchEvent(new window.Event('change', {bubbles:true}));
+      if(vertSpeedRowF.style.display === 'none') errors.push('FAIL: vertical speed row should become visible once vertical movement is turned on');
+      setValAndFire(vertDirSelectF, 'down');
+      setValAndFire(byId('designerVertSpeedSlider'), '55');
+
+      click(byId('designerAddKeyframeBtn'));
+      click(byId('designerSaveBtn'));
+      const segF = window.findSegment(cardF.getAttribute('data-seg-id'));
+      const savedF = segF.customPoses && segF.customPoses[charIdF];
+      if(!savedF || savedF.moveSpeed !== 70 || savedF.moveDir !== -1) errors.push('FAIL: expected moveSpeed=70/moveDir=-1 (backward) saved, got: ' + JSON.stringify(savedF));
+      if(!savedF || savedF.vertSpeed !== 55 || savedF.vertDir !== -1) errors.push('FAIL: expected vertSpeed=55/vertDir=-1 (down) saved, got: ' + JSON.stringify(savedF));
+      results.push(['forward/backward + up/down movement controls save', 'ok, backward@70px/s and down@55px/s both persisted']);
+
+      const editBtnF = doc.querySelector('[data-designer-edit][data-cid="'+charIdF+'"]');
+      if(editBtnF){
+        click(editBtnF);
+        if(byId('designerMoveDirSelect').value !== 'backward') errors.push('FAIL: reopening should restore Backward on the direction select, got: ' + byId('designerMoveDirSelect').value);
+        if(!byId('designerVertCheckbox').checked || byId('designerVertDirSelect').value !== 'down') errors.push('FAIL: reopening should restore vertical checked+Down, got checked=' + byId('designerVertCheckbox').checked + ' dir=' + byId('designerVertDirSelect').value);
+        results.push(['forward/backward + up/down movement controls reload correctly', 'ok, backward/down restored on reopen']);
+        click(byId('designerCancelBtn'));
+      }
+    }
+  }
+
+  // 27. "Record" a move so it reflects in the actual tool: saving to the Move Library should make it
+  // immediately pickable as a "⭐ <name>" option directly on ANY character/segment's action dropdown
+  // (clipOptionsHtml), applying its keyframes+movement to that character/segment without ever opening
+  // the Pose Designer — and deleting it from the library should remove that option again.
+  {
+    const cardsG = doc.querySelectorAll('.segment-card');
+    const cardG = cardsG[0];
+    const actionSelectG = cardG.querySelector('select[data-field^="action_"]');
+    const charIdG = actionSelectG.getAttribute('data-field').slice('action_'.length);
+    setValAndFire(actionSelectG, 'customPose');
+    const torsoSliderG = doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]');
+    setValAndFire(torsoSliderG, '0.4');
+    click(byId('designerAddKeyframeBtn'));
+    // Save this move to the library under a distinctive test name.
+    const origPrompt27 = window.prompt;
+    window.prompt = () => 'Smoke Test Move 27';
+    click(byId('designerSaveToLibBtn'));
+    window.prompt = origPrompt27;
+    click(byId('designerCancelBtn')); // don't save it onto THIS segment/character via the normal Save path
+
+    // A second, distinct character/segment should now see a "⭐ Smoke Test Move 27" option directly in
+    // its action dropdown, with no designer involved.
+    const otherSelect = Array.from(doc.querySelectorAll('#segmentList select[data-field^="action_"]'))
+      .find(el => el !== actionSelectG);
+    if(!otherSelect) errors.push('FAIL: expected a second character/segment select to test the saved-move dropdown option on');
+    else {
+      const savedOption = Array.from(otherSelect.options).find(o => o.textContent.indexOf('Smoke Test Move 27') !== -1);
+      if(!savedOption) errors.push('FAIL: expected a "Smoke Test Move 27" option to appear in the action dropdown after saving it to the Move Library');
+      else {
+        const otherCharId = otherSelect.getAttribute('data-field').slice('action_'.length);
+        const otherSegId = otherSelect.closest('.segment-card').getAttribute('data-seg-id');
+        setValAndFire(otherSelect, savedOption.value); // value is "customMove:<id>"
+        const otherSeg = window.findSegment(otherSegId);
+        const appliedKF = otherSeg.actions && otherSeg.actions[otherCharId] === 'customPose'
+          ? (otherSeg.customPoses && otherSeg.customPoses[otherCharId] && otherSeg.customPoses[otherCharId].keyframes)
+          : null;
+        if(otherSeg.actions[otherCharId] !== 'customPose') errors.push('FAIL: picking a saved move from the dropdown should set the segment action to customPose, got: ' + otherSeg.actions[otherCharId]);
+        if(!appliedKF || !appliedKF.length || Math.abs(appliedKF[0].pose.torsoLean - 0.4) > 0.001) errors.push('FAIL: expected the saved move\'s keyframes (torsoLean 0.4) applied directly to the second character, got: ' + JSON.stringify(appliedKF));
+        else results.push(['saved move picked from action dropdown applies directly', 'ok, customPose + torsoLean 0.4 keyframe applied with no designer opened']);
+      }
+    }
+
+    // Deleting the saved move (via the designer's Move Library delete button) should remove the
+    // dropdown option again everywhere.
+    setValAndFire(actionSelectG, 'customPose');
+    const list = window.loadMoveLibrary();
+    const entry = list.find(m => m.label === 'Smoke Test Move 27');
+    if(!entry) errors.push('FAIL: expected the saved move to still be in the library before testing delete');
+    else {
+      const origConfirm27 = window.confirm;
+      window.confirm = () => true;
+      byId('designerMoveLibSelect').value = entry.id;
+      click(byId('designerDeleteMoveBtn'));
+      window.confirm = origConfirm27;
+      click(byId('designerCancelBtn'));
+      const stillThere = Array.from(doc.querySelectorAll('#segmentList select[data-field^="action_"]')[0].options).some(o => o.textContent.indexOf('Smoke Test Move 27') !== -1);
+      if(stillThere) errors.push('FAIL: deleting a saved move from the library should remove its option from every action dropdown');
+      else results.push(['deleting a saved move removes its dropdown option', 'ok, no longer offered anywhere']);
+    }
   }
 
   console.log('--- results ---');
