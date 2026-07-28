@@ -522,8 +522,18 @@ refreshLibSelect();
 // hand (see js/scene.js's evaluateScene + the Pose Designer below), not something an AI should ever
 // pick blind.
 function clipOptionsHtml(selected){
+  // Saved Move Library entries (js/ui.js's designerSaveToLibBtn, further down) are appended as their
+  // own options here — "record" a move once in the Pose Designer and it's immediately pickable on any
+  // character/segment straight from this dropdown, no need to reopen the designer just to apply it.
+  // Picking one is a one-shot "apply this move" action (handled in onSegmentFieldChange), not a value
+  // that's ever actually stored in seg.actions — after applying, the dropdown re-renders showing
+  // "Design your own..." selected instead, with the pencil edit button open to it for further tweaking.
+  const libOptions = (typeof loadMoveLibrary === 'function' ? loadMoveLibrary() : []).map(m=>
+    `<option value="customMove:${m.id}">&#9733; ${escapeHtml(m.label)}</option>`
+  ).join('');
   return CLIP_LIST.map(c=> `<option value="${c.id}" ${c.id===selected?'selected':''}>${c.label}</option>`).join('')
-    + `<option value="customPose" ${selected==='customPose'?'selected':''}>&#9998; Design your own...</option>`;
+    + `<option value="customPose" ${selected==='customPose'?'selected':''}>&#9998; Design your own...</option>`
+    + libOptions;
 }
 
 function renderSegmentList(){
@@ -853,7 +863,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0 }])) };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0, moveDir: d.moveDir || 1, vertSpeed: d.vertSpeed || 0, vertDir: d.vertDir || 1 }])) };
     state.scene.timeline.splice(idx+1, 0, copy);
   } else if(act === 'clearDrag'){
     const charId = e.currentTarget.getAttribute('data-char');
@@ -880,6 +890,25 @@ function onSegmentFieldChange(e){
     // from inside openPoseDesigner itself would see 'customPose' (already written a few lines down),
     // making Cancel a no-op on a fresh pick — that was a real bug, fixed by passing this through.
     const priorAction = seg.actions[charId] || 'idle';
+    // A "⭐ <name>" option (a saved Move Library entry, see clipOptionsHtml) isn't a real clip id — it's
+    // a one-shot "apply this saved move to this character/segment" action. Resolve it straight to
+    // customPose + the library entry's keyframes/movement settings, exactly as if the user had loaded
+    // it inside the Pose Designer and hit Save, without actually opening the designer.
+    if(e.target.value.indexOf('customMove:') === 0){
+      const moveId = e.target.value.slice('customMove:'.length);
+      const entry = loadMoveLibrary().find(m=> m.id === moveId);
+      if(entry){
+        if(!seg.customPoses) seg.customPoses = {};
+        seg.customPoses[charId] = {
+          keyframes: entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })),
+          moveSpeed: entry.moveSpeed || 0, moveDir: entry.moveDir || 1,
+          vertSpeed: entry.vertSpeed || 0, vertDir: entry.vertDir || 1
+        };
+        seg.actions[charId] = 'customPose';
+      }
+      renderSegmentList();
+      return;
+    }
     seg.actions[charId] = e.target.value;
     // Selecting "Talk" with no dialogue set yet would otherwise render a silent, closed-mouth
     // character — poseTalk (js/poses.js) only opens the mouth and evaluateScene only draws a speech
@@ -988,11 +1017,18 @@ const designer = {
   // buildDesignerFrame — the drag-to-pose handles (below) need this to know where on the canvas the
   // character's hip/shoulder actually are this frame, since that depends on the real scene layout.
   previewAnchor: null,
-  // moveSpeed: px/sec this move should also travel across the stage while playing, 0 = stay in place
-  // (the default, matching every existing saved move). Lets a hand-designed walk/run/approach-style
-  // move actually cross the screen instead of only animating in place — see js/scene.js's evaluateScene
-  // and computeSegmentStartPositions, which read this alongside the normal MOVE_SPEEDS mechanism.
-  moveSpeed: 0
+  // moveSpeed/moveDir: horizontal travel. moveSpeed is px/sec, 0 = stay in place (the default, matching
+  // every existing saved move). moveDir is +1 forward (the way the character is facing) or -1 backward
+  // (retreat while still facing the same way) — only meaningful when moveSpeed > 0. Lets a hand-designed
+  // walk/run/approach/retreat-style move actually cross the screen instead of only animating in place —
+  // see js/scene.js's evaluateScene and computeSegmentStartPositions, which read both alongside the
+  // normal MOVE_SPEEDS mechanism.
+  moveSpeed: 0, moveDir: 1,
+  // vertSpeed/vertDir: independent vertical drift (jump, duck-and-rise, fly up/down mid-move) — px/sec
+  // and +1 up / -1 down, 0 speed = no vertical drift (default). Unlike the fly-clip up/down direction
+  // override, this can combine with horizontal travel at the same time (e.g. a jumping punch that also
+  // moves forward) — see js/scene.js's evaluateScene and computeSegmentStartAltitudes.
+  vertSpeed: 0, vertDir: 1
 };
 
 // Full-scene-context preview: rather than an isolated character floating on a plain background, reuse
@@ -1222,23 +1258,52 @@ function renderDesignerKeyframeList(){
 // per-move instead of being fixed per-action-id (js/scene.js's evaluateScene/computeSegmentStartPositions).
 const designerMoveCheckbox = document.getElementById('designerMoveCheckbox');
 const designerMoveSpeedRow = document.getElementById('designerMoveSpeedRow');
+const designerMoveDirSelect = document.getElementById('designerMoveDirSelect');
 const designerMoveSpeedSlider = document.getElementById('designerMoveSpeedSlider');
 const designerMoveSpeedVal = document.getElementById('designerMoveSpeedVal');
+const designerVertCheckbox = document.getElementById('designerVertCheckbox');
+const designerVertSpeedRow = document.getElementById('designerVertSpeedRow');
+const designerVertDirSelect = document.getElementById('designerVertDirSelect');
+const designerVertSpeedSlider = document.getElementById('designerVertSpeedSlider');
+const designerVertSpeedVal = document.getElementById('designerVertSpeedVal');
 function renderDesignerMovementControl(){
   if(!designerMoveCheckbox) return;
   designerMoveCheckbox.checked = designer.moveSpeed > 0;
   designerMoveSpeedRow.style.display = designer.moveSpeed > 0 ? 'flex' : 'none';
+  designerMoveDirSelect.value = (designer.moveDir === -1) ? 'backward' : 'forward';
   designerMoveSpeedSlider.value = designer.moveSpeed > 0 ? designer.moveSpeed : 45;
   designerMoveSpeedVal.textContent = (designer.moveSpeed > 0 ? designer.moveSpeed : 45) + ' px/s';
+  if(!designerVertCheckbox) return;
+  designerVertCheckbox.checked = designer.vertSpeed > 0;
+  designerVertSpeedRow.style.display = designer.vertSpeed > 0 ? 'flex' : 'none';
+  designerVertDirSelect.value = (designer.vertDir === -1) ? 'down' : 'up';
+  designerVertSpeedSlider.value = designer.vertSpeed > 0 ? designer.vertSpeed : 45;
+  designerVertSpeedVal.textContent = (designer.vertSpeed > 0 ? designer.vertSpeed : 45) + ' px/s';
 }
 if(designerMoveCheckbox){
   designerMoveCheckbox.addEventListener('change', ()=>{
     designer.moveSpeed = designerMoveCheckbox.checked ? parseInt(designerMoveSpeedSlider.value, 10) : 0;
     renderDesignerMovementControl();
   });
+  designerMoveDirSelect.addEventListener('change', ()=>{
+    designer.moveDir = designerMoveDirSelect.value === 'backward' ? -1 : 1;
+  });
   designerMoveSpeedSlider.addEventListener('input', ()=>{
     designer.moveSpeed = parseInt(designerMoveSpeedSlider.value, 10);
     designerMoveSpeedVal.textContent = designer.moveSpeed + ' px/s';
+  });
+}
+if(designerVertCheckbox){
+  designerVertCheckbox.addEventListener('change', ()=>{
+    designer.vertSpeed = designerVertCheckbox.checked ? parseInt(designerVertSpeedSlider.value, 10) : 0;
+    renderDesignerMovementControl();
+  });
+  designerVertDirSelect.addEventListener('change', ()=>{
+    designer.vertDir = designerVertDirSelect.value === 'down' ? -1 : 1;
+  });
+  designerVertSpeedSlider.addEventListener('input', ()=>{
+    designer.vertSpeed = parseInt(designerVertSpeedSlider.value, 10);
+    designerVertSpeedVal.textContent = designer.vertSpeed + ' px/s';
   });
 }
 
@@ -1262,6 +1327,9 @@ function openPoseDesigner(segId, charId, explicitPreviousAction){
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
   if(designer.keyframes.length) designer.editingIdx = 0;
   designer.moveSpeed = (existing && existing.moveSpeed) || 0;
+  designer.moveDir = (existing && existing.moveDir) || 1;
+  designer.vertSpeed = (existing && existing.vertSpeed) || 0;
+  designer.vertDir = (existing && existing.vertDir) || 1;
   designerTitleEl.textContent = 'Design a Move — ' + character.name;
   designerPlayBtn.textContent = 'Play sequence';
   designerPreviewLabel.textContent = 'Editing keyframe pose';
@@ -1309,7 +1377,7 @@ function saveDesignerMove(){
       seg.actions[designer.charId] = 'idle';
       delete seg.customPoses[designer.charId];
     } else {
-      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0 };
+      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0, moveDir: designer.moveDir || 1, vertSpeed: designer.vertSpeed || 0, vertDir: designer.vertDir || 1 };
       seg.actions[designer.charId] = 'customPose';
     }
   }
@@ -1370,12 +1438,24 @@ const designerMoveLibSelect = document.getElementById('designerMoveLibSelect');
 const designerLoadMoveBtn = document.getElementById('designerLoadMoveBtn');
 const designerDeleteMoveBtn = document.getElementById('designerDeleteMoveBtn');
 const designerSaveToLibBtn = document.getElementById('designerSaveToLibBtn');
-function loadMoveLibrary(){ try { return JSON.parse(localStorage.getItem(MOVE_LIB_KEY) || '[]'); } catch(e){ return []; } }
+// Move Library entries get a stable id (rather than being referenced by array index) so they can be
+// safely pointed at from elsewhere — specifically the main action dropdown's "saved move" options
+// below, which must keep working even if the library list is reordered or another entry is deleted.
+// Older entries saved before this id existed are migrated in place the first time they're loaded.
+function genMoveId(){ return 'move_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+function loadMoveLibrary(){
+  let list;
+  try { list = JSON.parse(localStorage.getItem(MOVE_LIB_KEY) || '[]'); } catch(e){ list = []; }
+  let migrated = false;
+  list.forEach(m=>{ if(!m.id){ m.id = genMoveId(); migrated = true; } });
+  if(migrated) saveMoveLibrary(list);
+  return list;
+}
 function saveMoveLibrary(list){ try { localStorage.setItem(MOVE_LIB_KEY, JSON.stringify(list)); } catch(e){} }
 function refreshMoveLibSelect(){
   const list = loadMoveLibrary();
   designerMoveLibSelect.innerHTML = list.length
-    ? list.map((m,i)=> '<option value="'+i+'">'+escapeHtml(m.label)+' ('+m.keyframes.length+' keyframes)</option>').join('')
+    ? list.map(m=> '<option value="'+m.id+'">'+escapeHtml(m.label)+' ('+m.keyframes.length+' keyframes)</option>').join('')
     : '<option value="">(none saved yet)</option>';
 }
 designerSaveToLibBtn.addEventListener('click', ()=>{
@@ -1383,20 +1463,28 @@ designerSaveToLibBtn.addEventListener('click', ()=>{
   const name = (prompt('Name this move (e.g. "Boxing Jab-Cross"):', '') || '').trim();
   if(!name) return;
   const list = loadMoveLibrary();
-  list.push({ label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0 });
+  const id = genMoveId();
+  list.push({ id: id, label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0, moveDir: designer.moveDir || 1, vertSpeed: designer.vertSpeed || 0, vertDir: designer.vertDir || 1 });
   saveMoveLibrary(list);
   refreshMoveLibSelect();
-  designerMoveLibSelect.value = String(list.length - 1);
+  designerMoveLibSelect.value = id;
+  // This saved move is now also directly pickable from every segment's action dropdown elsewhere in
+  // the tool (clipOptionsHtml appends a "saved move" option per library entry) — refresh the timeline
+  // so that shows up immediately instead of only after the next unrelated re-render.
+  if(typeof renderSegmentList === 'function') renderSegmentList();
 });
 designerLoadMoveBtn.addEventListener('click', ()=>{
   const list = loadMoveLibrary();
-  const idx = parseInt(designerMoveLibSelect.value, 10);
-  if(isNaN(idx) || !list[idx]) return;
-  designer.keyframes = list[idx].keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }));
+  const entry = list.find(m=> m.id === designerMoveLibSelect.value);
+  if(!entry) return;
+  designer.keyframes = entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }));
   designer.editingIdx = designer.keyframes.length ? 0 : -1;
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
+  designer.moveSpeed = entry.moveSpeed || 0;
+  designer.moveDir = entry.moveDir || 1;
+  designer.vertSpeed = entry.vertSpeed || 0;
+  designer.vertDir = entry.vertDir || 1;
   designer.playing = false;
-  designer.moveSpeed = list[idx].moveSpeed || 0;
   designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe pose';
   renderDesignerSliders();
   renderDesignerKeyframeList();
@@ -1404,12 +1492,15 @@ designerLoadMoveBtn.addEventListener('click', ()=>{
 });
 designerDeleteMoveBtn.addEventListener('click', ()=>{
   const list = loadMoveLibrary();
-  const idx = parseInt(designerMoveLibSelect.value, 10);
-  if(isNaN(idx) || !list[idx]) return;
+  const idx = list.findIndex(m=> m.id === designerMoveLibSelect.value);
+  if(idx < 0) return;
   if(!confirm('Delete the saved move "' + list[idx].label + '"? This cannot be undone.')) return;
   list.splice(idx, 1);
   saveMoveLibrary(list);
   refreshMoveLibSelect();
+  // A deleted saved move must also disappear from every segment's action dropdown (clipOptionsHtml
+  // reads the library fresh each render) so it can't be picked again after being removed.
+  if(typeof renderSegmentList === 'function') renderSegmentList();
 });
 refreshMoveLibSelect();
 

@@ -438,6 +438,10 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
       // clip already gets, or the character would snap back after a segment boundary.
       const customKF = clipId === 'customPose' ? (seg.customPoses && seg.customPoses[c.id]) : null;
       const customSpeed = (customKF && customKF.moveSpeed) || 0;
+      // moveDir: +1 forward (the direction the character is already facing, the long-standing default),
+      // -1 backward (retreat while still facing the same way) — set by the Pose Designer's Forward/
+      // Backward select, only meaningful when customSpeed > 0.
+      const customDir = (customKF && customKF.moveDir) || 1;
       if(dragTarget){
         runningX[i] = clamp(dragTarget.x, 60, W-60);
       } else if(customSpeed > 0 || isMoveClip(clipId)){
@@ -447,7 +451,7 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
         if(vdir === 0){
           const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir);
           const dist = (customSpeed > 0 ? customSpeed : MOVE_SPEEDS[clipId]) * Math.max(0.1, seg.duration);
-          runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
+          runningX[i] = clamp(runningX[i] + dist*dir*(customSpeed > 0 ? customDir : 1), 60, W-60);
         }
       }
     });
@@ -469,6 +473,17 @@ function computeSegmentStartAltitudes(scene, timeline){
         const vdir = resolveVerticalDir(seg, c.id);
         if(vdir !== 0){
           const dAlt = VERTICAL_SPEEDS[clipId] * Math.max(0.1, seg.duration) * vdir;
+          running[i] = clamp(running[i] + dAlt, 0, MAX_ALTITUDE);
+        }
+      } else if(clipId === 'customPose'){
+        // Mirrors the fly-clip case above but for a hand-designed move's own optional up/down drift
+        // (Pose Designer's "travels up/down" checkbox) — carries the altitude reached across segment
+        // boundaries the same way customSpeed's horizontal carry-over works in computeSegmentStartPositions.
+        const customKF = seg.customPoses && seg.customPoses[c.id];
+        const vertSpeed = (customKF && customKF.vertSpeed) || 0;
+        const vertDir = (customKF && customKF.vertDir) || 0;
+        if(vertSpeed > 0 && vertDir !== 0){
+          const dAlt = vertSpeed * Math.max(0.1, seg.duration) * vertDir;
           running[i] = clamp(running[i] + dAlt, 0, MAX_ALTITUDE);
         }
       }
@@ -528,13 +543,24 @@ function evaluateScene(scene, t){
       altitude = clamp(activeStartAlt[i] + VERTICAL_SPEEDS[clipId]*localT*vdir, 0, MAX_ALTITUDE);
     } else {
       // A custom keyframe move can optionally travel across the stage too (Pose Designer: "This move
-      // travels forward" checkbox + speed slider), stored per-character as customKF.moveSpeed (px/sec,
-      // 0 = stay in place, the default so existing saved moves with no moveSpeed field are unaffected).
-      // Falls through to the normal MOVE_SPEEDS lookup for every real named clip id, same as before.
+      // travels forward/backward" checkbox + direction + speed slider), stored per-character as
+      // customKF.moveSpeed (px/sec, 0 = stay in place, the default so existing saved moves with no
+      // moveSpeed field are unaffected) and customKF.moveDir (+1 forward / -1 backward, defaults to
+      // forward so existing saved moves keep their old behavior). Falls through to the normal
+      // MOVE_SPEEDS lookup for every real named clip id, same as before.
       const customSpeed = (customKF && customKF.moveSpeed) || 0;
-      const travelled = customSpeed > 0 ? customSpeed*localT*faceDir : (isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0);
+      const customDir = (customKF && customKF.moveDir) || 1;
+      const travelled = customSpeed > 0 ? customSpeed*localT*faceDir*customDir : (isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0);
       x = clamp(activeStartX[i] + travelled, 60, W-60);
-      altitude = activeStartAlt[i];
+      // A custom move can independently drift up/down too (Pose Designer's "travels up/down" checkbox),
+      // stored as customKF.vertSpeed (px/sec, 0 = default/no drift) and customKF.vertDir (+1 up / -1
+      // down). Unlike the fly-clip vdir branch above, this never holds x still — a custom move can
+      // travel forward AND rise/fall at the same time (e.g. a jumping punch).
+      const vertSpeed = (customKF && customKF.vertSpeed) || 0;
+      const vertDir2 = (customKF && customKF.vertDir) || 0;
+      altitude = (vertSpeed > 0 && vertDir2 !== 0)
+        ? clamp(activeStartAlt[i] + vertSpeed*localT*vertDir2, 0, MAX_ALTITUDE)
+        : activeStartAlt[i];
     }
     pose.altitude = altitude; // read by computeSkeleton (js/render.js) to lift the whole skeleton
     return { id: appearance.id, x: x, faceDir: faceDir, appearance: appearance, clipId: clipId, pose: pose };
