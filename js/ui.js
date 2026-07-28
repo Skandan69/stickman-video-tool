@@ -979,6 +979,7 @@ const designerPreviewMount = document.getElementById('designerPreviewMount');
 const designerSlidersEl = document.getElementById('designerSliders');
 const designerKeyframeListEl = document.getElementById('designerKeyframeList');
 const designerAddKeyframeBtn = document.getElementById('designerAddKeyframeBtn');
+const designerAddNewKeyframeBtn = document.getElementById('designerAddNewKeyframeBtn');
 const designerPlayBtn = document.getElementById('designerPlayBtn');
 const designerPreviewLabel = document.getElementById('designerPreviewLabel');
 const designerSaveBtn = document.getElementById('designerSaveBtn');
@@ -1136,6 +1137,7 @@ function applyDesignerDrag(part, canvasX, canvasY){
     designer.editingIdx = -1;
     const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
     if(activeRow) activeRow.classList.remove('active');
+    updateAddKeyframeUI();
   }
   syncDesignerSlidersFromCurrentPose();
 }
@@ -1203,6 +1205,7 @@ function renderDesignerSliders(){
         designer.editingIdx = -1;
         const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
         if(activeRow) activeRow.classList.remove('active');
+        updateAddKeyframeUI();
       }
       designerPlayBtn.textContent = 'Play sequence';
       designerPreviewLabel.textContent = 'Editing keyframe pose';
@@ -1212,9 +1215,20 @@ function renderDesignerSliders(){
   });
 }
 
+// Keeps the Add-keyframe area unambiguous about what clicking it will do: when a keyframe is currently
+// loaded (editingIdx>=0, i.e. its pose still exactly matches the sliders), the main button switches to
+// "Update keyframe #N" and a second "+ Add as new (don't overwrite)" button appears — so the user never
+// has to guess whether clicking will silently overwrite the loaded keyframe or append a new one.
+function updateAddKeyframeUI(){
+  if(!designerAddKeyframeBtn) return;
+  const editing = designer.editingIdx >= 0 && designer.editingIdx < designer.keyframes.length;
+  designerAddKeyframeBtn.textContent = editing ? ('Update keyframe ' + (designer.editingIdx+1)) : '+ Add keyframe from current pose';
+  if(designerAddNewKeyframeBtn) designerAddNewKeyframeBtn.style.display = editing ? 'inline-block' : 'none';
+}
+
 function renderDesignerKeyframeList(){
   designerKeyframeListEl.innerHTML = designer.keyframes.length ? designer.keyframes.map((k,idx)=>
-    '<div class="designer-kf-row'+(idx===designer.editingIdx?' active':'')+'">' +
+    '<div class="designer-kf-row'+(idx===designer.editingIdx?' active':'')+'" data-kf-row="'+idx+'" title="Click to load this keyframe onto the sliders/preview and edit it">' +
       '<span>'+(idx+1)+'.</span>' +
       '<input type="number" min="0.1" step="0.1" value="'+k.duration+'" data-kf-duration="'+idx+'" title="Seconds to hold/transition"><span class="designer-kf-s">s</span>' +
       '<button type="button" class="icon-btn" data-kf-load="'+idx+'" title="Load onto sliders to edit">&#9998;</button>' +
@@ -1224,16 +1238,25 @@ function renderDesignerKeyframeList(){
     '</div>'
   ).join('') : '<p style="font-size:12px; color:var(--muted); margin:4px 0;">No keyframes yet — pose the character with the sliders, then "Add keyframe". A single keyframe just holds that pose; two or more animate between them, looping.</p>';
 
+  function loadKeyframe(idx){
+    designer.currentPose = Object.assign({}, designer.keyframes[idx].pose);
+    designer.editingIdx = idx; designer.playing = false;
+    designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe ' + (idx+1) + ' — adjust sliders or drag the preview, then Update or Add as new';
+    renderDesignerSliders(); renderDesignerKeyframeList();
+  }
+  // Clicking anywhere on a keyframe row selects/loads it (not just the small pencil button) — makes it
+  // obvious you can pick any keyframe, not only the first, and jump straight to editing it with the
+  // preview already reflecting that exact pose.
+  designerKeyframeListEl.querySelectorAll('[data-kf-row]').forEach(row=> row.addEventListener('click', e=>{
+    if(e.target.closest('button, input')) return; // let the specific icon-buttons/duration input handle their own clicks
+    loadKeyframe(parseInt(row.getAttribute('data-kf-row'),10));
+  }));
   designerKeyframeListEl.querySelectorAll('[data-kf-duration]').forEach(inp=> inp.addEventListener('input', e=>{
     const idx = parseInt(e.target.getAttribute('data-kf-duration'),10);
     designer.keyframes[idx].duration = Math.max(0.1, parseFloat(e.target.value)||0.1);
   }));
   designerKeyframeListEl.querySelectorAll('[data-kf-load]').forEach(btn=> btn.addEventListener('click', e=>{
-    const idx = parseInt(e.currentTarget.getAttribute('data-kf-load'),10);
-    designer.currentPose = Object.assign({}, designer.keyframes[idx].pose);
-    designer.editingIdx = idx; designer.playing = false;
-    designerPlayBtn.textContent = 'Play sequence'; designerPreviewLabel.textContent = 'Editing keyframe pose';
-    renderDesignerSliders(); renderDesignerKeyframeList();
+    loadKeyframe(parseInt(e.currentTarget.getAttribute('data-kf-load'),10));
   }));
   designerKeyframeListEl.querySelectorAll('[data-kf-up]').forEach(btn=> btn.addEventListener('click', e=>{
     const idx = parseInt(e.currentTarget.getAttribute('data-kf-up'),10);
@@ -1250,6 +1273,7 @@ function renderDesignerKeyframeList(){
     else if(designer.editingIdx>idx) designer.editingIdx -= 1;
     renderDesignerKeyframeList();
   }));
+  updateAddKeyframeUI();
 }
 
 // Movement: off by default (every custom move just animates in place, matching every prior saved
@@ -1418,6 +1442,24 @@ designerAddKeyframeBtn.addEventListener('click', ()=>{
   }
   renderDesignerKeyframeList();
 });
+// Only shown/enabled while a keyframe is loaded (editingIdx>=0) — lets you explicitly append the
+// current pose as a brand new keyframe instead of it overwriting the one you loaded, without needing
+// to nudge a slider first as a workaround. Explicit rather than relying on the user noticing the main
+// button silently switches between "Update" and "Add" depending on hidden state.
+if(designerAddNewKeyframeBtn){
+  designerAddNewKeyframeBtn.addEventListener('click', ()=>{
+    if(designer.playing){
+      designer.currentPose = evalKeyframePose(designer.elapsed, designer.keyframes);
+      designer.playing = false;
+      designerPlayBtn.textContent = 'Play sequence';
+      designerPreviewLabel.textContent = 'Editing keyframe pose';
+      syncDesignerSlidersFromCurrentPose();
+    }
+    designer.keyframes.push({ pose: Object.assign({}, designer.currentPose), duration: 0.6 });
+    designer.editingIdx = designer.keyframes.length - 1;
+    renderDesignerKeyframeList();
+  });
+}
 designerPlayBtn.addEventListener('click', ()=>{
   if(designer.keyframes.length < 2) return; // nothing to animate between yet
   designer.playing = !designer.playing;
