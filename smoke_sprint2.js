@@ -1603,6 +1603,54 @@ async function run(){
     }
   }
 
+  // 28. Selecting/editing an already-built keyframe (not just keyframe 1) and the Update-vs-Add-new
+  // clarity fix: clicking anywhere on a keyframe row (not just its tiny pencil icon) loads that pose
+  // onto the sliders/preview; while a keyframe is loaded the main button reads "Update keyframe N" and
+  // a second "+ Add as new (don't overwrite)" button appears, so it's never ambiguous whether a click
+  // will overwrite the loaded keyframe or append a new one (this is what the user was actually hitting
+  // when they reported "it won't let me add a keyframe" after loading and editing one).
+  {
+    const cardsH = doc.querySelectorAll('.segment-card');
+    const cardH = cardsH[0];
+    const actionSelectH = cardH.querySelector('select[data-field^="action_"]');
+    setValAndFire(actionSelectH, 'customPose');
+    const torsoSliderH = doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]');
+    setValAndFire(torsoSliderH, '0.2'); click(byId('designerAddKeyframeBtn'));
+    setValAndFire(torsoSliderH, '0.7'); click(byId('designerAddKeyframeBtn'));
+    setValAndFire(torsoSliderH, '1.1'); click(byId('designerAddKeyframeBtn'));
+    if(doc.querySelectorAll('#designerKeyframeList .designer-kf-row').length !== 3) errors.push('FAIL: expected 3 keyframes built as a baseline for test 28');
+
+    // Clicking the SECOND row (not keyframe 1) directly, away from its pencil icon, should load it.
+    const rows28 = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    rows28[1].dispatchEvent(new window.MouseEvent('click', {bubbles:true}));
+    const torsoAfterRowClick = parseFloat(doc.querySelector('#designerSliders input[data-designer-slider="torsoLean"]').value);
+    if(Math.abs(torsoAfterRowClick - 0.7) > 0.001) errors.push('FAIL: clicking keyframe row 2 directly should load its pose (torsoLean 0.7) onto the sliders, got: ' + torsoAfterRowClick);
+    if(!rows28[1].classList.contains('active')) errors.push('FAIL: clicking keyframe row 2 should mark it active/selected');
+    else results.push(['clicking any keyframe row (not just the pencil icon) selects and loads it', 'ok, row 2 loaded (torsoLean 0.7) and marked active']);
+
+    // With keyframe 2 loaded and untouched, the button should read "Update keyframe 2" and the
+    // "Add as new" button should be visible.
+    if(byId('designerAddKeyframeBtn').textContent.indexOf('Update keyframe 2') === -1) errors.push('FAIL: expected the Add button to read "Update keyframe 2" while that keyframe is loaded, got: ' + byId('designerAddKeyframeBtn').textContent);
+    if(byId('designerAddNewKeyframeBtn').style.display === 'none') errors.push('FAIL: expected "+ Add as new" button to be visible while a keyframe is loaded');
+    else results.push(['Add button label + Add-as-new button reflect the loaded keyframe', 'ok, "Update keyframe 2" shown with Add-as-new visible']);
+
+    // Clicking "+ Add as new" should append a 4th keyframe with the CURRENT (still-loaded, unedited)
+    // pose rather than overwriting keyframe 2 — proving you can always explicitly add, never stuck.
+    click(byId('designerAddNewKeyframeBtn'));
+    const rowsAfterAddNew = doc.querySelectorAll('#designerKeyframeList .designer-kf-row');
+    if(rowsAfterAddNew.length !== 4) errors.push('FAIL: expected "+ Add as new" to append a 4th keyframe, got ' + rowsAfterAddNew.length + ' rows');
+    else results.push(['Add-as-new button always appends (never overwrites)', 'ok, 4th keyframe added without touching keyframe 2']);
+
+    // After a slider change, the button should revert to "+ Add keyframe from current pose" and the
+    // Add-as-new button should hide again (editingIdx invalidated).
+    setValAndFire(torsoSliderH, '-0.5');
+    if(byId('designerAddKeyframeBtn').textContent !== '+ Add keyframe from current pose') errors.push('FAIL: after changing a slider the button should revert to "+ Add keyframe from current pose", got: ' + byId('designerAddKeyframeBtn').textContent);
+    if(byId('designerAddNewKeyframeBtn').style.display !== 'none') errors.push('FAIL: "+ Add as new" should hide again once editingIdx is invalidated by a slider change');
+    else results.push(['button state reverts correctly after a slider change invalidates the loaded keyframe', 'ok']);
+
+    click(byId('designerCancelBtn'));
+  }
+
   console.log('--- results ---');
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 

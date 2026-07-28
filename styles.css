@@ -134,17 +134,19 @@ hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
   display:flex; align-items:center; justify-content:center; padding:20px;
 }
 .designer-panel{
-  background:var(--panel); border-radius:14px; padding:18px 20px; width:100%; max-width:820px;
+  background:var(--panel); border-radius:14px; padding:18px 20px; width:100%; max-width:960px;
   max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.35);
 }
 .designer-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;}
 .designer-head h2{font-size:16px; margin:0;}
 .designer-body{display:flex; gap:18px; flex-wrap:wrap;}
+/* Wide enough that the drag-to-pose handles (js/ui.js) are actually grabbable — this used to be a
+   240px thumbnail sized for glancing at the pose, not for precisely dragging a hand or foot on it. */
 .designer-preview{
-  flex:0 0 240px; display:flex; flex-direction:column; align-items:center; gap:8px;
+  flex:0 0 360px; display:flex; flex-direction:column; align-items:center; gap:8px;
   background:#fafbfc; border:1px solid var(--border); border-radius:10px; padding:10px;
 }
-.designer-preview canvas{max-width:100%;}
+.designer-preview canvas{max-width:100%; cursor:default;}
 .designer-preview-controls{display:flex; flex-direction:column; align-items:center; gap:4px; width:100%;}
 .designer-controls{flex:1; min-width:280px; display:flex; flex-direction:column; gap:4px;}
 .designer-sliders{
@@ -157,7 +159,7 @@ hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
 .designer-keyframes{border-top:1px dashed var(--border); padding-top:8px; margin-top:6px;}
 .designer-kf-row{
   display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 6px; border-radius:6px;
-  margin-bottom:4px; background:#fafbfc; border:1px solid var(--border);
+  margin-bottom:4px; background:#fafbfc; border:1px solid var(--border); cursor:pointer;
 }
 .designer-kf-row.active{border-color:var(--accent); background:#eef2ff;}
 .designer-kf-row input[type=number]{width:52px; padding:3px 5px; font-size:12px;}

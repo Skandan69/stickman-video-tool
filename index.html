@@ -162,8 +162,12 @@
         <div class="designer-sliders" id="designerSliders"></div>
         <div class="designer-keyframes">
           <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
+          <p style="font-size:11px; color:var(--muted); margin:0 0 6px; line-height:1.4;">Click any keyframe below (or its &#9998; button) to load that exact pose onto the sliders/preview and adjust it — drag the purple dots or use the sliders, and the preview updates live.</p>
           <div id="designerKeyframeList"></div>
-          <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="width:100%; margin-top:6px;">+ Add keyframe from current pose</button>
+          <div class="row" style="gap:6px; margin-top:6px;">
+            <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="flex:1;">+ Add keyframe from current pose</button>
+            <button type="button" id="designerAddNewKeyframeBtn" class="secondary small" style="flex:0 0 auto; display:none;" title="Keep the loaded keyframe as-is and add this pose as a brand new one instead of overwriting it">+ Add as new (don't overwrite)</button>
+          </div>
 
           <h3 style="margin:14px 0 6px; font-size:13px;">Movement</h3>
           <div class="checkbox-field" style="margin:0 0 6px;">
