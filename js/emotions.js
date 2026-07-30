@@ -149,13 +149,21 @@ const EMOTIONS = {
   // exaggerated than the realistic emotions above. headBoost enlarges the whole head (and, via
   // drawFace's S constant, every feature on it); armPose overrides just the arms with a matching
   // dramatic gesture, leaving whatever the character's current action is doing with legs/torso alone.
+  // armPose angles were chosen (and geometrically checked by hand against js/helpers.js's
+  // downPoint/upPoint convention: angle 0 = straight down, angle PI = straight up, sin(angle) sets the
+  // sideways reach) so the hand/elbow points land clearly OUTSIDE the boosted head's circle — the head
+  // is drawn (filled) after the arms in js/render.js's drawStickman, so any hand that lands inside the
+  // head's circle gets silently painted over/invisible. UPPER_ARM+FORE_ARM together (~54px) is shorter
+  // than the distance from the shoulder to the top of a boosted head (~64px), so these gestures reach
+  // UP AND OUT to the sides of the head rather than overhead, and terrifiedShock's bracing gesture stays
+  // well below the shoulder entirely, which trivially guarantees it can never be hidden behind the head.
   mindBlown:     { label: 'Mind-Blown (Extreme)',   browLeftY: -20, browRightY: -20, mouth: 'o',    eyeScale: 2.4, headBoost: 1.35,
-    armPose: { leftShoulderAngle: 2.7, leftElbowBend: 0.15, rightShoulderAngle: -2.7, rightElbowBend: -0.15 } },
+    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } },
   jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -18, browRightY: -18, mouth: 'o',    eyeScale: 2.2, headBoost: 1.3 },
   terrifiedShock:{ label: 'Terrified Shock (Extreme)', browLeftY: -20, browRightY: -20, mouth: 'o', eyeScale: 2.5, headBoost: 1.3,
-    armPose: { leftShoulderAngle: 0.5, leftElbowBend: -2.0, rightShoulderAngle: -0.5, rightElbowBend: -2.0 } },
+    armPose: { leftShoulderAngle: 1.0, leftElbowBend: -1.8, rightShoulderAngle: -1.0, rightElbowBend: 1.8 } },
   ecstaticBurst: { label: 'Ecstatic Burst (Extreme)', browLeftY: -18, browRightY: -18, mouth: 'smile', eyeScale: 1.8, headBoost: 1.2,
-    armPose: { leftShoulderAngle: 2.7, leftElbowBend: 0.15, rightShoulderAngle: -2.7, rightElbowBend: -0.15 } },
+    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } },
   stunnedExtreme:{ label: 'Stunned (Extreme)',      browLeftY: -18, browRightY: -18, mouth: 'flat', eyeScale: 2.2, headBoost: 1.25 }
 };
 const EMOTION_LIST = Object.keys(EMOTIONS).map(id => ({ id, label: EMOTIONS[id].label }));
