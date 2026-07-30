@@ -1600,9 +1600,14 @@ exportBtn.addEventListener('click', ()=>{
   const origW = canvas.width, origH = canvas.height;
   canvas.width = Math.round(origW * EXPORT_SCALE);
   canvas.height = Math.round(origH * EXPORT_SCALE);
-  // Resizing a canvas element always resets its 2D context state (transform included), so the scale
-  // has to be (re)applied right after, before any frame renders at the new size.
+  // Resizing a canvas element always resets its 2D context state (transform included) AND clears its
+  // pixel content back to blank — the scale has to be (re)applied right after, and critically the
+  // canvas needs an actual painted frame at the new size BEFORE captureStream() is called. Calling
+  // captureStream() on a still-blank, just-resized canvas produced a stream that recorded zero frames
+  // (a real bug caught by testing the export live: the resulting .webm was 0 bytes) — forcing one
+  // synchronous redraw here first fixes that.
   ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+  forceRedraw();
 
   const stream = canvas.captureStream(30);
   let mime = 'video/webm;codecs=vp9';
@@ -1632,7 +1637,7 @@ exportBtn.addEventListener('click', ()=>{
     exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
   };
   exportBtn.disabled = true; exportBtn.textContent = 'Recording…';
-  recorder.start();
+  recorder.start(1000);
   setTimeout(()=> recorder.stop(), totalDur*1000/state.speed + 250);
 });
 
