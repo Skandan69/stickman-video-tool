@@ -10,6 +10,25 @@ function wrapText(context, text, maxWidth){
   const lines = [];
   let line = '';
   for(const w of words){
+    // A single "word" with no spaces (a long URL, a run-on typo, or someone just holding down a key)
+    // used to be pushed onto its own line verbatim no matter how wide it measured, since the wrap
+    // check only ever compares whole words against the running line — that line would then render
+    // past the speech bubble's edges (drawSpeechBubble sizes the box from the SAME measurement, but
+    // fillText doesn't clip), spilling text across the rest of the canvas. Any word wider than
+    // maxWidth by itself is now force-broken character by character so no single rendered line can
+    // ever exceed maxWidth, regardless of spacing in the source text.
+    if(context.measureText(w).width > maxWidth){
+      if(line){ lines.push(line); line = ''; }
+      let chunk = '';
+      for(const ch of w){
+        const test = chunk + ch;
+        if(context.measureText(test).width > maxWidth && chunk){
+          lines.push(chunk); chunk = ch;
+        } else { chunk = test; }
+      }
+      line = chunk;
+      continue;
+    }
     const test = line ? line + ' ' + w : w;
     if(context.measureText(test).width > maxWidth && line){
       lines.push(line); line = w;

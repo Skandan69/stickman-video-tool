@@ -560,7 +560,7 @@ function renderSegmentList(){
     const dialogueHtml = seg.dialogue ? (
       '<div class="row">' +
         '<div class="field" style="max-width:100px;"><label>Speaker</label><select data-field="dialogueSpeaker" data-id="'+seg.id+'">'+speakerOptions+'</select></div>' +
-        '<div class="field"><label>Line</label><input type="text" data-field="dialogueText" data-id="'+seg.id+'" value="'+escapeHtml(seg.dialogue.text)+'"></div>' +
+        '<div class="field"><label>Line</label><input type="text" maxlength="200" data-field="dialogueText" data-id="'+seg.id+'" value="'+escapeHtml(seg.dialogue.text)+'"></div>' +
       '</div>'
     ) : '';
     // Per-segment background/weather overrides — "(Scene default)" means inherit the global Scene

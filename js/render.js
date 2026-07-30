@@ -276,12 +276,27 @@ function drawStickman(x, faceDir, appearance, pose){
 
 function drawSpeechBubble(anchor, text, faceDir){
   ctx.font = '15px "Comic Sans MS", cursive, sans-serif';
-  const lines = wrapText(ctx, text, 150);
+  let lines = wrapText(ctx, text, 150);
+  // A dialogue line long enough to wrap into many rows used to grow the bubble taller with no limit,
+  // pushing its top edge (by, below) further and further above the canvas until the bubble — and all
+  // its text — rendered partly or entirely off the top of the frame. Cap how many lines actually show;
+  // anything beyond that collapses into an ellipsis on the last visible line instead of silently
+  // growing the box past where anyone could ever see it.
+  const MAX_BUBBLE_LINES = 5;
+  if(lines.length > MAX_BUBBLE_LINES){
+    const shown = lines.slice(0, MAX_BUBBLE_LINES);
+    let last = shown[MAX_BUBBLE_LINES-1];
+    while(last.length > 1 && ctx.measureText(last + '…').width > 150) last = last.slice(0, -1);
+    shown[MAX_BUBBLE_LINES-1] = last + '…';
+    lines = shown;
+  }
   const lineH = 18;
   const boxW = Math.min(180, Math.max(...lines.map(l=>ctx.measureText(l).width)) + 24);
   const boxH = lines.length*lineH + 18;
   const bx = anchor.x - boxW/2 + faceDir*20;
-  const by = anchor.y - 55 - boxH;
+  // Clamp so the bubble's top edge can never go above the canvas (y=0) even after the line cap above
+  // — belt-and-suspenders for any bubble anchored high up (e.g. a tall character) with several lines.
+  const by = Math.max(4, anchor.y - 55 - boxH);
 
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
   ctx.beginPath();
