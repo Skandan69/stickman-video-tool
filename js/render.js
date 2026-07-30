@@ -38,9 +38,20 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
   ctx.stroke();
 
   // eye (shape controlled by eyeStyle, size bumped up for wide-eyed emotions like surprise)
+  // Extreme reaction emotions push eyeScale way past what a normal small solid-black dot reads well
+  // at (a big filled black blob just looks like an ink smudge) — past bigEyedThreshold, draw the
+  // classic wide-eyed "reaction face" look instead: a white circle (sclera) with a black outline, plus
+  // a smaller black pupil, matching the huge-white-eyed shocked/surprised characters this was modeled on.
   ctx.fillStyle = INK;
+  const bigEyed = wide >= 1.7;
   if(eyeStyle === 'round'){
-    ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, 0, Math.PI*2); ctx.fill();
+    if(bigEyed){
+      const r = 3.5*wide*S;
+      ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex, ey, r*0.42, 0, Math.PI*2); ctx.fillStyle = INK; ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, 0, Math.PI*2); ctx.fill();
+    }
   } else if(eyeStyle === 'happy'){
     ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(ex, ey, 3.5*wide*S, Math.PI, 0); ctx.stroke();
@@ -85,16 +96,31 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
     }
     ctx.stroke();
   } else {
-    ctx.beginPath(); ctx.arc(ex, ey, 2.4*wide*S, 0, Math.PI*2); ctx.fill();
+    if(bigEyed){
+      const r = 2.4*wide*S;
+      ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex, ey, r*0.42, 0, Math.PI*2); ctx.fillStyle = INK; ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(ex, ey, 2.4*wide*S, 0, Math.PI*2); ctx.fill();
+    }
   }
 
-  // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise the emotion's shape applies
+  // mouth: talking (mouthOpen) always wins so dialogue still reads clearly; otherwise the emotion's shape applies.
+  // The talking-mouth ellipse also scales with how exaggerated the current emotion is (via `wide`, the
+  // same eyeScale that drives the huge-eyed look above) — without this, every extreme reaction emotion
+  // looked completely ordinary the moment a character actually spoke, since talking always drew the same
+  // small fixed-size ellipse regardless of emotion, hiding all of the exaggeration mid-dialogue.
   const mx = head.x + faceDir*6*S, my = head.y + 8*S;
+  const talkMouthScale = Math.max(1, wide*0.6);
   ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 2.5;
   if(mouthOpen > 0.5){
-    ctx.beginPath(); ctx.ellipse(mx, my, 4*S, 3.5*S, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx, my, 4*S*talkMouthScale, 3.5*S*talkMouthScale, 0, 0, Math.PI*2); ctx.fill();
   } else if(em.mouth === 'o'){
     ctx.beginPath(); ctx.arc(mx, my, 3*S, 0, Math.PI*2); ctx.fill();
+  } else if(em.mouth === 'jawDrop'){
+    // A tall vertical open oval (not a round "o") so "Jaw-Dropped" reads as the jaw literally hanging
+    // open, rather than sharing the same round gasp shape as Mind-Blown/Terrified Shock.
+    ctx.beginPath(); ctx.ellipse(mx, my+4*S, 3*S, 8*S, 0, 0, Math.PI*2); ctx.fill();
   } else if(em.mouth === 'smile'){
     ctx.beginPath(); ctx.arc(mx - faceDir*2*S, my-2*S, 6*S, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
   } else if(em.mouth === 'frown'){

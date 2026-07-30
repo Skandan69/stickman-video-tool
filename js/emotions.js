@@ -3,7 +3,8 @@
 // To add a new emotion: add one entry below (and it automatically shows up in the character
 // card's Emotion dropdown via EMOTION_LIST). Nothing else needs to change.
 //   browLeftY / browRightY: eyebrow endpoint offsets from the eye, in the pre-faceDir "written" sense
-//   mouth: one of 'flat' | 'smile' | 'frown' | 'grimace' | 'o'
+//   mouth: one of 'flat' | 'smile' | 'frown' | 'grimace' | 'o' | 'jawDrop' (a tall open oval — the jaw
+//     literally hanging down, distinct from 'o''s round gasp; used by jawDropped)
 //   eyeScale: optional multiplier on eye size (e.g. wide-eyed surprise)
 //   headBoost: optional multiplier on the whole head (js/render.js's computeSkeleton scales HEAD_R by
 //     this right before the head/neck joint and every facial feature are positioned, and drawFace scales
@@ -163,7 +164,7 @@ const EMOTIONS = {
   // clearly distinguishable from each other at a glance, not just subtly different eyeScale numbers.
   mindBlown:     { label: 'Mind-Blown (Extreme)',   browLeftY: -22, browRightY: -22, mouth: 'o',      eyeScale: 2.5, headBoost: 1.35,
     armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } }, // symmetric sky-high brows, round gasping mouth, arms thrown up and out
-  jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -24, browRightY: -12, mouth: 'o',      eyeScale: 2.0, headBoost: 1.3 }, // ONE eyebrow shoots way up (asymmetric, "did that really just happen" look), arms untouched
+  jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -24, browRightY: -12, mouth: 'jawDrop', eyeScale: 2.0, headBoost: 1.3 }, // ONE eyebrow shoots way up (asymmetric, "did that really just happen" look), a tall dropped-open jaw (not a round gasp), arms untouched
   terrifiedShock:{ label: 'Terrified Shock (Extreme)', browLeftY: -12, browRightY: -22, mouth: 'grimace', eyeScale: 2.2, headBoost: 1.25,
     armPose: { leftShoulderAngle: 1.0, leftElbowBend: -1.8, rightShoulderAngle: -1.0, rightElbowBend: 1.8 } }, // lopsided brows mirrored the OTHER way from jawDropped, gritted-teeth grimace instead of a round mouth, hands clutched at the chest
   ecstaticBurst: { label: 'Ecstatic Burst (Extreme)', browLeftY: -18, browRightY: -18, mouth: 'smile', eyeScale: 1.8, headBoost: 1.2,
