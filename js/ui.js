@@ -1618,8 +1618,12 @@ exportBtn.addEventListener('click', ()=>{
   // start from. Not all browsers implement requestFrame() yet, so guard for it.
   const videoTrack = stream.getVideoTracks()[0];
   if(videoTrack && typeof videoTrack.requestFrame === 'function') videoTrack.requestFrame();
-  let mime = 'video/webm;codecs=vp9';
-  if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8';
+  // VP9 deliberately skipped: live testing at 1920x1080 found it unreliable — real-time VP9
+  // encoding at this resolution is CPU-heavy and, at least on some machines/Chrome builds,
+  // silently produced a completely empty (0-byte) recording with no error. VP8 encodes far
+  // more cheaply and was 100% reliable across repeated tests at the same resolution/bitrate,
+  // so it's used directly rather than attempted as a fallback after a broken vp9 pass.
+  let mime = 'video/webm;codecs=vp8';
   if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
   // A higher target bitrate keeps the extra resolution from being immediately thrown away by the
   // codec's default (much lower, tuned-for-800x450) bitrate — without this the exported file would be
