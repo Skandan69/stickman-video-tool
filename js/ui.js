@@ -1610,6 +1610,14 @@ exportBtn.addEventListener('click', ()=>{
   forceRedraw();
 
   const stream = canvas.captureStream(30);
+  // Belt-and-suspenders against the 0-byte-export bug: canvas.captureStream()'s automatic
+  // per-frame timer can still occasionally miss capturing anything right after a synchronous
+  // resize, even with the forceRedraw() above. CanvasCaptureMediaStreamTrack.requestFrame()
+  // explicitly pushes the canvas's current pixels into the stream as a real frame right now,
+  // independent of that timer, so the recorder always has at least one guaranteed frame to
+  // start from. Not all browsers implement requestFrame() yet, so guard for it.
+  const videoTrack = stream.getVideoTracks()[0];
+  if(videoTrack && typeof videoTrack.requestFrame === 'function') videoTrack.requestFrame();
   let mime = 'video/webm;codecs=vp9';
   if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8';
   if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
