@@ -1652,6 +1652,47 @@ async function run(){
   }
 
   console.log('--- results ---');
+  // 29. Extreme "reaction" emotions (mindBlown/jawDropped/terrifiedShock/ecstaticBurst/stunnedExtreme,
+  // js/emotions.js) — YouTube-thumbnail-style exaggerated big head + huge eyes + (for some) a dramatic
+  // arm gesture, on top of the character's real body pose. Core math (HEAD_R boost, armPose override,
+  // legs staying from the real pose, HEAD_R resetting per character) was verified separately with a
+  // standalone Node vm harness against js/render.js directly; this covers that they're wired into the
+  // real app: they show up in the Emotion dropdown, and picking one doesn't throw or break rendering.
+  {
+    const extremeIds = ['mindBlown','jawDropped','terrifiedShock','ecstaticBurst','stunnedExtreme'];
+    if(!extremeIds.every(id => window.EMOTIONS && window.EMOTIONS[id])) errors.push('FAIL: expected all 5 extreme reaction emotions to be defined in EMOTIONS');
+    else results.push(['extreme reaction emotions defined', 'ok, all 5 present in EMOTIONS']);
+
+    const emotionSelect = doc.querySelector('select[data-cfield="emotion"]');
+    if(!emotionSelect) errors.push('FAIL: expected at least one character\'s Emotion <select> in the DOM');
+    else {
+      const missing = extremeIds.filter(id => !Array.from(emotionSelect.options).some(o => o.value === id));
+      if(missing.length) errors.push('FAIL: expected the Emotion dropdown to list every extreme reaction emotion, missing: ' + JSON.stringify(missing));
+      else results.push(['extreme reaction emotions appear in the Emotion dropdown', 'ok, all 5 listed (EMOTION_LIST auto-population)']);
+
+      // Picking each extreme emotion in the REAL dropdown should re-render without throwing (exercises
+      // the actual onCharacterFieldChange -> forceRedraw code path; any exception surfaces via the
+      // window.onerror hook this suite already tracks in `errors`).
+      extremeIds.forEach(id => setValAndFire(emotionSelect, id));
+      setValAndFire(emotionSelect, 'neutral'); // leave state clean for any tests appended after this one
+      results.push(['selecting each extreme reaction emotion re-renders without throwing', 'ok, cycled through all 5 with no window errors']);
+    }
+
+    // Separately (self-contained, no dependency on the live app's internal `state`), confirm the actual
+    // math: an extreme emotion should enlarge the head (HEAD_R boost) relative to neutral for the exact
+    // same pose, while leaving the legs alone — mirrors the standalone Node vm harness check already run
+    // against js/render.js directly, now also covered inside the real jsdom-loaded app for permanence.
+    try {
+      const walkPose = { torsoLean:0.05, headTilt:0, bounceY:2, leftShoulderAngle:0.4, leftElbowBend:0.2, rightShoulderAngle:-0.4, rightElbowBend:-0.2, leftHipAngle:0.3, leftKneeBend:0.5, rightHipAngle:-0.3, rightKneeBend:0.1, mouthOpen:0 };
+      const skNeutral = window.computeSkeleton(400, 1, { emotion:'neutral', bodyType:'adult', sizeScale:1, build:'average' }, walkPose);
+      const skExtreme = window.computeSkeleton(400, 1, { emotion:'mindBlown', bodyType:'adult', sizeScale:1, build:'average' }, walkPose);
+      if(!(skExtreme.head.y < skNeutral.head.y)) errors.push('FAIL: mindBlown should enlarge the head (head.y should move further from the ground than neutral), got neutral=' + skNeutral.head.y + ' extreme=' + skExtreme.head.y);
+      else if(skNeutral.lHand.x === skExtreme.lHand.x) errors.push('FAIL: mindBlown has an armPose override, expected the hand position to differ from neutral');
+      else if(skNeutral.lFoot.x !== skExtreme.lFoot.x || skNeutral.lFoot.y !== skExtreme.lFoot.y) errors.push('FAIL: legs should be untouched by an emotion\'s armPose override, expected identical foot position');
+      else results.push(['extreme emotion enlarges head + overrides arms while leaving legs from the real pose', 'ok, matches vm harness result']);
+    } catch(e){ errors.push('FAIL: computeSkeleton with an extreme emotion threw: ' + e.stack); }
+  }
+
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 
   if(errors.length){
