@@ -24,6 +24,22 @@ const COSTUMES = {
   robot:     { label: 'Robot',     outfit: '#94a3b8', accessory: 'helmet' },
   clown:     { label: 'Clown',     outfit: '#e0453f', accessory: 'bowtie' },
   fairy:     { label: 'Fairy',     outfit: '#f0abfc', accessory: 'crown' },
-  vampire:   { label: 'Vampire',   outfit: '#1f2937', accessory: 'cape' }
+  vampire:   { label: 'Vampire',   outfit: '#1f2937', accessory: 'cape' },
+
+  // ---- generic "famous character type" archetypes: recognizable character roles/tropes, not any
+  // specific real person or copyrighted character — reuses the existing accessory shapes above,
+  // combined with a distinct outfit color, to add more variety to pick from.
+  cowboy:      { label: 'Cowboy',       outfit: '#a16207', accessory: 'hat' },
+  detective:   { label: 'Detective',    outfit: '#44403c', accessory: 'glasses' },
+  secretAgent: { label: 'Secret Agent', outfit: '#111827', accessory: 'necktie' },
+  rockstar:    { label: 'Rockstar',     outfit: '#18181b', accessory: 'earrings' },
+  viking:      { label: 'Viking',       outfit: '#57534e', accessory: 'helmet' },
+  samurai:     { label: 'Samurai',      outfit: '#7f1d1d', accessory: 'headband' },
+  alien:       { label: 'Alien',        outfit: '#22c55e', accessory: 'helmet' },
+  zombie:      { label: 'Zombie',       outfit: '#4b5563', accessory: 'scarf' },
+  mermaid:     { label: 'Mermaid',      outfit: '#0e7490', accessory: 'crown' },
+  magician:    { label: 'Magician',     outfit: '#312e81', accessory: 'bowtie' },
+  explorer:    { label: 'Explorer',     outfit: '#a8a29e', accessory: 'hat' },
+  rapper:      { label: 'Rapper',       outfit: '#eab308', accessory: 'wristwatch' }
 };
 const COSTUME_LIST = Object.keys(COSTUMES).map(id => ({ id, label: COSTUMES[id].label }));
