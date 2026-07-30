@@ -1566,6 +1566,14 @@ if(startSceneDesignBtn){
 }
 
 // ---------- export ----------
+// Exports at a higher resolution than the live editing canvas (which stays at its normal 800x450 the
+// rest of the time, for snappy interactive editing/dragging). EXPORT_SCALE temporarily enlarges the
+// shared canvas's backing pixel buffer to 800*EXPORT_SCALE x 450*EXPORT_SCALE (1920x1080 = standard
+// Full HD) and applies a matching ctx.scale() — every existing draw call in render.js/scene.js only
+// ever draws in the original 0-800/0-450 logical coordinate space (W/H there are constants captured
+// once at page load, not re-read from the live canvas), so the scale transform is ALL that's needed to
+// get a crisp, full-resolution export with zero changes anywhere else in the renderer.
+const EXPORT_SCALE = 2.4; // 800x450 * 2.4 = 1920x1080
 exportBtn.addEventListener('click', ()=>{
   if(!canvas.captureStream || !window.MediaRecorder){
     alert('Video export needs a Chrome/Edge browser (MediaRecorder API). Playback still works everywhere.');
@@ -1575,14 +1583,46 @@ exportBtn.addEventListener('click', ()=>{
   elapsed = 0;
   state.playing = true;
 
+  // Lock the ON-SCREEN displayed size to exactly what it already was (in CSS pixels) before touching
+  // the backing resolution — canvas{max-width:100%} alone would otherwise let the browser stretch the
+  // now-much-taller backing buffer to fill the container width, visibly distorting the aspect ratio for
+  // the few seconds of recording. Capturing the current rendered box size and pinning it via inline
+  // style keeps the visible preview looking completely unchanged while it secretly records much bigger.
+  const displayW = canvas.offsetWidth, displayH = canvas.offsetHeight;
+  canvas.style.width = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+  // A user dragging a character/timeline-scrub on the canvas mid-export would compute the wrong
+  // position (canvasPointFromEvent divides by the now-larger canvas.width), so just disable pointer
+  // interaction on the canvas for the brief recording window — export already disables the button, this
+  // covers the canvas itself.
+  canvas.style.pointerEvents = 'none';
+
+  const origW = canvas.width, origH = canvas.height;
+  canvas.width = Math.round(origW * EXPORT_SCALE);
+  canvas.height = Math.round(origH * EXPORT_SCALE);
+  // Resizing a canvas element always resets its 2D context state (transform included), so the scale
+  // has to be (re)applied right after, before any frame renders at the new size.
+  ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+
   const stream = canvas.captureStream(30);
   let mime = 'video/webm;codecs=vp9';
   if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8';
   if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
-  const recorder = new MediaRecorder(stream, { mimeType: mime });
+  // A higher target bitrate keeps the extra resolution from being immediately thrown away by the
+  // codec's default (much lower, tuned-for-800x450) bitrate — without this the exported file would be
+  // 1920x1080 in name only, look just as soft as before, and not meaningfully benefit from the resize.
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
   const chunks = [];
   recorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+  const restoreCanvas = () => {
+    canvas.width = origW; canvas.height = origH;
+    canvas.style.width = ''; canvas.style.height = ''; canvas.style.pointerEvents = '';
+    // No need to re-apply ctx.scale here: the resize above already reset the transform to identity,
+    // which is exactly what normal on-screen playback/editing expects.
+    forceRedraw();
+  };
   recorder.onstop = () => {
+    restoreCanvas();
     const blob = new Blob(chunks, { type: 'video/webm' });
     const url = URL.createObjectURL(blob);
     previewVideo.src = url; previewVideo.style.display = 'block';
