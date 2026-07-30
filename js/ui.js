@@ -189,6 +189,15 @@ bgImageInput.addEventListener('change', (e)=>{
   const file = e.target.files && e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
+  // Neither failure path here used to be handled at all: picking a non-image file (a .txt, a renamed
+  // extension, a corrupted download) meant img.onload simply never fired and NOTHING happened — no
+  // background change, no message, no way to tell the upload silently failed versus still being read.
+  // Both now reset the file input (so re-selecting the same filename fires 'change' again) and tell
+  // the person plainly what went wrong instead of leaving them guessing.
+  reader.onerror = function(){
+    alert('Could not read that file. Please try a different image.');
+    bgImageInput.value = '';
+  };
   reader.onload = function(ev){
     const img = new Image();
     img.onload = function(){
@@ -196,6 +205,10 @@ bgImageInput.addEventListener('change', (e)=>{
       state.scene.background = 'custom';
       bgSelect.value = 'custom';
       forceRedraw();
+    };
+    img.onerror = function(){
+      alert('That file doesn\'t look like a valid image. Please pick a JPG, PNG, or similar image file.');
+      bgImageInput.value = '';
     };
     img.src = ev.target.result;
   };
@@ -618,7 +631,7 @@ function renderSegmentList(){
           '</div>' +
         '</div>' +
         '<div class="row">' +
-          '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
+          '<div class="field"><label>Duration (s)</label><input type="number" min="0.5" max="120" step="0.5" value="'+seg.duration+'" data-field="duration" data-id="'+seg.id+'"></div>' +
           actionFieldsHtml +
         '</div>' +
         '<div class="row">' + directionFieldsHtml + '</div>' +
@@ -696,7 +709,7 @@ function renderTimelineStrip(){
       const secsPerPx = total / stripWidth;
       const startX = e.clientX, startDuration = seg.duration;
       function onMove(ev){
-        seg.duration = Math.max(0.5, startDuration + (ev.clientX - startX) * secsPerPx);
+        seg.duration = Math.min(120, Math.max(0.5, startDuration + (ev.clientX - startX) * secsPerPx));
         renderTimelineStrip();
         renderSegmentList();
         forceRedraw();
@@ -880,7 +893,13 @@ function onSegmentFieldChange(e){
   const seg = findSegment(id);
   if(!seg) return;
   if(field === 'duration'){
-    seg.duration = Math.max(0.5, parseFloat(e.target.value) || 0.5);
+    // Capped at 120s per segment — there was no upper bound before, so a typo (an extra zero, a
+    // stray paste) could set a segment to thousands or millions of seconds. That doesn't crash the
+    // editor, but hitting Export afterward starts a REAL-TIME recording sized to match: with no way to
+    // cancel an in-progress export short of reloading the tab (losing the recording), a huge duration
+    // could strand someone recording for hours/days with the export button stuck disabled. 120s/segment
+    // is already generous for a single beat of a video; long videos are still possible via many segments.
+    seg.duration = Math.min(120, Math.max(0.5, parseFloat(e.target.value) || 0.5));
     timelineTotal.textContent = 'Total: ' + evaluateScene(state.scene,0).totalDuration.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
   } else if(field.indexOf('action_') === 0){
     const charId = field.slice('action_'.length);
