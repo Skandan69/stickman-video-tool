@@ -1133,12 +1133,13 @@ function applyDesignerDrag(part, canvasX, canvasY){
     designer.currentPose.headTilt = Math.atan2(localDx, -localDy);
   }
   designer.playing = false;
-  if(designer.editingIdx !== -1){
-    designer.editingIdx = -1;
-    const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
-    if(activeRow) activeRow.classList.remove('active');
-    updateAddKeyframeUI();
-  }
+  // NOTE: dragging a handle used to clear editingIdx here (treating any change as "now editing a
+  // brand-new pose"), which meant the moment you dragged anything while a keyframe was loaded for
+  // editing, the "Update keyframe N" option silently disappeared and only "+ Add keyframe" (as a
+  // new one) remained — directly breaking the "select a keyframe, adjust it, then update it in
+  // place" workflow this designer is supposed to support. editingIdx is left alone here on purpose:
+  // the Update-vs-Add-as-new buttons already make the user's intent explicit, so there's no need to
+  // guess by watching for pose changes.
   syncDesignerSlidersFromCurrentPose();
 }
 // Small purple handles drawn on top of the normal render at each draggable point — only shown in
@@ -1197,18 +1198,16 @@ function renderDesignerSliders(){
       const field = e.target.getAttribute('data-designer-slider');
       designer.currentPose[field] = parseFloat(e.target.value);
       designer.playing = false; // a manual slider tweak always drops back into live single-pose editing
-      // The sliders no longer exactly match whichever keyframe was loaded (if any) the moment a value
-      // actually changes — clear editingIdx so "Add keyframe" appends a NEW keyframe instead of
-      // silently overwriting the one that used to be loaded (avoid a full list re-render on every drag
-      // tick; just drop the 'active' highlight directly).
-      if(designer.editingIdx !== -1){
-        designer.editingIdx = -1;
-        const activeRow = designerKeyframeListEl.querySelector('.designer-kf-row.active');
-        if(activeRow) activeRow.classList.remove('active');
-        updateAddKeyframeUI();
-      }
+      // editingIdx is intentionally left untouched here: this used to clear editingIdx on every slider
+      // tweak (treating any change as "now editing a brand-new pose"), which meant the instant you
+      // adjusted a slider while a keyframe was loaded, "Update keyframe N" silently disappeared and
+      // you could only ever append a new keyframe — breaking the "select a keyframe, adjust it, then
+      // save the change back" workflow. The Update-vs-Add-as-new buttons already make the user's
+      // choice explicit, so there's no need to guess by watching for pose changes.
       designerPlayBtn.textContent = 'Play sequence';
-      designerPreviewLabel.textContent = 'Editing keyframe pose';
+      designerPreviewLabel.textContent = (designer.editingIdx >= 0)
+        ? ('Editing keyframe ' + (designer.editingIdx+1) + ' — adjust sliders or drag the preview, then Update or Add as new')
+        : 'Editing keyframe pose';
       const label = designerSlidersEl.querySelector('[data-valfor="'+field+'"]');
       if(label) label.textContent = designer.currentPose[field].toFixed(2);
     });
@@ -1427,13 +1426,13 @@ designerAddKeyframeBtn.addEventListener('click', ()=>{
     designer.editingIdx = -1;
     syncDesignerSlidersFromCurrentPose();
   }
-  // editingIdx means "the sliders currently reflect this exact saved keyframe" — true right after
-  // loading one (pencil button) or right after appending one (below), and invalidated the instant any
-  // slider actually moves (see renderDesignerSliders' input handler) or the snapshot-from-Play above.
-  // Without that invalidation this branch would keep re-triggering after the FIRST Add forever, silently
-  // overwriting keyframe 0 on every later click instead of ever appending a second/third pose — that was
-  // a real bug, fixed by making sure editingIdx only stays "live" while the sliders truly still match
-  // that keyframe.
+  // editingIdx tracks which keyframe (if any) is currently loaded for editing — set right after
+  // loading one (pencil button/row click) or right after appending one (below), and now stays put
+  // across slider tweaks and preview drags (it used to be cleared the instant anything changed, which
+  // silently blocked ever updating a keyframe's pose — see renderDesignerSliders' input handler and
+  // applyDesignerDrag for the fuller explanation). This button always OVERWRITES keyframe editingIdx
+  // when one is loaded; the separate "+ Add as new" button is the only way to append instead, so
+  // there's no ambiguity about which action a click will take.
   if(designer.editingIdx >= 0 && designer.editingIdx < designer.keyframes.length){
     designer.keyframes[designer.editingIdx].pose = Object.assign({}, designer.currentPose);
   } else {
