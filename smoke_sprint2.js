@@ -1693,6 +1693,27 @@ async function run(){
     } catch(e){ errors.push('FAIL: computeSkeleton with an extreme emotion threw: ' + e.stack); }
   }
 
+  // 30. Follow-up fixes after the user reported the extreme emotions still didn't look exaggerated
+  // enough: (a) jawDropped now uses a distinct 'jawDrop' mouth shape (a tall dropped-open oval) instead
+  // of sharing 'o' with mindBlown/terrifiedShock, (b) huge eyeScale (>=1.7) now draws a white eye with a
+  // black pupil instead of one solid black blob, (c) the talking-mouth ellipse scales up with eyeScale
+  // so exaggeration is still visible while a character is mid-dialogue, not just when idle. Canvas pixel
+  // output can't be asserted from this text-based harness, so this just confirms the data/wiring is
+  // correct and nothing throws — visual confirmation was done live in the browser.
+  {
+    if(!window.EMOTIONS || window.EMOTIONS.jawDropped.mouth !== 'jawDrop') errors.push('FAIL: expected jawDropped.mouth to be \'jawDrop\', got: ' + (window.EMOTIONS && window.EMOTIONS.jawDropped.mouth));
+    else results.push(['jawDropped uses its own distinct mouth shape', 'ok, mouth: \'jawDrop\'']);
+
+    try {
+      const walkPose = { torsoLean:0.05, headTilt:0, bounceY:2, leftShoulderAngle:0.4, leftElbowBend:0.2, rightShoulderAngle:-0.4, rightElbowBend:-0.2, leftHipAngle:0.3, leftKneeBend:0.5, rightHipAngle:-0.3, rightKneeBend:0.1, mouthOpen:0 };
+      ['mindBlown','jawDropped','terrifiedShock','ecstaticBurst','stunnedExtreme'].forEach(id => {
+        window.drawFace({x:400,y:200}, 1, 'dot', id, 0); // talkOpen=0 -> exercises each emotion's own mouth branch, including the new jawDrop path
+        window.drawFace({x:400,y:200}, 1, 'dot', id, 1); // talkOpen=1 -> exercises the scaled talking-mouth ellipse for each
+      });
+      results.push(['drawFace renders every extreme emotion, talking and not, without throwing', 'ok, including the new jawDrop mouth branch and scaled talk-mouth ellipse']);
+    } catch(e){ errors.push('FAIL: drawFace threw for an extreme emotion: ' + e.stack); }
+  }
+
   results.forEach(r => console.log(r[0] + ': ' + r[1]));
 
   if(errors.length){
