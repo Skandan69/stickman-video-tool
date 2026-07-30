@@ -157,13 +157,17 @@ const EMOTIONS = {
   // than the distance from the shoulder to the top of a boosted head (~64px), so these gestures reach
   // UP AND OUT to the sides of the head rather than overhead, and terrifiedShock's bracing gesture stays
   // well below the shoulder entirely, which trivially guarantees it can never be hidden behind the head.
-  mindBlown:     { label: 'Mind-Blown (Extreme)',   browLeftY: -20, browRightY: -20, mouth: 'o',    eyeScale: 2.4, headBoost: 1.35,
-    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } },
-  jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -18, browRightY: -18, mouth: 'o',    eyeScale: 2.2, headBoost: 1.3 },
-  terrifiedShock:{ label: 'Terrified Shock (Extreme)', browLeftY: -20, browRightY: -20, mouth: 'o', eyeScale: 2.5, headBoost: 1.3,
-    armPose: { leftShoulderAngle: 1.0, leftElbowBend: -1.8, rightShoulderAngle: -1.0, rightElbowBend: 1.8 } },
+  // Deliberately spread across mouth shape (o / grimace / smile / flat), brow SYMMETRY (not just
+  // magnitude — jawDropped and terrifiedShock use lopsided brows, mirrored opposite ways, so they don't
+  // read as the same face as mindBlown's perfectly symmetric ones), and arm behavior, so all five are
+  // clearly distinguishable from each other at a glance, not just subtly different eyeScale numbers.
+  mindBlown:     { label: 'Mind-Blown (Extreme)',   browLeftY: -22, browRightY: -22, mouth: 'o',      eyeScale: 2.5, headBoost: 1.35,
+    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } }, // symmetric sky-high brows, round gasping mouth, arms thrown up and out
+  jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -24, browRightY: -12, mouth: 'o',      eyeScale: 2.0, headBoost: 1.3 }, // ONE eyebrow shoots way up (asymmetric, "did that really just happen" look), arms untouched
+  terrifiedShock:{ label: 'Terrified Shock (Extreme)', browLeftY: -12, browRightY: -22, mouth: 'grimace', eyeScale: 2.2, headBoost: 1.25,
+    armPose: { leftShoulderAngle: 1.0, leftElbowBend: -1.8, rightShoulderAngle: -1.0, rightElbowBend: 1.8 } }, // lopsided brows mirrored the OTHER way from jawDropped, gritted-teeth grimace instead of a round mouth, hands clutched at the chest
   ecstaticBurst: { label: 'Ecstatic Burst (Extreme)', browLeftY: -18, browRightY: -18, mouth: 'smile', eyeScale: 1.8, headBoost: 1.2,
-    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } },
-  stunnedExtreme:{ label: 'Stunned (Extreme)',      browLeftY: -18, browRightY: -18, mouth: 'flat', eyeScale: 2.2, headBoost: 1.25 }
+    armPose: { leftShoulderAngle: 2.1, leftElbowBend: 0.4, rightShoulderAngle: -2.1, rightElbowBend: -0.4 } }, // same "arms up and out" gesture family as mindBlown, but a big smile instead of a gasp
+  stunnedExtreme:{ label: 'Stunned (Extreme)',      browLeftY: -8,  browRightY: -8,  mouth: 'flat',   eyeScale: 2.3, headBoost: 1.25 } // LOW/relaxed brows (not raised like the other four) + huge eyes + flat mouth = blank "500-yard stare", arms untouched
 };
 const EMOTION_LIST = Object.keys(EMOTIONS).map(id => ({ id, label: EMOTIONS[id].label }));
