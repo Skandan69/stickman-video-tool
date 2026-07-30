@@ -22,7 +22,10 @@ function drawFace(head, faceDir, eyeStyle, emotion, mouthOpen){
   const em = EMOTIONS[emotion] || EMOTIONS.neutral;
   // S scales all the feature offsets/sizes below, which were originally tuned for the old, smaller
   // head radius — keeping them proportionate to today's bigger "bold cartoon" head (see humanTypes.js).
-  const S = 1.2;
+  // Extreme reaction emotions (mindBlown, terrifiedShock, etc.) also boost the head itself via
+  // em.headBoost (see computeSkeleton) — folding the same factor in here keeps eyes/eyebrows/mouth
+  // growing right along with the bigger head instead of looking tiny and lost on it.
+  const S = 1.2 * (em.headBoost || 1);
   const ex = head.x + faceDir*7*S, ey = head.y - 3*S;
   const wide = em.eyeScale || 1;
   const INK = '#111';
@@ -119,6 +122,12 @@ function computeSkeleton(x, faceDir, appearance, pose){
   const emotion = appearance.emotion || 'neutral';
   const accessory = appearance.accessory || 'none';
   const bodyPreset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // sets HEAD_R/TORSO_LEN/etc for THIS character
+  // Extreme reaction emotions (js/emotions.js: mindBlown, terrifiedShock, etc.) enlarge just the head —
+  // HEAD_R was only just set above for this one character by applyBodyScale, so bumping it here is
+  // purely transient for this character's frame (the next character's computeSkeleton call resets it via
+  // its own applyBodyScale), and happens before every joint/feature position below is computed from it.
+  const em = EMOTIONS[appearance.emotion] || EMOTIONS.neutral;
+  if(em.headBoost) HEAD_R *= em.headBoost;
   const stoop = bodyPreset.stoop || 0;
   const effTorsoLean = pose.torsoLean + stoop;
   const effHeadTilt = pose.headTilt + stoop*0.5;
@@ -139,10 +148,19 @@ function computeSkeleton(x, faceDir, appearance, pose){
   const rKnee = downPoint(hip, pose.rightHipAngle, UPPER_LEG, faceDir);
   const rFoot = downPoint(rKnee, pose.rightHipAngle+pose.rightKneeBend, LOWER_LEG, faceDir);
 
-  const lElbow = downPoint(shoulder, pose.leftShoulderAngle, UPPER_ARM, faceDir);
-  const lHand = downPoint(lElbow, pose.leftShoulderAngle+pose.leftElbowBend, FORE_ARM, faceDir);
-  const rElbow = downPoint(shoulder, pose.rightShoulderAngle, UPPER_ARM, faceDir);
-  const rHand = downPoint(rElbow, pose.rightShoulderAngle+pose.rightElbowBend, FORE_ARM, faceDir);
+  // An extreme reaction emotion's armPose (js/emotions.js) overrides ONLY the arm angles used for IK
+  // below — legs/torso/head above already came from the real pose untouched — so e.g. terrifiedShock's
+  // hands-near-face gesture applies on top of whatever the character's current action is doing with its
+  // legs (walking, standing, sitting, etc.), rather than replacing the whole pose.
+  const armPose = em.armPose;
+  const lShoulderA = armPose ? armPose.leftShoulderAngle : pose.leftShoulderAngle;
+  const lElbowB = armPose ? armPose.leftElbowBend : pose.leftElbowBend;
+  const rShoulderA = armPose ? armPose.rightShoulderAngle : pose.rightShoulderAngle;
+  const rElbowB = armPose ? armPose.rightElbowBend : pose.rightElbowBend;
+  const lElbow = downPoint(shoulder, lShoulderA, UPPER_ARM, faceDir);
+  const lHand = downPoint(lElbow, lShoulderA+lElbowB, FORE_ARM, faceDir);
+  const rElbow = downPoint(shoulder, rShoulderA, UPPER_ARM, faceDir);
+  const rHand = downPoint(rElbow, rShoulderA+rElbowB, FORE_ARM, faceDir);
 
   return { outfit, gender, name, skin, hairStyle, hairColor, eyeStyle, emotion, accessory, bodyPreset,
     hip, shoulder, neck, head, lKnee, lFoot, rKnee, rFoot, lElbow, lHand, rElbow, rHand };

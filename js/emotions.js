@@ -5,6 +5,15 @@
 //   browLeftY / browRightY: eyebrow endpoint offsets from the eye, in the pre-faceDir "written" sense
 //   mouth: one of 'flat' | 'smile' | 'frown' | 'grimace' | 'o'
 //   eyeScale: optional multiplier on eye size (e.g. wide-eyed surprise)
+//   headBoost: optional multiplier on the whole head (js/render.js's computeSkeleton scales HEAD_R by
+//     this right before the head/neck joint and every facial feature are positioned, and drawFace scales
+//     its "S" constant by the same factor) — for big, YouTube-thumbnail-style exaggerated reactions
+//     where the head and its features are dramatically oversized, not just the eyes.
+//   armPose: optional { leftShoulderAngle, leftElbowBend, rightShoulderAngle, rightElbowBend } — when
+//     present, computeSkeleton uses these instead of whatever the character's current action pose set
+//     for the arms (everything else — legs, torso lean, head tilt — still comes from the actual pose),
+//     so an extreme reaction emotion can also force a matching dramatic gesture (hands on face, arms
+//     thrown up) regardless of what the character was otherwise doing.
 const EMOTIONS = {
   neutral:   { label: 'Neutral',   browLeftY: -9,  browRightY: -9,  mouth: 'flat' },
   happy:     { label: 'Happy',     browLeftY: -10, browRightY: -11, mouth: 'smile' },
@@ -134,6 +143,19 @@ const EMOTIONS = {
   thirsty: { label: 'Thirsty', browLeftY: -7,  browRightY: -7,  mouth: 'o',      eyeScale: 0.8 },
   cold:    { label: 'Cold',    browLeftY: -6,  browRightY: -6,  mouth: 'flat',   eyeScale: 0.6 },
   hot:     { label: 'Hot',     browLeftY: -8,  browRightY: -8,  mouth: 'flat',   eyeScale: 0.7 },
-  inPain:  { label: 'In Pain', browLeftY: -10, browRightY: -10, mouth: 'grimace',eyeScale: 0.6 }
+  inPain:  { label: 'In Pain', browLeftY: -10, browRightY: -10, mouth: 'grimace',eyeScale: 0.6 },
+
+  // ---- extreme reactions: big-head, huge-eyed, dramatic-gesture "YouTube thumbnail" style, far more
+  // exaggerated than the realistic emotions above. headBoost enlarges the whole head (and, via
+  // drawFace's S constant, every feature on it); armPose overrides just the arms with a matching
+  // dramatic gesture, leaving whatever the character's current action is doing with legs/torso alone.
+  mindBlown:     { label: 'Mind-Blown (Extreme)',   browLeftY: -20, browRightY: -20, mouth: 'o',    eyeScale: 2.4, headBoost: 1.35,
+    armPose: { leftShoulderAngle: 2.7, leftElbowBend: 0.15, rightShoulderAngle: -2.7, rightElbowBend: -0.15 } },
+  jawDropped:    { label: 'Jaw-Dropped (Extreme)',  browLeftY: -18, browRightY: -18, mouth: 'o',    eyeScale: 2.2, headBoost: 1.3 },
+  terrifiedShock:{ label: 'Terrified Shock (Extreme)', browLeftY: -20, browRightY: -20, mouth: 'o', eyeScale: 2.5, headBoost: 1.3,
+    armPose: { leftShoulderAngle: 0.5, leftElbowBend: -2.0, rightShoulderAngle: -0.5, rightElbowBend: -2.0 } },
+  ecstaticBurst: { label: 'Ecstatic Burst (Extreme)', browLeftY: -18, browRightY: -18, mouth: 'smile', eyeScale: 1.8, headBoost: 1.2,
+    armPose: { leftShoulderAngle: 2.7, leftElbowBend: 0.15, rightShoulderAngle: -2.7, rightElbowBend: -0.15 } },
+  stunnedExtreme:{ label: 'Stunned (Extreme)',      browLeftY: -18, browRightY: -18, mouth: 'flat', eyeScale: 2.2, headBoost: 1.25 }
 };
 const EMOTION_LIST = Object.keys(EMOTIONS).map(id => ({ id, label: EMOTIONS[id].label }));
