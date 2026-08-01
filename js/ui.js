@@ -530,8 +530,9 @@ document.getElementById('addFromLibBtn').addEventListener('click', ()=>{
 document.getElementById('deleteLibBtn').addEventListener('click', ()=>{
   const list = loadLibrary();
   const idx = parseInt(libSelect.value, 10);
-  if(isNaN(idx)) return;
-  list.splice(idx,1);
+if(isNaN(idx) || !list[idx]) return;
+      if(!confirm('Delete the saved character "' + list[idx].label + '"? This cannot be undone.')) return;
+      list.splice(idx,1);
   saveLibrary(list);
   refreshLibSelect();
 });
