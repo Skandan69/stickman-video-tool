@@ -135,6 +135,134 @@ const STYLES = {
       return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
     }
   },
+  bighead: {
+    label: 'Big Head Comedy',
+    // A much more detailed, exaggerated "reaction-comedy cartoon" look — big round head, big white
+    // "googly" eyes, a thick furrowed eyebrow bar, and a chubby FILLED cartoon body/clothing instead of
+    // thin stick limbs. Still built entirely from computeSkeleton()'s shared joint math (so every
+    // pose/action/saved move lines up exactly the same as every other style) and the EMOTIONS registry's
+    // browLeftY/browRightY/mouth/eyeScale fields (so every existing emotion, including the "Extreme"
+    // reaction set, drives this face too) — only the actual shapes drawn are different. This is a
+    // procedural APPROXIMATION of that art style (flat colors, no shading/folds/unique per-character
+    // designs), not a pixel-for-pixel recreation of hand-animated reference art.
+    drawStickman: (x, faceDir, appearance, pose)=>{
+      const sk = computeSkeleton(x, faceDir, appearance, pose);
+      const em = EMOTIONS[sk.emotion] || EMOTIONS.neutral;
+      const HR = HEAD_R * 1.4; // the signature oversized head — drawn bigger than the skeleton's own
+                                 // HEAD_R without touching it, so joint positions stay exactly where
+                                 // every other style already puts them.
+      const limbW = LW * 2.8; // thick, chubby capsule limbs instead of a thin stick line
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // legs: thick filled capsules
+      [[sk.hip,sk.lKnee,sk.lFoot],[sk.hip,sk.rKnee,sk.rFoot]].forEach(seg=>{
+        ctx.strokeStyle = '#3a4250'; ctx.lineWidth = limbW;
+        ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
+      });
+      [sk.lFoot, sk.rFoot].forEach(p=>{
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(p.x+faceDir*4, p.y, 10, 6, 0, 0, Math.PI*2); ctx.fill();
+      });
+
+      // torso: one big rounded belly shape (not a thin line) spanning hip-to-shoulder, filled with outfit color
+      const midX = (sk.hip.x+sk.shoulder.x)/2, midY = (sk.hip.y+sk.shoulder.y)/2;
+      ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(midX, midY, TORSO_LEN*0.46, TORSO_LEN*0.62, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // arms: thick capsules, drawn over the torso
+      [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
+        ctx.strokeStyle = sk.outfit; ctx.lineWidth = limbW;
+        ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
+      });
+      [sk.lHand, sk.rHand].forEach(p=>{
+        ctx.fillStyle = sk.skin; ctx.beginPath(); ctx.arc(p.x, p.y, limbW*0.5, 0, Math.PI*2); ctx.fill();
+      });
+
+      // Body-worn accessories, shared with every other style's drawStickman.
+      if(sk.accessory === 'bag'){
+        const bagAnchor = faceDir > 0 ? sk.lHand : sk.rHand;
+        ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(sk.shoulder.x - faceDir*4, sk.shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
+      }
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+
+      // head: big filled circle
+      ctx.fillStyle = sk.skin; ctx.strokeStyle = '#2b2f38'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // Simple messy hair "poof" using the character's own hair color — kept deliberately simple (one
+      // shape, not the full hairStyle registry) since the reference art's hair reads as a single loose
+      // silhouette rather than a distinct per-style haircut; hairColor customization still carries through.
+      if(sk.hairStyle !== 'none'){
+        ctx.fillStyle = sk.hairColor;
+        ctx.beginPath();
+        ctx.arc(sk.head.x - faceDir*HR*0.1, sk.head.y - HR*0.7, HR*0.95, Math.PI*1.02, Math.PI*1.98);
+        ctx.fill();
+      }
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+
+      // face: big white "googly" eyes + one continuous furrowed eyebrow bar + an exaggerated mouth.
+      // Reuses em.browLeftY/browRightY/mouth/eyeScale (js/emotions.js) exactly like drawFace does, so
+      // every emotion (including the big "Extreme" reactions) drives this face the same way it drives
+      // every other style's — only the shapes are bigger/rounder/filled instead of thin ink lines.
+      const wide = Math.max(1, em.eyeScale || 1);
+      const eyeY = sk.head.y - HR*0.05;
+      const eyeSpacing = HR*0.4;
+      const eyeCX = sk.head.x + faceDir*HR*0.12;
+      const lEyeX = eyeCX - eyeSpacing, rEyeX = eyeCX + eyeSpacing;
+      const r = 6.5*wide;
+      [lEyeX, rEyeX].forEach(exx=>{
+        ctx.beginPath(); ctx.ellipse(exx, eyeY, r*0.82, r, 0, 0, Math.PI*2);
+        ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 2.4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(exx, eyeY + r*0.15, r*0.34, 0, Math.PI*2); ctx.fillStyle = '#111'; ctx.fill();
+      });
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(lEyeX - r*0.9, eyeY - r*1.0 + em.browLeftY*0.55);
+      ctx.lineTo(rEyeX + r*0.9, eyeY - r*1.0 + em.browRightY*0.55);
+      ctx.stroke();
+
+      const mx = sk.head.x + faceDir*HR*0.08, my = sk.head.y + HR*0.62;
+      ctx.lineWidth = 3;
+      if(pose.mouthOpen > 0.4){
+        ctx.beginPath(); ctx.ellipse(mx, my, 9*Math.max(1,wide*0.7), 11*Math.max(1,wide*0.7), 0, 0, Math.PI*2);
+        ctx.fillStyle = '#7a2020'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.fillRect(mx-8, my-10, 16, 4);
+      } else if(em.mouth === 'smile'){
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.arc(mx, my-5, 10, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'frown'){
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.arc(mx, my+9, 10, 1.1*Math.PI, 1.9*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'o' || em.mouth === 'jawDrop' || em.mouth === 'grimace'){
+        ctx.beginPath(); ctx.ellipse(mx, my, 8, em.mouth==='jawDrop'?13:9, 0, 0, Math.PI*2);
+        ctx.fillStyle = '#7a2020'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.stroke();
+      } else {
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.moveTo(mx-9,my); ctx.lineTo(mx+9,my); ctx.stroke();
+      }
+
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
+
+      ctx.fillStyle = '#333'; ctx.font = 'bold 13px "Comic Sans MS", cursive'; ctx.textAlign = 'center';
+      ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
+      ctx.restore();
+      return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
+    }
+  },
   sketchy: {
     label: 'Hand-Drawn Sketch',
     drawStickman: (x, faceDir, appearance, pose)=>{
