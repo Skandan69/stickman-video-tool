@@ -323,13 +323,22 @@ function renderCharacterList(){
   addCharacterBtn.disabled = state.scene.characters.length >= MAX_CHARACTERS;
 }
 
+// A character's name is shown as the field label for that character in every segment card (and in
+// the dialogue speaker dropdown), so renaming needs renderSegmentList() to keep those labels in sync
+// — but the name field fires on every keystroke, and re-rendering every segment's full card on every
+// single keystroke is the same kind of needless, scale-punishing rebuild flagged elsewhere in this
+// file (see renderSegmentList's own comment): typing a 10-character name into a scene with many
+// segments would otherwise trigger 10 full rebuilds back-to-back. Debouncing coalesces that into one
+// rebuild after typing actually pauses, without changing what ends up on screen.
+const debouncedRenderSegmentListForRename = debounce(()=> renderSegmentList(), 300);
+
 function onCharacterFieldChange(e){
   const id = e.target.getAttribute('data-cid');
   const field = e.target.getAttribute('data-cfield');
   const c = findCharacter(id);
   if(!c) return;
   if(field === 'gender'){ if(e.target.checked) c.gender = e.target.value; }
-  else if(field === 'name'){ c.name = e.target.value || 'Stickman'; renderSegmentList(); }
+  else if(field === 'name'){ c.name = e.target.value || 'Stickman'; debouncedRenderSegmentListForRename(); }
   else if(field === 'sizeScale'){
     c.sizeScale = parseFloat(e.target.value) || 1;
     const label = characterList.querySelector('[data-sizeval="'+id+'"]');
@@ -549,11 +558,11 @@ function clipOptionsHtml(selected){
     + libOptions;
 }
 
-function renderSegmentList(){
-  const total = evaluateScene(state.scene, 0).totalDuration;
-  timelineTotal.textContent = 'Total: ' + total.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
-
-  segmentList.innerHTML = state.scene.timeline.map((seg, idx)=>{
+// Builds the HTML for exactly ONE segment's card. Pulled out of renderSegmentList so a single
+// field edit (picking an action, toggling dialogue, etc.) can regenerate just the one card that
+// actually changed via updateSegmentCard() below, instead of every segment's card — see the perf
+// note on renderSegmentList for why that distinction matters once a scene has many segments.
+function segmentCardHtml(seg, idx){
     const actionFieldsHtml = state.scene.characters.map(c=>{
       const clipVal = (seg.actions&&seg.actions[c.id])||'idle';
       const kfCount = (seg.customPoses && seg.customPoses[c.id] && seg.customPoses[c.id].keyframes) ? seg.customPoses[c.id].keyframes.length : 0;
@@ -641,17 +650,59 @@ function renderSegmentList(){
         dialogueHtml +
       '</div>'
     );
-  }).join('');
+}
 
-  segmentList.querySelectorAll('[data-act]').forEach(btn=> btn.addEventListener('click', onSegmentAction));
-  segmentList.querySelectorAll('select[data-field]').forEach(el=> el.addEventListener('change', onSegmentFieldChange));
-  segmentList.querySelectorAll('input[data-field]').forEach(el=>{
+// Wires up the interactive elements INSIDE a single segment card element (a click/change/input
+// listener per button/select/input). Scoped to whatever root element is passed in — called with the
+// whole segmentList after a full rebuild, or with just one freshly-swapped-in card after a targeted
+// update, so listeners never get attached twice and never have to be attached to more nodes than
+// actually changed.
+function wireSegmentCard(root){
+  root.querySelectorAll('[data-act]').forEach(btn=> btn.addEventListener('click', onSegmentAction));
+  root.querySelectorAll('select[data-field]').forEach(el=> el.addEventListener('change', onSegmentFieldChange));
+  root.querySelectorAll('input[data-field]').forEach(el=>{
     el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', onSegmentFieldChange);
   });
-  segmentList.querySelectorAll('[data-designer-edit]').forEach(btn=> btn.addEventListener('click', (e)=>{
+  root.querySelectorAll('[data-designer-edit]').forEach(btn=> btn.addEventListener('click', (e)=>{
     openPoseDesigner(e.currentTarget.getAttribute('data-segid'), e.currentTarget.getAttribute('data-cid'));
   }));
+}
+
+// Full rebuild: every segment's card HTML is regenerated and the whole list is reparsed/rewired.
+// Correct for anything that changes segment COUNT or ORDER (add/remove/duplicate/reorder), but far
+// more expensive than it needs to be for a single field edit on one existing segment — profiling
+// during QA found this taking ~750ms on a stress-test scene (8 characters x ~100 segments), all spent
+// re-parsing HTML and re-populating <select> options for segments that didn't actually change.
+// updateSegmentCard() below is the targeted alternative used for those single-segment edits.
+function renderSegmentList(){
+  const total = evaluateScene(state.scene, 0).totalDuration;
+  timelineTotal.textContent = 'Total: ' + total.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
+
+  segmentList.innerHTML = state.scene.timeline.map((seg, idx)=> segmentCardHtml(seg, idx)).join('');
+  wireSegmentCard(segmentList);
   renderTimelineStrip();
+}
+
+// Targeted alternative to renderSegmentList() for edits that only affect ONE existing segment's own
+// fields (action picked, dialogue toggled, direction changed) — regenerates just that segment's card
+// and swaps it in place, instead of re-rendering every other untouched segment along with it. Falls
+// back to a full renderSegmentList() if the card can't be found (shouldn't normally happen, but safer
+// than silently doing nothing).
+function updateSegmentCard(segId){
+  const idx = state.scene.timeline.findIndex(s=> s.id === segId);
+  const oldCard = segmentList.querySelector('.segment-card[data-seg-id="'+segId+'"]');
+  if(idx === -1 || !oldCard){ renderSegmentList(); return; }
+  const seg = state.scene.timeline[idx];
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = segmentCardHtml(seg, idx);
+  const newCard = wrapper.firstElementChild;
+  oldCard.replaceWith(newCard);
+  wireSegmentCard(newCard);
+  // The timeline strip's label for this block can depend on the first character's action (segLabel),
+  // so keep it in sync too — updating just the one label span is still far cheaper than
+  // renderTimelineStrip() rebuilding every block.
+  const stripLabel = timelineStrip.querySelector('.timeline-strip-block[data-seg-id="'+segId+'"] .strip-label');
+  if(stripLabel) stripLabel.textContent = (idx+1) + '. ' + segLabel(seg);
 }
 
 // Canva/CapCut-style visual timeline strip: same segments as the detailed cards below, rendered as
@@ -708,13 +759,27 @@ function renderTimelineStrip(){
       const stripWidth = timelineStrip.getBoundingClientRect().width || 1;
       const secsPerPx = total / stripWidth;
       const startX = e.clientX, startDuration = seg.duration;
+      // Dragging fires onMove dozens of times a second — calling the full renderTimelineStrip()/
+      // renderSegmentList() rebuilds on every single one of those (as this used to) meant a drag on a
+      // large scene (many segments) visibly stuttered, since every mousemove re-rendered every OTHER
+      // segment's card/block too even though only this one's duration is actually changing. Only this
+      // block's own flex-basis, this one segment's duration input (if its card happens to be open), and
+      // the running total text need to update live; a single full re-render happens once on mouseup.
       function onMove(ev){
         seg.duration = Math.min(120, Math.max(0.5, startDuration + (ev.clientX - startX) * secsPerPx));
-        renderTimelineStrip();
-        renderSegmentList();
+        block.style.flex = Math.max(0.1, seg.duration) + ' 1 0%';
+        block.title = 'Segment ' + (idx+1) + ' (' + seg.duration + 's)';
+        const durInput = segmentList.querySelector('input[data-field="duration"][data-id="'+seg.id+'"]');
+        if(durInput) durInput.value = seg.duration;
+        timelineTotal.textContent = 'Total: ' + evaluateScene(state.scene,0).totalDuration.toFixed(1) + 's (' + state.scene.timeline.length + ' segment' + (state.scene.timeline.length===1?'':'s') + ')';
         forceRedraw();
       }
-      function onUp(){ document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+      function onUp(){
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        renderTimelineStrip();
+        renderSegmentList();
+      }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
@@ -925,7 +990,7 @@ function onSegmentFieldChange(e){
         };
         seg.actions[charId] = 'customPose';
       }
-      renderSegmentList();
+      updateSegmentCard(seg.id);
       return;
     }
     seg.actions[charId] = e.target.value;
@@ -942,9 +1007,10 @@ function onSegmentFieldChange(e){
     if(e.target.value === 'customPose'){
       openPoseDesigner(seg.id, charId, priorAction);
     }
-    // Re-render so the direction select's Up/Down (climb/descend) options show up immediately when
-    // switching a character into flyplane/flyhelicopter, and disappear when switching back out.
-    renderSegmentList();
+    // Re-render just this card so the direction select's Up/Down (climb/descend) options show up
+    // immediately when switching a character into flyplane/flyhelicopter, and disappear when
+    // switching back out.
+    updateSegmentCard(seg.id);
   } else if(field.indexOf('direction_') === 0){
     const charId = field.slice('direction_'.length);
     if(!seg.directions) seg.directions = {};
@@ -954,14 +1020,14 @@ function onSegmentFieldChange(e){
     // dragged end-position is cleared rather than silently overriding what the dropdown now shows.
     if(seg.dragTargets && seg.dragTargets[charId]){
       delete seg.dragTargets[charId];
-      renderSegmentList();
+      updateSegmentCard(seg.id);
     }
   } else if(field === 'povCamera'){
     seg.povCamera = e.target.checked;
   } else if(field === 'hasDialogue'){
     const firstId = state.scene.characters[0] && state.scene.characters[0].id;
     seg.dialogue = e.target.checked ? { speakerId: firstId, text: 'New line' } : null;
-    renderSegmentList();
+    updateSegmentCard(seg.id);
   } else if(field === 'dialogueSpeaker'){
     if(seg.dialogue) seg.dialogue.speakerId = e.target.value;
   } else if(field === 'dialogueText'){
