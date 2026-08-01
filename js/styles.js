@@ -263,6 +263,112 @@ const STYLES = {
       return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
     }
   },
+  ghost: {
+    label: 'Doodle Ghost',
+    // A minimal "cute AI-doodle mascot" look, inspired by the viral trend of a simple ghost/blob
+    // character composited into real photos (see the reference request: a round head, plain black
+    // oval eyes, no visible legs, soft blob body/arms ending in dark mitt hands). This style is meant
+    // to be used together with the "Custom photo..." background (js/backgrounds.js), which already
+    // lets a user upload their own photo — the doodle then reads like a simple sticker sitting on top
+    // of it. Still driven entirely by computeSkeleton()'s shared joint math and the EMOTIONS registry
+    // (mouth/eyeScale), so every existing pose/action/emotion still works — this style just skips
+    // drawing legs (the reference character never has visible legs) and softens everything into
+    // rounded blob shapes instead of thin stick lines.
+    drawStickman: (x, faceDir, appearance, pose)=>{
+      const sk = computeSkeleton(x, faceDir, appearance, pose);
+      const em = EMOTIONS[sk.emotion] || EMOTIONS.neutral;
+      const HR = HEAD_R * 1.15;
+      const armW = LW * 2.4;
+      const mittR = armW * 0.62;
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // No legs/feet drawn (the reference character floats/sits without visible legs) — instead a
+      // soft rounded "base" blob grounds the character where its feet would otherwise be.
+      ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(sk.hip.x, GROUND_Y - 6, HEAD_R*0.9, 10, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // torso: one soft rounded blob spanning hip-to-shoulder (a "ghost body", not articulated limbs)
+      const midX = (sk.hip.x+sk.shoulder.x)/2, midY = (sk.hip.y+sk.shoulder.y)/2;
+      ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(midX, midY, TORSO_LEN*0.4, TORSO_LEN*0.58, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // arms: soft rounded capsules ending in dark mitt "hands" — always dark regardless of skin
+      // tone/outfit, matching the reference art's contrast-mitt look.
+      [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
+        ctx.strokeStyle = sk.outfit; ctx.lineWidth = armW;
+        ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
+      });
+      [sk.lHand, sk.rHand].forEach(p=>{
+        ctx.fillStyle = '#26262b'; ctx.beginPath(); ctx.arc(p.x, p.y, mittR, 0, Math.PI*2); ctx.fill();
+      });
+
+      // Body-worn accessories, shared with every other style's drawStickman.
+      if(sk.accessory === 'bag'){
+        const bagAnchor = faceDir > 0 ? sk.lHand : sk.rHand;
+        ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(sk.shoulder.x - faceDir*4, sk.shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
+      }
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+
+      // head: plain round white/light head, no hair drawn (the reference character is bald/hairless —
+      // hairStyle 'none' is respected, but any other hairStyle is skipped here on purpose to keep the
+      // silhouette reading as the simple ghost shape rather than a normal character with hair).
+      ctx.fillStyle = '#fbfbfd'; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+
+      // face: two plain solid-black oval eyes (no sclera/pupil split, matching the reference's flat
+      // "googly-less" look) plus a small, minimal mouth driven by the same em.mouth/pose.mouthOpen
+      // every other style already uses, so emotions/talking still read even on this stripped-down face.
+      const wide = Math.max(1, em.eyeScale || 1);
+      const eyeY = sk.head.y - HR*0.05;
+      const eyeSpacing = HR*0.38;
+      const eyeCX = sk.head.x + faceDir*HR*0.1;
+      ctx.fillStyle = '#111';
+      [eyeCX-eyeSpacing, eyeCX+eyeSpacing].forEach(exx=>{
+        ctx.beginPath(); ctx.ellipse(exx, eyeY, 4.2*wide, 7*wide, 0, 0, Math.PI*2); ctx.fill();
+      });
+
+      const mx = sk.head.x + faceDir*HR*0.08, my = sk.head.y + HR*0.5;
+      if(pose.mouthOpen > 0.4){
+        ctx.beginPath(); ctx.ellipse(mx, my, 6, 8, 0, 0, Math.PI*2); ctx.fillStyle = '#111'; ctx.fill();
+      } else if(em.mouth === 'smile'){
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(mx, my-3, 6, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'frown'){
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(mx, my+6, 6, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'o' || em.mouth === 'jawDrop' || em.mouth === 'grimace'){
+        ctx.beginPath(); ctx.ellipse(mx, my, 4.5, em.mouth==='jawDrop'?7:5, 0, 0, Math.PI*2); ctx.fillStyle = '#111'; ctx.fill();
+      } else {
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(mx, my, 3, 1.6, 0, 0, Math.PI*2); ctx.fill();
+      }
+
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
+
+      ctx.fillStyle = '#333'; ctx.font = '12px Arial, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
+      ctx.restore();
+      return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
+    }
+  },
   sketchy: {
     label: 'Hand-Drawn Sketch',
     drawStickman: (x, faceDir, appearance, pose)=>{
