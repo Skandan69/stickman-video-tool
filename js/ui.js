@@ -538,6 +538,101 @@ if(isNaN(idx) || !list[idx]) return;
 });
 refreshLibSelect();
 
+// ---------- Custom Images panel: upload ANY image (hand-drawn character, logo, photo cutout) and drop
+// it into the scene as a free-floating "sticker" layer (js/customElements.js) - positioned/sized/rotated
+// via sliders here, then animated per-segment via a one-click preset dropdown added to segmentCardHtml
+// below (Fade In, Slide In, Pop/Bounce, Spin, Pulse), mirroring the Animals/Vehicles panel pattern above.
+const customImageInput = document.getElementById('customImageInput');
+const customElementList = document.getElementById('customElementList');
+
+if(customImageInput){
+  customImageInput.addEventListener('change', (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onerror = function(){
+      alert('Could not read that file. Please try a different image.');
+      customImageInput.value = '';
+    };
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onload = function(){
+        const longSide = Math.max(img.naturalWidth, img.naturalHeight) || 1;
+        state.scene.customElements.push({ id: uid(), img: img, x: 400, y: 260, scale: Math.min(1, 160/longSide), rotation: 0 });
+        renderCustomElementList();
+        forceRedraw();
+      };
+      img.onerror = function(){
+        alert("That file doesn't look like a valid image. Please pick a JPG, PNG, or similar image file.");
+        customImageInput.value = '';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    customImageInput.value = '';
+  });
+}
+
+function customElementCardHtml(el, idx){
+  return (
+    '<div class="segment-card">' +
+      '<div class="segment-head">' +
+        '<img src="'+el.img.src+'" style="width:28px;height:28px;object-fit:contain;border-radius:4px;background:#f1f2f5;margin-right:6px;" alt="">' +
+        '<strong>Image ' + (idx+1) + '</strong>' +
+        '<div class="segment-actions-row">' +
+          '<button type="button" class="icon-btn danger" data-ecact="remove" data-eid="'+el.id+'">&times;</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="field"><label>X position</label><input type="range" min="0" max="800" step="4" data-efield="x" data-eid="'+el.id+'" value="'+el.x+'"></div>' +
+        '<div class="field"><label>Y position</label><input type="range" min="0" max="450" step="4" data-efield="y" data-eid="'+el.id+'" value="'+el.y+'"></div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="field"><label>Size <span class="size-val" data-esizeval="'+el.id+'">'+(el.scale||1).toFixed(2)+'x</span></label><input type="range" min="0.1" max="3" step="0.05" data-efield="scale" data-eid="'+el.id+'" value="'+(el.scale||1)+'"></div>' +
+        '<div class="field"><label>Rotation</label><input type="range" min="-180" max="180" step="1" data-efield="rotation" data-eid="'+el.id+'" value="'+(el.rotation||0)+'"></div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function findCustomElement(id){ return state.scene.customElements.find(el=> el.id === id); }
+
+function renderCustomElementList(){
+  if(!customElementList) return;
+  customElementList.innerHTML = state.scene.customElements.map((el,idx)=> customElementCardHtml(el, idx)).join('');
+  customElementList.querySelectorAll('[data-efield]').forEach(el=> el.addEventListener('input', onCustomElementFieldChange));
+  customElementList.querySelectorAll('[data-ecact]').forEach(btn=> btn.addEventListener('click', onCustomElementAction));
+}
+
+function onCustomElementFieldChange(e){
+  const id = e.target.getAttribute('data-eid');
+  const field = e.target.getAttribute('data-efield');
+  const el = findCustomElement(id);
+  if(!el) return;
+  if(field === 'x') el.x = parseFloat(e.target.value) || 0;
+  else if(field === 'y') el.y = parseFloat(e.target.value) || 0;
+  else if(field === 'rotation') el.rotation = parseFloat(e.target.value) || 0;
+  else if(field === 'scale'){
+    el.scale = parseFloat(e.target.value) || 1;
+    const label = customElementList.querySelector('[data-esizeval="'+id+'"]');
+    if(label) label.textContent = el.scale.toFixed(2) + 'x';
+  }
+  forceRedraw();
+}
+
+function onCustomElementAction(e){
+  const id = e.currentTarget.getAttribute('data-eid');
+  const act = e.currentTarget.getAttribute('data-ecact');
+  if(act === 'remove'){
+    state.scene.customElements = state.scene.customElements.filter(el=> el.id !== id);
+    state.scene.timeline.forEach(seg=>{ if(seg.elementAnims) delete seg.elementAnims[id]; });
+    renderCustomElementList();
+    renderSegmentList();
+    forceRedraw();
+  }
+}
+renderCustomElementList();
+
 // ---------- Timeline / segment editor ----------
 // 'customPose' is a reserved id, appended after the real CLIP_LIST entries — deliberately NOT added to
 // CLIP_LIST itself, since that array is also read by the AI scene planner/Scene Engine schemas, and
@@ -628,6 +723,14 @@ function segmentCardHtml(seg, idx){
         vertOptions +
         '</select>' + dragNote + '</div>';
     }).join('');
+    // One-click animation preset per uploaded custom image (js/customElements.js), same per-segment
+    // per-entity override pattern as actions/directions above - only rendered when at least one custom
+    // image actually exists, so scenes without any uploaded images show no extra clutter.
+    const elementAnimFieldsHtml = state.scene.customElements.map((el, i)=>{
+      const animVal = (seg.elementAnims && seg.elementAnims[el.id]) || 'none';
+      const options = CUSTOM_ANIM_LIST.map(a=> '<option value="'+a.id+'"'+(a.id===animVal?' selected':'')+'>'+escapeHtml(a.label)+'</option>').join('');
+      return '<div class="field"><label>Image ' + (i+1) + ' animation</label><select data-field="elementAnim_'+el.id+'" data-id="'+seg.id+'">'+options+'</select></div>';
+    }).join('');
     return (
       '<div class="segment-card" draggable="true" data-seg-id="'+seg.id+'">' +
         '<div class="segment-head">' +
@@ -645,6 +748,7 @@ function segmentCardHtml(seg, idx){
           actionFieldsHtml +
         '</div>' +
         '<div class="row">' + directionFieldsHtml + '</div>' +
+        (elementAnimFieldsHtml ? '<div class="row">' + elementAnimFieldsHtml + '</div>' : '') +
         sceneOverrideHtml +
         '<div class="checkbox-field"><input type="checkbox" data-field="povCamera" data-id="'+seg.id+'" '+(seg.povCamera?'checked':'')+'> <label>Driver POV camera (windshield view, if someone is riding/driving)</label></div>' +
         '<div class="checkbox-field"><input type="checkbox" data-field="hasDialogue" data-id="'+seg.id+'" '+(seg.dialogue?'checked':'')+'> <label>Dialogue in this segment</label></div>' +
@@ -942,7 +1046,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0, moveDir: d.moveDir || 1, vertSpeed: d.vertSpeed || 0, vertDir: d.vertDir || 1 }])) };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), elementAnims: Object.assign({}, seg.elementAnims), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0, moveDir: d.moveDir || 1, vertSpeed: d.vertSpeed || 0, vertDir: d.vertDir || 1 }])) };
     state.scene.timeline.splice(idx+1, 0, copy);
   } else if(act === 'clearDrag'){
     const charId = e.currentTarget.getAttribute('data-char');
@@ -1037,6 +1141,10 @@ function onSegmentFieldChange(e){
     seg.background = e.target.value || null;
   } else if(field === 'segWeather'){
     seg.weather = e.target.value || null;
+  } else if(field.indexOf('elementAnim_') === 0){
+    const elId = field.slice('elementAnim_'.length);
+    if(!seg.elementAnims) seg.elementAnims = {};
+    seg.elementAnims[elId] = e.target.value;
   }
   forceRedraw();
 }
