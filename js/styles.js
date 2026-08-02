@@ -24,6 +24,17 @@ const STYLES = {
       [[sk.hip,sk.lKnee,sk.lFoot],[sk.hip,sk.rKnee,sk.rFoot]].forEach(seg=>{
         ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
       });
+      // female-coded skirt accent, same shape/placement as the bold style's skirt (js/render.js)
+      if(sk.gender === 'female'){
+        ctx.beginPath();
+        ctx.moveTo(sk.hip.x-13, sk.hip.y+2);
+        ctx.lineTo(sk.hip.x+13, sk.hip.y+2);
+        ctx.lineTo(sk.hip.x, sk.hip.y+40);
+        ctx.closePath();
+        ctx.fillStyle = glow + '33';
+        ctx.fill();
+        ctx.stroke();
+      }
       ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.shoulder.x,sk.shoulder.y); ctx.stroke();
       [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
         ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
@@ -168,6 +179,19 @@ const STYLES = {
       const midX = (sk.hip.x+sk.shoulder.x)/2, midY = (sk.hip.y+sk.shoulder.y)/2;
       ctx.fillStyle = sk.outfit; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.ellipse(midX, midY, TORSO_LEN*0.46, TORSO_LEN*0.62, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // female-coded skirt accent, flaring out below the belly — scaled up for this style's chubbier
+      // proportions, same idea as the bold style's skirt (js/render.js)
+      if(sk.gender === 'female'){
+        ctx.beginPath();
+        ctx.moveTo(sk.hip.x-22, sk.hip.y+4);
+        ctx.lineTo(sk.hip.x+22, sk.hip.y+4);
+        ctx.lineTo(sk.hip.x, sk.hip.y+55);
+        ctx.closePath();
+        ctx.fillStyle = sk.outfit;
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2.5;
+        ctx.fill(); ctx.stroke();
+      }
 
       // arms: thick capsules, drawn over the torso
       [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
@@ -389,6 +413,16 @@ const STYLES = {
       let seed = x*0.13;
       sketchLine(sk.hip, sk.lKnee, seed++); sketchLine(sk.lKnee, sk.lFoot, seed++);
       sketchLine(sk.hip, sk.rKnee, seed++); sketchLine(sk.rKnee, sk.rFoot, seed++);
+      // female-coded skirt accent, sketched with the same jitter wobble as every other line here
+      if(sk.gender === 'female'){
+        const sj = seed++;
+        ctx.beginPath();
+        ctx.moveTo(sk.hip.x-13+jitter(sj), sk.hip.y+2+jitter(sj+1));
+        ctx.lineTo(sk.hip.x+13+jitter(sj+2), sk.hip.y+2+jitter(sj+3));
+        ctx.lineTo(sk.hip.x+jitter(sj+4), sk.hip.y+38+jitter(sj+5));
+        ctx.closePath();
+        ctx.stroke();
+      }
       sketchLine(sk.hip, sk.shoulder, seed++);
       sketchLine(sk.shoulder, sk.lElbow, seed++); sketchLine(sk.lElbow, sk.lHand, seed++);
       sketchLine(sk.shoulder, sk.rElbow, seed++); sketchLine(sk.rElbow, sk.rHand, seed++);
