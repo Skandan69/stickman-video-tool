@@ -120,56 +120,6 @@
       <label for="customImageInput">Upload an image</label>
       <input type="file" id="customImageInput" accept="image/*">
     </div>
-
-    <hr class="sep">
-    <h2>AI Video (experimental)</h2>
-    <p style="font-size:11px; color:#8a5a00; background:#fff6e0; border:1px solid #f0d896; border-radius:6px; padding:6px 8px; margin:0 0 8px; line-height:1.4;">This calls a real AI video model (Kling, via Replicate) and costs real money per generation, paid for by the site &mdash; unlike everything else in this tool, which is free and runs entirely in your browser. Use sparingly.</p>
-    <div class="field">
-      <label for="aiVideoPrompt">Describe the AI video</label>
-      <textarea id="aiVideoPrompt" rows="3" placeholder="e.g. A doodle-style stick figure character walks through a rainy city street at night, photoreal background" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
-    </div>
-    <div class="field">
-      <label for="aiVideoRefImage">Optional style/character reference image</label>
-      <input type="file" id="aiVideoRefImage" accept="image/*">
-      <img id="aiVideoRefPreview" style="display:none; max-width:100%; margin-top:6px; border-radius:6px;">
-    </div>
-    <div class="field">
-      <label for="aiVideoNegative">Negative prompt (optional &mdash; things to avoid)</label>
-      <input type="text" id="aiVideoNegative" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-    </div>
-    <div class="row" style="gap:8px;">
-      <div class="field" style="flex:1;">
-        <label for="aiVideoDuration">Duration</label>
-        <select id="aiVideoDuration">
-          <option value="3">3s</option>
-          <option value="5" selected>5s</option>
-          <option value="8">8s</option>
-          <option value="10">10s</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1;">
-        <label for="aiVideoMode">Quality</label>
-        <select id="aiVideoMode">
-          <option value="standard" selected>Standard (720p, cheaper)</option>
-          <option value="pro">Pro (1080p)</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1;">
-        <label for="aiVideoAspect">Aspect ratio</label>
-        <select id="aiVideoAspect">
-          <option value="16:9" selected>16:9</option>
-          <option value="9:16">9:16</option>
-          <option value="1:1">1:1</option>
-        </select>
-      </div>
-    </div>
-    <div class="checkbox-field" style="margin:0 0 8px;">
-      <input type="checkbox" id="aiVideoAudio">
-      <label for="aiVideoAudio">Generate native audio</label>
-    </div>
-    <button type="button" id="aiVideoGenerateBtn" class="ai-btn" style="width:100%; margin-bottom:4px;">Generate AI Video</button>
-    <p id="aiVideoStatus" style="font-size:11px; color:var(--muted); margin:0 0 8px; min-height:14px; line-height:1.4;"></p>
-    <div id="aiVideoResult"></div>
   </div>
 
   <div class="stage-wrap">
@@ -296,6 +246,5 @@
 <script src="js/poses.js?v=20260728a"></script>
 <script src="js/scene.js?v=20260801a"></script>
 <script src="js/ui.js?v=20260801a"></script>
-<script src="js/aiVideo.js?v=20260802a"></script>
 </body>
 </html>
