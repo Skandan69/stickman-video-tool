@@ -476,6 +476,155 @@ const STYLES = {
       ctx.restore();
       return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
     }
+  },
+  stickerDoodle: {
+    label: 'Sticker Doodle',
+    // A "hand-drawn sticker mascot" look with full arms/legs, a spiky messy hair crown, big round
+    // googly eyes with separate expressive eyebrows (one per eye, not a single bar), crisp white
+    // sneakers, and rounded fist hands — designed to read well as a sticker composited over a real
+    // photo background (the "Custom photo..." option in js/backgrounds.js), same spirit as Doodle
+    // Ghost but with a completely different, more standard mascot silhouette (visible limbs, not a
+    // legless blob). Still driven entirely by computeSkeleton()'s shared joint math and the EMOTIONS
+    // registry, so every existing pose/action/emotion (including headBoost/armPose "Extreme
+    // reactions") drives this face/body the same way it drives every other style.
+    drawStickman: (x, faceDir, appearance, pose)=>{
+      const sk = computeSkeleton(x, faceDir, appearance, pose);
+      const em = EMOTIONS[sk.emotion] || EMOTIONS.neutral;
+      const limbW = LW * 1.7;
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // legs: outfit-colored capsule limbs, black outline, ending in crisp white sneakers
+      [[sk.hip,sk.lKnee,sk.lFoot],[sk.hip,sk.rKnee,sk.rFoot]].forEach(seg=>{
+        ctx.strokeStyle = sk.outfit; ctx.lineWidth = limbW;
+        ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
+      });
+      [sk.lFoot, sk.rFoot].forEach(p=>{
+        ctx.fillStyle = '#fefefe'; ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.ellipse(p.x+faceDir*4, p.y, 9, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      });
+
+      // female-coded skirt accent, same idea as every other style's skirt
+      if(sk.gender === 'female'){
+        ctx.beginPath();
+        ctx.moveTo(sk.hip.x-14, sk.hip.y+2);
+        ctx.lineTo(sk.hip.x+14, sk.hip.y+2);
+        ctx.lineTo(sk.hip.x, sk.hip.y+42);
+        ctx.closePath();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8;
+        ctx.fill(); ctx.stroke();
+      }
+
+      // torso: thick outfit-colored capsule line with a thin black outline stroke on top
+      ctx.strokeStyle = sk.outfit; ctx.lineWidth = limbW*1.3;
+      ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.shoulder.x,sk.shoulder.y); ctx.stroke();
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(sk.hip.x,sk.hip.y); ctx.lineTo(sk.shoulder.x,sk.shoulder.y); ctx.stroke();
+
+      // arms: capsule limbs ending in rounded fists
+      [[sk.shoulder,sk.lElbow,sk.lHand],[sk.shoulder,sk.rElbow,sk.rHand]].forEach(seg=>{
+        ctx.strokeStyle = sk.outfit; ctx.lineWidth = limbW;
+        ctx.beginPath(); ctx.moveTo(seg[0].x,seg[0].y); ctx.lineTo(seg[1].x,seg[1].y); ctx.lineTo(seg[2].x,seg[2].y); ctx.stroke();
+      });
+      [sk.lHand, sk.rHand].forEach(p=>{
+        ctx.fillStyle = sk.skin; ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      });
+
+      // Body-worn accessories, shared with every other style's drawStickman.
+      if(sk.accessory === 'bag'){
+        const bagAnchor = faceDir > 0 ? sk.lHand : sk.rHand;
+        ctx.strokeStyle = '#5a3d24'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(sk.shoulder.x - faceDir*4, sk.shoulder.y); ctx.lineTo(bagAnchor.x, bagAnchor.y-6); ctx.stroke();
+        ctx.fillStyle = sk.outfit; ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(bagAnchor.x-7, bagAnchor.y-6, 14, 12); ctx.fill(); ctx.stroke();
+      }
+      if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
+      if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
+      if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
+      if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
+      if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+
+      // head: skin-colored circle, black outline
+      ctx.fillStyle = sk.skin; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      // messy spiky "crown" of hair — the style's signature silhouette, kept as one simplified
+      // zigzag shape (not the full hairStyle registry) so it always reads as this style's messy-doodle
+      // look; hairColor customization still carries through, and 'none' still means no hair drawn.
+      if(sk.hairStyle !== 'none'){
+        ctx.fillStyle = sk.hairColor; ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
+        const spikes = 7;
+        ctx.beginPath();
+        ctx.moveTo(sk.head.x - HEAD_R*1.05, sk.head.y - HEAD_R*0.1);
+        for(let i=0;i<=spikes;i++){
+          const t = i/spikes;
+          const ang = Math.PI*(1.08 - t*1.16);
+          const baseX = sk.head.x + Math.cos(ang)*HEAD_R*1.05;
+          const baseY = sk.head.y - Math.sin(ang)*HEAD_R*1.05;
+          const tipLen = 1.55 + (i%2 ? 0.25 : 0);
+          const tipX = sk.head.x + Math.cos(ang)*HEAD_R*tipLen;
+          const tipY = sk.head.y - Math.sin(ang)*HEAD_R*tipLen;
+          ctx.lineTo(tipX, tipY);
+          ctx.lineTo(baseX, baseY);
+        }
+        ctx.lineTo(sk.head.x + HEAD_R*1.05, sk.head.y - HEAD_R*0.1);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+      }
+      if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
+      if(sk.accessory === 'chefhat') drawChefHat(sk.head);
+      if(sk.accessory === 'police') drawPoliceCap(sk.head);
+      if(sk.accessory === 'headband') drawHeadband(sk.head, sk.outfit);
+      if(sk.accessory === 'crown') drawCrown(sk.head);
+      if(sk.accessory === 'wizardhat') drawWizardHat(sk.head);
+      if(sk.accessory === 'helmet') drawHelmet(sk.head);
+
+      // face: big round white googly eyes + two separate bold expressive eyebrows (one per eye) +
+      // mouth — same em.browLeftY/browRightY/mouth/eyeScale fields every other style's face already
+      // uses, so all existing emotions (including talking + Extreme reactions) drive this face too.
+      const wide = Math.max(1, em.eyeScale || 1);
+      const eyeY = sk.head.y - HEAD_R*0.08;
+      const eyeSpacing = HEAD_R*0.4;
+      const eyeCX = sk.head.x + faceDir*HEAD_R*0.1;
+      const lEyeX = eyeCX - eyeSpacing, rEyeX = eyeCX + eyeSpacing;
+      const r = 5.2*wide;
+      [lEyeX, rEyeX].forEach(exx=>{
+        ctx.beginPath(); ctx.ellipse(exx, eyeY, r*0.8, r, 0, 0, Math.PI*2);
+        ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(exx + faceDir*r*0.15, eyeY + r*0.1, r*0.4, 0, Math.PI*2); ctx.fillStyle = '#111'; ctx.fill();
+      });
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(lEyeX - r*0.9, eyeY - r*1.3 + em.browLeftY*0.4); ctx.lineTo(lEyeX + r*0.7, eyeY - r*1.6 + em.browLeftY*0.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rEyeX - r*0.7, eyeY - r*1.6 + em.browRightY*0.4); ctx.lineTo(rEyeX + r*0.9, eyeY - r*1.3 + em.browRightY*0.4); ctx.stroke();
+
+      const mx = sk.head.x + faceDir*HEAD_R*0.08, my = sk.head.y + HEAD_R*0.55;
+      ctx.lineWidth = 2.4;
+      if(pose.mouthOpen > 0.4){
+        ctx.beginPath(); ctx.ellipse(mx, my, 6*Math.max(1,wide*0.7), 8*Math.max(1,wide*0.7), 0, 0, Math.PI*2);
+        ctx.fillStyle = '#7a2020'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.stroke();
+      } else if(em.mouth === 'smile'){
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.arc(mx, my-3, 7, 0.1*Math.PI, 0.9*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'frown'){
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.arc(mx, my+6, 7, 1.1*Math.PI, 1.9*Math.PI); ctx.stroke();
+      } else if(em.mouth === 'o' || em.mouth === 'jawDrop' || em.mouth === 'grimace'){
+        ctx.beginPath(); ctx.ellipse(mx, my, 5, em.mouth==='jawDrop'?9:6, 0, 0, Math.PI*2);
+        ctx.fillStyle = '#7a2020'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.stroke();
+      } else {
+        ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.moveTo(mx-6,my); ctx.lineTo(mx+6,my); ctx.stroke();
+      }
+
+      if(sk.accessory === 'glasses') drawGlasses(sk.head);
+      if(sk.accessory === 'doctor') drawStethoscope(sk.neck);
+      if(sk.accessory === 'mask') drawMask(sk.head);
+      if(sk.accessory === 'earrings') drawEarrings(sk.head);
+
+      ctx.fillStyle = '#333'; ctx.font = 'bold 12px Arial, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(sk.name, sk.hip.x, GROUND_Y + 18);
+      ctx.restore();
+      return { leftHand: sk.lHand, rightHand: sk.rHand, head: sk.head };
+    }
   }
 };
 const STYLE_LIST = Object.keys(STYLES).map(id => ({ id, label: STYLES[id].label }));
