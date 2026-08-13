@@ -20,6 +20,14 @@
   <button type="button" id="startSceneDesignBtn">Start designing &rarr;</button>
 </div>
 
+<div class="scene-designer-cta" style="background:linear-gradient(135deg,#fff7ed,#fffbeb); border-color:#fed7aa;">
+  <div class="scene-designer-cta-text">
+    <strong>&#9998; Flipbook Animator</strong>
+    <p>Draw your own frame-by-frame animation from scratch &mdash; sketch a frame, click "+ Add" for the next one (the faint outline of the last frame, the onion skin, stays visible so you can line up the motion), then play it back or export it as a real .webm video.</p>
+  </div>
+  <button type="button" id="startFlipbookBtn" style="background:linear-gradient(135deg,#f59e0b,#ea580c);">Start drawing &rarr;</button>
+</div>
+
 <div class="layout">
 
   <div class="panel">
@@ -224,6 +232,52 @@
   </div>
 </div>
 
+<div id="flipbookOverlay" class="designer-overlay" style="display:none;">
+  <div class="designer-panel">
+    <div class="designer-head">
+      <h2>Flipbook Animator</h2>
+      <button type="button" id="flipbookCloseBtn" class="icon-btn" title="Close">&times;</button>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">Draw a frame, click "+ Add" for the next one &mdash; the faint outline of the previous frame (the onion skin) stays visible so you can line up the motion. Play it back, or export it as a real .webm video.</p>
+    <div class="designer-body">
+      <div class="flip-stage">
+        <canvas id="flipCanvas"></canvas>
+        <canvas id="flipGhost"></canvas>
+      </div>
+      <div class="designer-controls">
+        <h3 style="margin:0 0 6px; font-size:13px;">Brush</h3>
+        <div class="row" style="gap:6px; margin-bottom:10px;">
+          <button type="button" id="flipBrushPencil" class="secondary small on">&#9998; Pencil</button>
+          <button type="button" id="flipBrushEraser" class="secondary small">Eraser</button>
+        </div>
+        <h3 style="margin:0 0 6px; font-size:13px;">Colour</h3>
+        <div id="flipPalette" class="flip-palette"></div>
+        <input type="color" id="flipColourPick" value="#1b1f27" style="width:100%; height:32px; margin-top:8px; padding:2px;">
+        <h3 style="margin:14px 0 6px; font-size:13px;">Size <span id="flipSizeVal">8</span></h3>
+        <input type="range" id="flipSize" min="1" max="40" value="8" style="width:100%;">
+
+        <h3 style="margin:14px 0 6px; font-size:13px;">Frames</h3>
+        <div class="row" style="gap:6px;">
+          <button type="button" id="flipAddBtn" class="secondary small">+ Add</button>
+          <button type="button" id="flipDupBtn" class="secondary small">Copy</button>
+          <button type="button" id="flipDelBtn" class="secondary small">&times; Delete</button>
+        </div>
+        <div id="flipStrip" class="flip-strip"></div>
+
+        <h3 style="margin:14px 0 6px; font-size:13px;">Speed <span id="flipFpsVal">8 fps</span></h3>
+        <input type="range" id="flipFps" min="2" max="24" value="8" style="width:100%;">
+        <h3 style="margin:14px 0 6px; font-size:13px;">Onion skin <span id="flipOnionVal">30%</span></h3>
+        <input type="range" id="flipOnion" min="0" max="80" value="30" style="width:100%;">
+
+        <div class="row" style="gap:6px; margin-top:14px;">
+          <button type="button" id="flipPlayBtn" class="secondary" style="flex:1;">Play</button>
+        </div>
+        <button type="button" id="flipExportBtn" class="ai-btn" style="width:100%; margin-top:8px;">Export Video (.webm)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes", seating like "sofa", animals like "dog" or "cat", and vehicles like "car" or "bicycle" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <!-- ?v= cache-busting query param: bump this on every deploy so a browser tab that already has this
@@ -246,5 +300,6 @@
 <script src="js/poses.js?v=20260728a"></script>
 <script src="js/scene.js?v=20260801a"></script>
 <script src="js/ui.js?v=20260801a"></script>
+<script src="js/flipbook.js?v=20260814a"></script>
 </body>
 </html>
