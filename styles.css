@@ -1,20 +1,32 @@
 :root{
-  --bg:#f4f5f7; --panel:#ffffff; --border:#e2e4e9; --text:#1f2430;
-  --muted:#6b7280; --accent:#2563eb; --accent-hover:#1d4ed8;
+  --bg:#faf8ff; --panel:#ffffff; --border:#e2e4e9; --text:#1f2430;
+  --muted:#6b7280; --accent:#7c3aed; --accent-hover:#6d28d9; --accent-pink:#ec4899;
 }
 *{box-sizing:border-box;}
 body{
-  margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text);
-  display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  margin:0; font-family:'Segoe UI',Arial,sans-serif; color:var(--text);
+  background:linear-gradient(180deg,#f5eeff 0%,#fdfbff 420px,var(--bg) 420px);
+  display:flex; flex-direction:column; align-items:center; padding:0 16px 60px;
 }
-h1{font-size:20px; margin:0 0 4px;}
-.subtitle{color:var(--muted); font-size:13px; margin:0 0 20px; text-align:center; max-width:640px;}
+h1{font-size:34px; font-weight:800; letter-spacing:-0.5px; margin:8px 0 8px; color:#1e1436; text-align:center; max-width:760px;}
+h1 .hl{background:linear-gradient(135deg,#7c3aed,#f59e0b); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.subtitle{color:#5b5578; font-size:15px; margin:0 0 16px; text-align:center; max-width:640px; line-height:1.6;}
+.site-nav{ width:100%; max-width:1150px; margin:0 auto; padding:18px 4px 10px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.site-nav-logo{ font-weight:800; font-size:18px; color:#3c2a86; display:flex; align-items:center; gap:8px; }
+.site-nav-logo .dot{ width:9px; height:9px; border-radius:50%; background:#f59e0b; display:inline-block; }
+.site-nav nav{ display:flex; gap:22px; }
+.site-nav nav a{ font-size:13px; color:#55507a; text-decoration:none; font-weight:600; cursor:pointer; }
+.site-nav nav a:hover{ color:#3c2a86; }
+.nav-cta{ background:linear-gradient(135deg,#7c3aed,#ec4899); color:#fff; padding:9px 18px; border-radius:999px; font-weight:700; font-size:13px; border:none; cursor:pointer; }
+.nav-cta:hover{ background:linear-gradient(135deg,#6d28d9,#db2777); }
+.hero-badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:0 0 22px; }
+.hero-badges span{ background:#f4eefe; color:#6d28d9; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; }
 .layout{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; align-items:flex-start; width:100%; max-width:1650px;}
 .panel{
-  background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px;
+  background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:14px;
   width:296px; flex-shrink:0;
   max-height: calc(100vh - 170px); overflow-y: auto;
-  box-shadow:0 1px 2px rgba(15,17,23,0.04);
+  box-shadow:0 2px 10px rgba(124,58,237,0.06);
 }
 .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 10px;}
 .field{margin-bottom:12px;}
@@ -31,19 +43,19 @@ input[type=color]{width:42px; height:28px; border:1px solid var(--border); borde
 .color-row{display:flex; align-items:center; gap:10px;}
 .checkbox-field{display:flex; align-items:center; gap:6px; font-size:13px; margin:8px 0;}
 .stage-wrap{
-  background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px;
+  background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:14px;
   display:flex; flex-direction:column; align-items:center; gap:12px;
   flex-shrink:0; max-height: calc(100vh - 170px); overflow-y: auto;
-  box-shadow:0 1px 2px rgba(15,17,23,0.04);
+  box-shadow:0 2px 10px rgba(124,58,237,0.06);
 }
 canvas{background:#fff; border-radius:8px; border:1px solid var(--border); max-width:100%;}
 .controls-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;}
 button{
-  border:none; border-radius:7px; padding:9px 16px; font-size:13px; cursor:pointer;
+  border:none; border-radius:10px; padding:9px 16px; font-size:13px; cursor:pointer;
   background:var(--accent); color:#fff; font-weight:600;
   transition:background-color .15s ease, transform .05s ease, box-shadow .15s ease;
 }
-button:hover{background:var(--accent-hover);}
+button:hover{background:var(--accent-hover); box-shadow:0 6px 14px rgba(124,58,237,.22);}
 button:active:not(:disabled){transform:scale(0.97);}
 button.secondary{background:#eef0f4; color:var(--text);}
 button.secondary:hover{background:#e2e4e9;}
@@ -137,8 +149,9 @@ hr.sep{border:none; border-top:1px solid var(--border); margin:14px 0;}
    .ai-btn so it reads as "the smart/premium capability" the way the AI generate button already does. */
 .scene-designer-cta{
   width:100%; max-width:1150px; margin:0 auto 18px; box-sizing:border-box;
-  background:linear-gradient(135deg,#f5f3ff,#fdf4ff); border:1px solid #ddd6fe; border-radius:12px;
+  background:linear-gradient(135deg,#f5f3ff,#fdf4ff); border:1px solid #ddd6fe; border-radius:18px;
   padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+  box-shadow:0 8px 24px rgba(124,58,237,.08);
 }
 .scene-designer-cta-text strong{font-size:14px; color:#4c1d95;}
 .scene-designer-cta-text p{font-size:12px; color:#5b21b6; margin:4px 0 0; line-height:1.5; max-width:720px;}
