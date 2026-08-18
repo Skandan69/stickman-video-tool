@@ -443,6 +443,16 @@ function computeSegmentStartPositions(scene, timeline, homePositions){
                                         const dist = MOVE_SPEEDS[clipId] * Math.max(0.1, seg.duration);
                                         runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
                             }
+                  } else if(clipId === 'customPose'){
+                            // Hand-designed moves (js/ui.js Pose Designer) carry their own moveSpeed/moveDir instead of
+                            // living in MOVE_SPEEDS — read from seg.customPoses[charId] (js/poses.js's evalKeyframePose
+                            // consumes the same object for the actual per-frame pose, wired up in evaluateScene below).
+                            const cp = seg.customPoses && seg.customPoses[c.id];
+                            if(cp && cp.moveSpeed){
+                                        const dir = resolveFaceDir(seg, c.id, homePositions[i].faceDir) * (cp.moveDir || 1);
+                                        const dist = cp.moveSpeed * Math.max(0.1, seg.duration);
+                                        runningX[i] = clamp(runningX[i] + dist*dir, 60, W-60);
+                            }
                   }
           });
           return startX;
@@ -464,6 +474,12 @@ function computeSegmentStartAltitudes(scene, timeline){
                             const vdir = resolveVerticalDir(seg, c.id);
                             if(vdir !== 0){
                                         const dAlt = VERTICAL_SPEEDS[clipId] * Math.max(0.1, seg.duration) * vdir;
+                                        running[i] = clamp(running[i] + dAlt, 0, MAX_ALTITUDE);
+                            }
+                  } else if(clipId === 'customPose'){
+                            const cp = seg.customPoses && seg.customPoses[c.id];
+                            if(cp && cp.vertSpeed){
+                                        const dAlt = cp.vertSpeed * Math.max(0.1, seg.duration) * (cp.vertDir || 1);
                                         running[i] = clamp(running[i] + dAlt, 0, MAX_ALTITUDE);
                             }
                   }
@@ -493,7 +509,12 @@ function evaluateScene(scene, t){
         const clipId = (active.actions && active.actions[appearance.id]) || 'idle';
         const speaking = clipId === 'talk' && active.dialogue && active.dialogue.speakerId === appearance.id;
         const preset = applyBodyScale(appearance.bodyType, appearance.sizeScale, appearance.build); // must be active before the pose is computed (arm IK reads current geometry)
-                                              const pose = (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
+                                              // A hand-designed move (js/ui.js Pose Designer) isn't in CLIPS — it's a saved keyframe
+                                              // list in active.customPoses[charId], interpolated by js/poses.js's evalKeyframePose (the same
+                                              // function the Designer's own in-modal preview uses), so a saved custom move actually plays back
+                                              // here instead of silently falling through to idle.
+                                              const customPose = clipId === 'customPose' ? (active.customPoses && active.customPoses[appearance.id]) : null;
+                                              const pose = customPose ? evalKeyframePose(localT, customPose.keyframes) : (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
         pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
                                               const faceDir = resolveFaceDir(active, appearance.id, positions[i].faceDir);
         // Flying characters climbing/descending this segment (vdir!=0) hold x still and travel on the
@@ -514,9 +535,14 @@ function evaluateScene(scene, t){
                 x = clamp(activeStartX[i], 60, W-60);
                 altitude = clamp(activeStartAlt[i] + VERTICAL_SPEEDS[clipId]*localT*vdir, 0, MAX_ALTITUDE);
         } else {
-                const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir : 0;
+                // customPose's own moveSpeed/moveDir/vertSpeed/vertDir (set via the Pose Designer's forward/
+                // backward + up/down controls) drive travel the same way MOVE_SPEEDS/VERTICAL_SPEEDS do for
+                // built-in clips like walk/run/flyplane.
+                const travelled = isMoveClip(clipId) ? MOVE_SPEEDS[clipId]*localT*faceDir
+                                    : (customPose && customPose.moveSpeed) ? customPose.moveSpeed*localT*faceDir*(customPose.moveDir||1) : 0;
+                const vertTravelled = (customPose && customPose.vertSpeed) ? customPose.vertSpeed*localT*(customPose.vertDir||1) : 0;
                 x = clamp(activeStartX[i] + travelled, 60, W-60);
-                altitude = activeStartAlt[i];
+                altitude = clamp(activeStartAlt[i] + vertTravelled, 0, MAX_ALTITUDE);
         }
         pose.altitude = altitude; // read by computeSkeleton (js/render.js) to lift the whole skeleton
                                               return { id: appearance.id, x: x, faceDir: faceDir, appearance: appearance, clipId: clipId, pose: pose };
