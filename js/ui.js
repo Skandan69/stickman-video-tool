@@ -7,10 +7,12 @@ let lastFrame = null;
 function loop(now){
   const dt = (now - lastNow)/1000;
   lastNow = now;
-  // While the Pose Designer is open, it takes over the single shared canvas (reparented into the
-  // designer panel, see openPoseDesigner below) to preview the move being built, instead of the normal
-  // scene — same renderFrame pipeline either way, just a different (synthesized) frame object.
-  if(typeof designer !== 'undefined' && designer.active){
+  // Stickman Duel (js/duel.js) also takes over the single shared canvas while open, same reparenting
+  // trick as the Pose Designer below — checked first since Duel and the Designer are never open at the
+  // same time, but if they somehow were, the faster-paced game loop should win the canvas.
+  if(typeof duel !== 'undefined' && duel.active){
+    tickDuel(dt);
+  } else if(typeof designer !== 'undefined' && designer.active){
     if(designer.playing) designer.elapsed += dt;
     const pose = designer.playing ? evalKeyframePose(designer.elapsed, designer.keyframes) : Object.assign({}, designer.currentPose);
     pose.altitude = 0;
