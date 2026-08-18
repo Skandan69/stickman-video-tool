@@ -32,8 +32,24 @@
 </head>
 <body>
 
-<h1>Stickman Video Studio — Free Stickman Animation Maker</h1>
+<header class="site-nav">
+  <div class="site-nav-logo"><span class="dot"></span>Stickman Studio</div>
+  <nav>
+    <a id="navAiLink">AI Generator</a>
+    <a id="navDesignLink">Pose Designer</a>
+    <a id="navFlipbookLink">Flipbook</a>
+  </nav>
+  <button type="button" id="navStartBtn" class="nav-cta">Start creating</button>
+</header>
+
+<h1>Stickman Video Studio — Free Stickman <span class="hl">Animation Maker</span></h1>
 <p class="subtitle">Make stick figure animation videos free, right in your browser — no sign-up, no download. Describe a scene and AI builds it, or hand-pose every move yourself with the Pose Designer. Add weapons and effects, pick from 7 art styles, and export a real .webm video.</p>
+<div class="hero-badges">
+  <span>★ AI scene generator</span>
+  <span>★ Pose Designer</span>
+  <span>★ Weapons &amp; effects</span>
+  <span>★ 7 art styles</span>
+</div>
 <!-- Prominent entry point for the Pose Designer (js/ui.js's openPoseDesigner) — the dropdown option
      ("Design your own...") still exists in every segment's action select, but this callout makes the
      capability itself discoverable rather than requiring someone to already know it's there. -->
@@ -356,6 +372,19 @@
      page open (or a browser/CDN that ignores the cache-control header) always fetches the new file
      instead of silently continuing to run old JS after a fix ships — this bit us directly: a user kept
      reporting an already-fixed bug because their open tab was still running a stale cached ui.js. -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  function go(id){ var el = document.getElementById(id); if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); if(el.focus) el.focus(); } }
+  var aiLink = document.getElementById('navAiLink');
+  if(aiLink) aiLink.addEventListener('click', function(){ go('promptInput'); });
+  var designLink = document.getElementById('navDesignLink');
+  if(designLink) designLink.addEventListener('click', function(){ var btn = document.getElementById('startSceneDesignBtn'); if(btn) btn.click(); });
+  var flipLink = document.getElementById('navFlipbookLink');
+  if(flipLink) flipLink.addEventListener('click', function(){ var btn = document.getElementById('startFlipbookBtn'); if(btn) btn.click(); });
+  var startBtn = document.getElementById('navStartBtn');
+  if(startBtn) startBtn.addEventListener('click', function(){ go('promptInput'); });
+});
+</script>
 <script src="js/humanTypes.js?v=20260728a"></script>
 <script src="js/helpers.js?v=20260728a"></script>
 <script src="js/character.js?v=20260728a"></script>
