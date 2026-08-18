@@ -674,6 +674,24 @@ function poseSlash(t){
     mouthOpen: 0
   };
 }
+// "Hug from behind" — the one clip in this file where the pose ISN'T fully self-contained: this
+// function only supplies the fallback/base pose (used when there's no one else in the scene to hug, or
+// as the anchor pose before arm angles get overridden). The real arm-wrap IK, aimed at wherever the
+// OTHER character's torso actually is that frame, is computed in js/scene.js's evaluateScene — as a
+// second pass, after every character's own position/pose is already resolved — since that's the only
+// place with access to both characters' real computed skeletons at once. See evaluateScene's
+// "Hug from behind" block for the actual reach math (reuses armReachAngles, the same 2-bone IK the Pose
+// Designer's drag-to-pose handles and the reach-for-a-coffee-cup poses above already use).
+function poseHugBehind(t){
+  const settle = Math.min(1, t/0.6);
+  return {
+    torsoLean: 0.1*settle, headTilt: 0.05*settle, bounceY: Math.sin(t*2)*0.8,
+    leftShoulderAngle: 0.5, leftElbowBend: -0.3,
+    rightShoulderAngle: 0.5, rightElbowBend: -0.3,
+    leftHipAngle: 0, leftKneeBend: 0, rightHipAngle: 0, rightKneeBend: 0,
+    mouthOpen: 0
+  };
+}
 const CLIPS = {
   idle: { label:'Idle', pose:(t,opts)=>poseIdle(t, opts&&opts.phase) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking), opts&&opts.phase) },
@@ -726,7 +744,8 @@ const CLIPS = {
   flyplane: { label:'Fly a Plane', pose:(t)=>poseFly(t) },
   flyhelicopter: { label:'Pilot a Helicopter', pose:(t)=>poseFly(t) },
   shoot: { label:'Shoot', pose:(t)=>poseShoot(t) },
-  slash: { label:'Sword Slash', pose:(t)=>poseSlash(t) }
+  slash: { label:'Sword Slash', pose:(t)=>poseSlash(t) },
+  hugbehind: { label:'Hug from Behind', pose:(t)=>poseHugBehind(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -746,7 +765,7 @@ const CLIP_LIST = [
   {id:'drivecar', label:'Drive a Car'}, {id:'drivesportscar', label:'Drive a Sports Car'}, {id:'drivelimo', label:'Drive a Limo'},
   {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'},
   {id:'flyplane', label:'Fly a Plane'}, {id:'flyhelicopter', label:'Pilot a Helicopter'},
-  {id:'shoot', label:'Shoot'}, {id:'slash', label:'Sword Slash'}
+  {id:'shoot', label:'Shoot'}, {id:'slash', label:'Sword Slash'}, {id:'hugbehind', label:'Hug from Behind'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
