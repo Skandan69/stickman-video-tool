@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stickman Video Studio — Free Stickman &amp; Stick Figure Animation Maker</title>
-<meta name="description" content="Free stickman animation maker — no sign-up, no download, no paywall. AI scene generator or hand-pose your own moves with the Pose Designer. Weapons, effects, and 7 art styles. A free Pivot Animator and Stick Nodes alternative.">
-<meta name="keywords" content="stickman animation maker, stick figure animation online, free stickman video maker, stick figure animator online, stickman maker, stickman video maker, stick figure maker, AI stickman video generator, Pivot Animator alternative, Stick Nodes alternative, Stick Studio Pro alternative, browser animation tool, no download animation tool, frame by frame animation, keyframe animation online, 2D stick figure animation, animate stick figure online, stickman fight animation, free stick figure animator, online animator no signup">
+<meta name="description" content="Free stickman animation maker — no sign-up, no download, no paywall. Describe a scene and it builds instantly, or hand-pose your own moves with the Pose Designer. Weapons, effects, and 7 art styles. A free Pivot Animator and Stick Nodes alternative.">
+<meta name="keywords" content="stickman animation maker, stick figure animation online, free stickman video maker, stick figure animator online, stickman maker, stickman video maker, stick figure maker, Pivot Animator alternative, Stick Nodes alternative, Stick Studio Pro alternative, browser animation tool, no download animation tool, frame by frame animation, keyframe animation online, 2D stick figure animation, animate stick figure online, stickman fight animation, free stick figure animator, online animator no signup">
 <link rel="canonical" href="https://stickman-video-tool.vercel.app/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Stickman Video Studio">
 <meta property="og:title" content="Stickman Video Studio — Free Stickman &amp; Stick Figure Animation Maker">
-<meta property="og:description" content="Free stickman animation maker — no sign-up, no download, no paywall. AI scene generator or hand-pose your own moves. Weapons, effects, and 7 art styles.">
+<meta property="og:description" content="Free stickman animation maker — no sign-up, no download, no paywall. Describe a scene and it builds instantly, or hand-pose your own moves. Weapons, effects, and 7 art styles.">
 <meta property="og:url" content="https://stickman-video-tool.vercel.app/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Stickman Video Studio — Free Stickman &amp; Stick Figure Animation Maker">
-<meta name="twitter:description" content="Free stickman &amp; stick figure animation maker — AI scene generator, hand-posing, weapons and effects, 7 art styles. No sign-up, no paywall.">
+<meta name="twitter:description" content="Free stickman &amp; stick figure animation maker — instant scene builder, hand-posing, weapons and effects, 7 art styles. No sign-up, no paywall.">
 <meta name="theme-color" content="#7c3aed">
 <script type="application/ld+json">
 {
@@ -24,7 +24,7 @@
   "url": "https://stickman-video-tool.vercel.app/",
   "applicationCategory": "MultimediaApplication",
   "operatingSystem": "Any (runs in browser)",
-  "description": "Free browser-based stickman animation and stick figure video maker — no sign-up, no download, no paywall. Describe a scene and AI builds it, or hand-pose every move with the Pose Designer. Includes weapons and effects, a frame-by-frame Flipbook Animator, and 7 art styles. A free alternative to Pivot Animator, Stick Nodes, and Stick Studio Pro.",
+  "description": "Free browser-based stickman animation and stick figure video maker — no sign-up, no download, no paywall. Describe a scene and it builds instantly, or hand-pose every move with the Pose Designer. Includes weapons and effects, a frame-by-frame Flipbook Animator, and 7 art styles. A free alternative to Pivot Animator, Stick Nodes, and Stick Studio Pro.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
@@ -35,7 +35,7 @@
 <header class="site-nav">
   <div class="site-nav-logo"><span class="dot"></span>Stickman Studio</div>
   <nav>
-    <a id="navAiLink">AI Generator</a>
+    <a id="navAiLink">Scene Builder</a>
     <a id="navDesignLink">Pose Designer</a>
     <a id="navFlipbookLink">Flipbook</a>
     <a id="navDuelLink">Duel</a>
@@ -44,9 +44,9 @@
 </header>
 
 <h1>Stickman Video Studio — Free Stickman <span class="hl">Animation Maker</span></h1>
-<p class="subtitle">Make stick figure animation videos free, right in your browser — no sign-up, no download. Describe a scene and AI builds it, or hand-pose every move yourself with the Pose Designer. Add weapons and effects, pick from 7 art styles, and export a real .webm video.</p>
+<p class="subtitle">Make stick figure animation videos free, right in your browser — no sign-up, no download. Describe a scene and it builds instantly, or hand-pose every move yourself with the Pose Designer. Add weapons and effects, pick from 7 art styles, and export a real .webm video.</p>
 <div class="hero-badges">
-  <span>★ AI scene generator</span>
+  <span>★ Instant scene builder</span>
   <span>★ Pose Designer</span>
   <span>★ Weapons &amp; effects</span>
   <span>★ 7 art styles</span>
@@ -87,7 +87,6 @@
       <textarea id="promptInput" rows="3" placeholder="e.g. A stickman walks into a cafe, sits down, drinks coffee, then talks on the phone for 2 minutes" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
     </div>
     <button type="button" id="generateBtn" style="width:100%; margin-bottom:4px;">Generate from description</button>
-    <button type="button" id="aiGenerateBtn" class="ai-btn" style="width:100%; margin-bottom:4px;">&#10024; Generate with AI</button>
     <p id="generateStatus" style="font-size:11px; color:var(--muted); margin:0 0 10px; min-height:14px; line-height:1.4;"></p>
     <hr class="sep">
     <div class="field">
@@ -374,8 +373,8 @@
 <section class="seo-guide" style="max-width:900px; margin:40px auto 0; padding:0 16px;">
   <h2 style="font-size:22px; margin-bottom:10px;">How to animate stick figures (a quick guide)</h2>
   <p style="line-height:1.6; color:var(--muted);">Stick figure animation has always been the easiest way to start animating, because the rig is already built for you — you are posing and moving a character rather than drawing one from scratch. This stickman animation maker gives you two ways in: describe a scene in plain English and let AI build the whole timeline, or open the Pose Designer and hand-craft every frame yourself, the same way traditional stick figure animators like Pivot Animator or Stick Nodes work, just without installing anything.</p>
-  <h3 style="font-size:17px; margin:18px 0 6px;">Start with AI, then fine-tune by hand</h3>
-  <p style="line-height:1.6; color:var(--muted);">Typing something like "a stickman walks into a cafe, sits down, and drinks coffee" builds a full timeline automatically — background, actions, and timing included. From there you can edit any segment, swap an action, or open the Pose Designer on a single character to hand-pose a custom move the built-in action list does not cover.</p>
+  <h3 style="font-size:17px; margin:18px 0 6px;">Start with the scene builder, then fine-tune by hand</h3>
+  <p style="line-height:1.6; color:var(--muted);">Typing something like "a stickman walks into a cafe, sits down, and drinks coffee" builds a full timeline instantly — background, actions, and timing included, using built-in keyword understanding rather than a live AI call. From there you can edit any segment, swap an action, or open the Pose Designer on a single character to hand-pose a custom move the built-in action list does not cover.</p>
   <h3 style="font-size:17px; margin:18px 0 6px;">Design your own scene, step by step</h3>
   <p style="line-height:1.6; color:var(--muted);">The AI generator is the fast path, but the "Design Your Own Scene" tool is how you build a move nothing on the built-in action list covers — a specific punch combo, a signature dance, a custom sword stance. Here is the exact flow:</p>
   <ol style="line-height:1.8; color:var(--muted); padding-left:20px;">
@@ -402,7 +401,7 @@
   <h3 style="font-size:16px; margin:14px 0 4px;">What art styles are available?</h3>
   <p style="line-height:1.6; color:var(--muted);">Seven so far: Bold Cartoon, Neon Glow, Flat Clipart, Big Head Comedy, Doodle Ghost, Hand-Drawn Sketch, and Sticker Doodle. Every pose, action, and prop (including weapons) works identically across all of them.</p>
   <h3 style="font-size:16px; margin:14px 0 4px;">How is this different from Pivot Animator, Stick Nodes, or Stick Studio Pro?</h3>
-  <p style="line-height:1.6; color:var(--muted);">Everything here runs directly in your browser with no downloads, and every feature — export, weapons and effects, all 7 art styles, and the AI scene generator — is free with no account and no paid tier. Pivot Animator and Stick Nodes are the classic hand-posed tools this one is compatible in spirit with, but neither can turn a plain-English description into a working scene the way the AI generator here does; that part is closer to what AI stickman video tools offer, without the wait or the credits.</p>
+  <p style="line-height:1.6; color:var(--muted);">Everything here runs directly in your browser with no downloads, and every feature — export, weapons and effects, all 7 art styles, and the instant scene builder — is free with no account and no paid tier. Pivot Animator and Stick Nodes are the classic hand-posed tools this one is compatible in spirit with, but neither can turn a plain-English description into a working scene the way the builder here does, instantly and entirely offline.</p>
   <h3 style="font-size:16px; margin:14px 0 4px;">Can I draw my own animation from scratch instead?</h3>
   <p style="line-height:1.6; color:var(--muted);">Yes, the Flipbook Animator is a separate frame-by-frame drawing tool with onion skinning, built for sketching your own animation rather than posing a stick figure rig.</p>
 </section>
@@ -415,7 +414,7 @@
     { "@type": "Question", "name": "Is this a good alternative to Pivot Animator or Stick Nodes?", "acceptedAnswer": { "@type": "Answer", "text": "If you want the classic hand-posed, frame-by-frame stick figure animation experience, the Pose Designer works the same way those tools do, with an AI scene generator added on top." } },
     { "@type": "Question", "name": "Can two stickman characters interact, like a fight or a dance?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Actions like Fight, Argue, Hug, High Five, and Dance are designed for two characters performing together, and weapon effects like bullets and sword slashes detect a nearby character and land on them." } },
     { "@type": "Question", "name": "What art styles are available?", "acceptedAnswer": { "@type": "Answer", "text": "Seven: Bold Cartoon, Neon Glow, Flat Clipart, Big Head Comedy, Doodle Ghost, Hand-Drawn Sketch, and Sticker Doodle." } },
-    { "@type": "Question", "name": "How is this different from Pivot Animator, Stick Nodes, or Stick Studio Pro?", "acceptedAnswer": { "@type": "Answer", "text": "Everything runs in the browser with no downloads, and every feature - export, weapons and effects, all 7 art styles, and the AI scene generator - is free with no account and no paid tier." } },
+    { "@type": "Question", "name": "How is this different from Pivot Animator, Stick Nodes, or Stick Studio Pro?", "acceptedAnswer": { "@type": "Answer", "text": "Everything runs in the browser with no downloads, and every feature - export, weapons and effects, all 7 art styles, and the instant scene builder - is free with no account and no paid tier." } },
     { "@type": "Question", "name": "Can I draw my own animation from scratch instead?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, the Flipbook Animator is a separate frame-by-frame drawing tool with onion skinning, built for sketching your own animation rather than posing a stick figure rig." } }
   ]
 }
