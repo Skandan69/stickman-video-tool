@@ -1176,6 +1176,8 @@ const designerAddKeyframeBtn = document.getElementById('designerAddKeyframeBtn')
 const designerAddNewKeyframeBtn = document.getElementById('designerAddNewKeyframeBtn');
 const designerPlayBtn = document.getElementById('designerPlayBtn');
 const designerPreviewLabel = document.getElementById('designerPreviewLabel');
+const designerCharSelect = document.getElementById('designerCharSelect');
+if(designerCharSelect) designerCharSelect.addEventListener('change', (e)=> switchDesignerCharacter(e.target.value));
 const designerSaveBtn = document.getElementById('designerSaveBtn');
 const designerCancelBtn = document.getElementById('designerCancelBtn');
 const designerCloseBtn = document.getElementById('designerCloseBtn');
@@ -1206,6 +1208,7 @@ const DESIGNER_SLIDERS = [
 
 const designer = {
   active: false, segId: null, charId: null, previousAction: 'idle',
+  charStash: {}, // per-character in-progress state when posing multiple characters in one Designer session — see switchDesignerCharacter
   keyframes: [], currentPose: Object.assign({}, DEFAULT_DESIGNER_POSE), editingIdx: -1,
   playing: false, elapsed: 0, stageOriginalParent: null, stageOriginalNextSibling: null,
   // previewAnchor: { x, faceDir } for the character being edited, refreshed every frame by
@@ -1524,12 +1527,78 @@ if(designerVertCheckbox){
   });
 }
 
+// ---------- Multi-character posing: let one Designer session touch more than one character ----------
+// Originally the Designer only ever edited designer.charId for its whole lifetime. To let a user pose
+// BOTH stickmen in a scene (e.g. two boxers) without closing and reopening the overlay per character,
+// switching characters here snapshots the character being left into designer.charStash, then either
+// restores that character's own earlier-stashed progress (if they've already been visited this
+// session) or loads their existing saved move from seg.customPoses (same logic openPoseDesigner uses
+// for the very first character). saveDesignerMove/cancelPoseDesigner then walk every stashed character
+// instead of only designer.charId, so all of them actually get saved or reverted together.
+function stashCurrentDesignerChar(){
+  if(!designer.charId) return;
+  designer.charStash[designer.charId] = {
+    keyframes: designer.keyframes, currentPose: designer.currentPose, editingIdx: designer.editingIdx,
+    moveSpeed: designer.moveSpeed, moveDir: designer.moveDir, vertSpeed: designer.vertSpeed, vertDir: designer.vertDir,
+    previousAction: designer.previousAction
+  };
+}
+function switchDesignerCharacter(newCharId){
+  if(!newCharId || newCharId === designer.charId) return;
+  const seg = findSegment(designer.segId);
+  const character = findCharacter(newCharId);
+  if(!seg || !character) return;
+  stashCurrentDesignerChar();
+  designer.playing = false; designer.elapsed = 0;
+  const stashed = designer.charStash[newCharId];
+  if(stashed){
+    designer.keyframes = stashed.keyframes; designer.currentPose = stashed.currentPose; designer.editingIdx = stashed.editingIdx;
+    designer.moveSpeed = stashed.moveSpeed; designer.moveDir = stashed.moveDir; designer.vertSpeed = stashed.vertSpeed; designer.vertDir = stashed.vertDir;
+    designer.previousAction = stashed.previousAction;
+  } else {
+    const existing = seg.customPoses && seg.customPoses[newCharId];
+    designer.previousAction = (seg.actions && seg.actions[newCharId]) || 'idle';
+    designer.keyframes = (existing && existing.keyframes && existing.keyframes.length)
+      ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }))
+      : [];
+    designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
+    designer.editingIdx = designer.keyframes.length ? 0 : -1;
+    designer.moveSpeed = (existing && existing.moveSpeed) || 0;
+    designer.moveDir = (existing && existing.moveDir) || 1;
+    designer.vertSpeed = (existing && existing.vertSpeed) || 0;
+    designer.vertDir = (existing && existing.vertDir) || 1;
+  }
+  designer.charId = newCharId;
+  designerTitleEl.textContent = 'Design a Move — ' + character.name;
+  designerPlayBtn.textContent = 'Play sequence';
+  designerPreviewLabel.textContent = (designer.editingIdx >= 0)
+    ? ('Editing keyframe ' + (designer.editingIdx+1) + ' — adjust sliders or drag the preview, then Update or Add as new')
+    : 'Editing keyframe pose';
+  renderDesignerSliders();
+  renderDesignerKeyframeList();
+  renderDesignerMovementControl();
+  renderDesignerCharSelect();
+}
+// Only shown once a scene actually has more than one character — with a single character there's
+// nothing to switch to, so the control would just be clutter.
+function renderDesignerCharSelect(){
+  if(!designerCharSelect) return;
+  const chars = state.scene.characters;
+  if(!chars || chars.length < 2){ designerCharSelect.style.display = 'none'; return; }
+  designerCharSelect.style.display = '';
+  designerCharSelect.innerHTML = chars.map(c=>{
+    const kfCount = (c.id === designer.charId) ? designer.keyframes.length : ((designer.charStash[c.id] && designer.charStash[c.id].keyframes.length) || 0);
+    return '<option value="'+c.id+'"'+(c.id===designer.charId?' selected':'')+'>'+c.name+(kfCount ? ' ('+kfCount+' kf)' : '')+'</option>';
+  }).join('');
+}
+
 function openPoseDesigner(segId, charId, explicitPreviousAction){
   const seg = findSegment(segId);
   const character = findCharacter(charId);
   if(!seg || !character) return;
   designer.active = true; designer.segId = segId; designer.charId = charId;
   designer.playing = false; designer.elapsed = 0; designer.editingIdx = -1;
+  designer.charStash = {}; // fresh multi-character stash for this Designer session
   // explicitPreviousAction is passed by the action-dropdown handler (onSegmentFieldChange), which
   // must capture the TRUE prior action before it overwrites seg.actions[charId] with 'customPose' —
   // reading seg.actions[charId] here directly would already see 'customPose' in that case, breaking
@@ -1557,6 +1626,7 @@ function openPoseDesigner(segId, charId, explicitPreviousAction){
   renderDesignerSliders();
   renderDesignerKeyframeList();
   renderDesignerMovementControl();
+  renderDesignerCharSelect();
   designerOverlay.style.display = 'flex';
 }
 
@@ -1574,9 +1644,15 @@ function cancelPoseDesigner(){
   // Only snap the action back to whatever it was before opening if this was a fresh "Design your
   // own..." pick (previousAction wasn't already 'customPose') — cancelling out of re-editing an
   // existing saved move should leave that existing move exactly as it was, not revert to some earlier
-  // unrelated action.
-  if(seg && designer.previousAction !== 'customPose' && seg.actions){
-    seg.actions[designer.charId] = designer.previousAction;
+  // unrelated action. Stash the currently-active character's in-progress state first so a multi-
+  // character Designer session (see switchDesignerCharacter) reverts EVERY character touched this
+  // session, not just whichever one happened to be selected when Cancel was clicked.
+  stashCurrentDesignerChar();
+  if(seg && seg.actions){
+    Object.keys(designer.charStash).forEach(cid=>{
+      const st = designer.charStash[cid];
+      if(st.previousAction !== 'customPose') seg.actions[cid] = st.previousAction;
+    });
   }
   closePoseDesignerOverlay();
   renderSegmentList();
@@ -1585,18 +1661,25 @@ function cancelPoseDesigner(){
 
 function saveDesignerMove(){
   const seg = findSegment(designer.segId);
+  // Stash the currently-active character's latest edits first, then commit EVERY character touched
+  // this session (see switchDesignerCharacter) — not just whichever one happened to be selected when
+  // Save was clicked, so posing two characters in one Designer visit actually saves both moves.
+  stashCurrentDesignerChar();
   if(seg){
     if(!seg.customPoses) seg.customPoses = {};
     if(!seg.actions) seg.actions = {};
-    if(designer.keyframes.length === 0){
-      // Saved with nothing posed — there's nothing to animate, so don't leave the action pointed at an
-      // empty custom move; fall back to idle exactly like evaluateScene already would at render time.
-      seg.actions[designer.charId] = 'idle';
-      delete seg.customPoses[designer.charId];
-    } else {
-      seg.customPoses[designer.charId] = { keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0, moveDir: designer.moveDir || 1, vertSpeed: designer.vertSpeed || 0, vertDir: designer.vertDir || 1 };
-      seg.actions[designer.charId] = 'customPose';
-    }
+    Object.keys(designer.charStash).forEach(cid=>{
+      const st = designer.charStash[cid];
+      if(!st.keyframes || st.keyframes.length === 0){
+        // Saved with nothing posed — there's nothing to animate, so don't leave the action pointed at
+        // an empty custom move; fall back to idle exactly like evaluateScene already would at render time.
+        seg.actions[cid] = 'idle';
+        delete seg.customPoses[cid];
+      } else {
+        seg.customPoses[cid] = { keyframes: st.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: st.moveSpeed || 0, moveDir: st.moveDir || 1, vertSpeed: st.vertSpeed || 0, vertDir: st.vertDir || 1 };
+        seg.actions[cid] = 'customPose';
+      }
+    });
   }
   closePoseDesignerOverlay();
   renderSegmentList();
