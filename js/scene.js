@@ -608,7 +608,7 @@ function renderFrame(frame){
             drawGunFireEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, c.appearance.accessory === 'ak47', opp ? opp.x : null);
           }
           if(c.clipId === 'slash' && (c.appearance.accessory === 'sword' || c.appearance.accessory === 'katana')){
-            const opp = frame.characters.find(o=> o.id !== c.id && Math.sign(o.x - c.x) === c.faceDir && Math.abs(o.x - c.x) < 170);
+            const opp = frame.characters.find(o=> o.id !== c.id && Math.sign(o.x - c.x) === c.faceDir && Math.abs(o.x - c.x) < 220);
             drawBloodEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, opp ? { x: opp.x, y: handsById[c.id].rightHand.y } : null);
           }
     });
