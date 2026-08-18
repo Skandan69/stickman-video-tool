@@ -548,6 +548,36 @@ function evaluateScene(scene, t){
                                               return { id: appearance.id, x: x, faceDir: faceDir, appearance: appearance, clipId: clipId, pose: pose };
   });
 
+  // ---------- Hug from behind: real cross-character IK contact (second pass) ----------
+  // Every pose above is computed fully independently per character (see poseFight's NOTE on why) — this
+  // is the one deliberate exception. A character whose action is 'hugbehind' needs to know exactly where
+  // ANOTHER character's torso actually ended up this frame so their arms can reach around and wrap it for
+  // real, which only works once every character's own x/faceDir/pose is already resolved above — hence a
+  // second pass rather than folding it into the first. Reuses armReachAngles (js/poses.js) — the same
+  // 2-bone IK the Pose Designer's drag-to-pose handles and the reach-for-a-coffee-cup poses already use —
+  // just aimed at a moving target's torso instead of a mouse position or a fixed offset from the head.
+  const HUG_BEHIND_GAP = 26; // px between the hugger's anchor and the huggee's back
+  characters.forEach(c=>{
+        if(c.clipId !== 'hugbehind') return;
+        const target = characters.find(o=> o.id !== c.id);
+        if(!target) return; // nobody else in the scene — keep the standalone fallback pose as-is
+        // Stand directly behind the target, facing the same way they are, close enough for arms to reach.
+        c.faceDir = target.faceDir;
+        c.x = clamp(target.x - target.faceDir*HUG_BEHIND_GAP, 60, W-60);
+        // Hip/shoulder anchors come from x/faceDir/torsoLean/headTilt/bounceY, not from arm angles, so
+        // re-deriving the hugger's skeleton at the corrected position is safe — only the arm fields below
+        // get overwritten afterward.
+        const huggerSkel = computeSkeleton(c.x, c.faceDir, c.appearance, c.pose);
+        const targetSkel = computeSkeleton(target.x, target.faceDir, target.appearance, target.pose);
+        const wrapPoint = { x: (targetSkel.hip.x + targetSkel.shoulder.x)/2, y: (targetSkel.hip.y + targetSkel.shoulder.y)/2 };
+        const localDx = (wrapPoint.x - huggerSkel.shoulder.x) * c.faceDir;
+        const localDy = wrapPoint.y - huggerSkel.shoulder.y;
+        const reach = armReachAngles(localDx, localDy);
+        c.pose.leftShoulderAngle = reach.shoulderAngle; c.pose.leftElbowBend = reach.elbowBend;
+        c.pose.rightShoulderAngle = reach.shoulderAngle; c.pose.rightElbowBend = reach.elbowBend;
+        c.pose.torsoLean = (c.pose.torsoLean||0) + 0.12; // lean into the hug slightly
+  });
+
   const animalPositions = computeAnimalPositions((scene.animals || []).length);
     const animals = (scene.animals || []).map((a, i)=> ({ id: a.id, type: a.type, x: animalPositions[i].x, faceDir: animalPositions[i].faceDir, sizeScale: a.sizeScale || 1 }));
 
