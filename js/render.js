@@ -802,60 +802,60 @@ function drawSleepZzz(head, t){
 // ---------- weapon accessories (sword/katana/pistol/ak47) + shoot/slash effects ----------
 function drawSword(hand, faceDir){
   ctx.save();
-  const tipX = hand.x + faceDir*8, tipY = hand.y - 34;
+  const tipX = hand.x + faceDir*12, tipY = hand.y - 50;
   const gx = hand.x + (tipX-hand.x)*0.14, gy = hand.y + (tipY-hand.y)*0.14;
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(hand.x - faceDir*3, hand.y+3); ctx.lineTo(gx, gy); ctx.stroke();
+  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(hand.x - faceDir*4, hand.y+4); ctx.lineTo(gx, gy); ctx.stroke();
   const dx = tipX-hand.x, dy = tipY-hand.y, dlen = Math.hypot(dx,dy) || 1;
-  const px = -dy/dlen*6, py = dx/dlen*6;
-  ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 2.5;
+  const px = -dy/dlen*9, py = dx/dlen*9;
+  ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 3.5;
   ctx.beginPath(); ctx.moveTo(gx-px, gy-py); ctx.lineTo(gx+px, gy+py); ctx.stroke();
-  ctx.strokeStyle = '#d7dce1'; ctx.lineWidth = 3.5;
+  ctx.strokeStyle = '#d7dce1'; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(tipX, tipY); ctx.stroke();
-  ctx.strokeStyle = '#98a0aa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = '#98a0aa'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(tipX, tipY); ctx.stroke();
   ctx.restore();
 }
 function drawKatana(hand, faceDir){
   ctx.save();
-  const tipX = hand.x + faceDir*12, tipY = hand.y - 36;
-  const ctrlX = hand.x + faceDir*3, ctrlY = hand.y - 19;
-  const gx = hand.x + faceDir*1, gy = hand.y - 4;
-  ctx.strokeStyle = '#111'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(hand.x - faceDir*10, hand.y+4); ctx.lineTo(gx, gy); ctx.stroke();
-  ctx.fillStyle = '#7a1f1f'; ctx.beginPath(); ctx.arc(gx, gy, 3, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#dfe3e7'; ctx.lineWidth = 3;
+  const tipX = hand.x + faceDir*18, tipY = hand.y - 52;
+  const ctrlX = hand.x + faceDir*5, ctrlY = hand.y - 28;
+  const gx = hand.x + faceDir*1, gy = hand.y - 5;
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(hand.x - faceDir*14, hand.y+5); ctx.lineTo(gx, gy); ctx.stroke();
+  ctx.fillStyle = '#7a1f1f'; ctx.beginPath(); ctx.arc(gx, gy, 4.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#dfe3e7'; ctx.lineWidth = 4.5;
   ctx.beginPath(); ctx.moveTo(gx, gy); ctx.quadraticCurveTo(ctrlX, ctrlY, tipX, tipY); ctx.stroke();
-  ctx.strokeStyle = '#9aa1ad'; ctx.lineWidth = 0.9;
+  ctx.strokeStyle = '#9aa1ad'; ctx.lineWidth = 1.3;
   ctx.beginPath(); ctx.moveTo(gx, gy); ctx.quadraticCurveTo(ctrlX, ctrlY, tipX, tipY); ctx.stroke();
   ctx.restore();
 }
 function drawPistol(hand, faceDir){
   ctx.save();
-  ctx.fillStyle = '#292c30'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.rect(hand.x - (faceDir>0?2:12), hand.y-3, 14, 5); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.rect(hand.x - (faceDir>0?4:2), hand.y-2, 6, 11); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#292c30'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.rect(hand.x - (faceDir>0?3:18), hand.y-4, 21, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(hand.x - (faceDir>0?6:3), hand.y-3, 9, 16); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 function drawAK47(leftHand, rightHand, faceDir){
   ctx.save();
   const bx = rightHand.x, by = rightHand.y;
-  const tipX = bx + faceDir*32, tipY = by - 2;
-  const stockX = bx - faceDir*15, stockY = by + 5;
-  ctx.strokeStyle = '#25272a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  const tipX = bx + faceDir*46, tipY = by - 3;
+  const stockX = bx - faceDir*22, stockY = by + 7;
+  ctx.strokeStyle = '#25272a'; ctx.lineWidth = 7; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(stockX, stockY); ctx.lineTo(tipX, tipY); ctx.stroke();
-  ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(bx - faceDir*7, by+1); ctx.lineTo(stockX, stockY); ctx.stroke();
-  ctx.strokeStyle = '#151617'; ctx.lineWidth = 4.5;
+  ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(bx - faceDir*10, by+1); ctx.lineTo(stockX, stockY); ctx.stroke();
+  ctx.strokeStyle = '#151617'; ctx.lineWidth = 6.5;
   ctx.beginPath();
-  ctx.moveTo(bx + faceDir*3, by+2);
-  ctx.quadraticCurveTo(bx + faceDir*7, by+19, bx + faceDir*2, by+27);
+  ctx.moveTo(bx + faceDir*4, by+3);
+  ctx.quadraticCurveTo(bx + faceDir*10, by+27, bx + faceDir*3, by+39);
   ctx.stroke();
-  ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(tipX, tipY-4); ctx.lineTo(tipX, tipY+3); ctx.stroke();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2.8;
+  ctx.beginPath(); ctx.moveTo(tipX, tipY-6); ctx.lineTo(tipX, tipY+4); ctx.stroke();
   ctx.restore();
 }
-function drawGunFireEffect(hand, faceDir, t, isRifle){
+function drawGunFireEffect(hand, faceDir, t, isRifle, targetX){
   const cycle = 0.35;
   const phase = (t % cycle) / cycle;
   const muzzleX = hand.x + faceDir*(isRifle?32:15), muzzleY = hand.y - (isRifle?2:3);
@@ -874,22 +874,34 @@ function drawGunFireEffect(hand, faceDir, t, isRifle){
     ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  const travel = phase * 150;
+  const maxTravel = (typeof targetX === 'number') ? Math.max(20, Math.abs(targetX - muzzleX)) : 150;
+  const travel = Math.min(maxTravel, phase * maxTravel * 1.15);
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,220,120,0.9)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,220,120,0.9)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(muzzleX + faceDir*travel, muzzleY);
-  ctx.lineTo(muzzleX + faceDir*(travel+10), muzzleY);
+  ctx.lineTo(muzzleX + faceDir*(travel+12), muzzleY);
   ctx.stroke();
   ctx.restore();
+  if(typeof targetX === 'number' && travel >= maxTravel - 4 && phase > 0.3){
+    ctx.save();
+    ctx.translate(muzzleX + faceDir*maxTravel, muzzleY);
+    ctx.fillStyle = '#ffdd66';
+    for(let i=0;i<5;i++){
+      const ang = (i/5)*Math.PI*2;
+      ctx.beginPath(); ctx.arc(Math.cos(ang)*5, Math.sin(ang)*5, 2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
 }
-function drawBloodEffect(hand, faceDir, t){
+function drawBloodEffect(hand, faceDir, t, target){
   const cycle = 0.7, impact = 0.45, winW = 0.16;
   const phase = (t % cycle) / cycle;
   const dist = Math.abs(phase - impact);
   if(dist > winW) return;
   const alpha = 1 - dist/winW;
-  const sx = hand.x + faceDir*22, sy = hand.y - 8;
+  const sx = target ? target.x : hand.x + faceDir*22;
+  const sy = target ? target.y : hand.y - 8;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = '#c81e1e';
