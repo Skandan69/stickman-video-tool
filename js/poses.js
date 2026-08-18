@@ -649,6 +649,31 @@ function poseCamera(t){
   };
 }
 
+// ---------- shoot (pistol/AK47 aim+fire) and slash (sword/katana swing) ----------
+function poseShoot(t){
+  const cycle = 0.35;
+  const phase = (t % cycle) / cycle;
+  const recoil = phase < 0.25 ? (0.25-phase)/0.25 : 0;
+  return {
+    torsoLean: 0.06 - recoil*0.1, headTilt: 0.04, bounceY: Math.sin(t*2)*0.6,
+    leftShoulderAngle: 1.1, leftElbowBend: -0.7,
+    rightShoulderAngle: 1.55 - recoil*0.35, rightElbowBend: -0.15 + recoil*0.3,
+    leftHipAngle: 0.1, leftKneeBend: 0.15, rightHipAngle: -0.05, rightKneeBend: 0.1,
+    mouthOpen: 0
+  };
+}
+function poseSlash(t){
+  const cycle = 0.7;
+  const phase = (t % cycle) / cycle;
+  const angle = 2.6 - phase*2.4;
+  return {
+    torsoLean: 0.15*Math.sin(phase*Math.PI), headTilt: 0.05, bounceY: Math.abs(Math.sin(phase*Math.PI))*3,
+    leftShoulderAngle: 0.3, leftElbowBend: 0.3,
+    rightShoulderAngle: angle, rightElbowBend: -0.3 - 0.3*Math.sin(phase*Math.PI),
+    leftHipAngle: 0.1, leftKneeBend: 0.2, rightHipAngle: -0.1, rightKneeBend: 0.15,
+    mouthOpen: 0
+  };
+}
 const CLIPS = {
   idle: { label:'Idle', pose:(t,opts)=>poseIdle(t, opts&&opts.phase) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking), opts&&opts.phase) },
@@ -699,7 +724,9 @@ const CLIPS = {
   ridebike: { label:'Ride a Bicycle', pose:(t)=>poseRide(t) },
   ridemotorcycle: { label:'Ride a Motorcycle', pose:(t)=>poseRide(t) },
   flyplane: { label:'Fly a Plane', pose:(t)=>poseFly(t) },
-  flyhelicopter: { label:'Pilot a Helicopter', pose:(t)=>poseFly(t) }
+  flyhelicopter: { label:'Pilot a Helicopter', pose:(t)=>poseFly(t) },
+  shoot: { label:'Shoot', pose:(t)=>poseShoot(t) },
+  slash: { label:'Sword Slash', pose:(t)=>poseSlash(t) }
 };
 const CLIP_LIST = [
   {id:'idle', label:'Idle'}, {id:'talk', label:'Talk'}, {id:'walk', label:'Walk'},
@@ -718,7 +745,8 @@ const CLIP_LIST = [
   {id:'laptop', label:'Type on Laptop'}, {id:'camera', label:'Take Photo'},
   {id:'drivecar', label:'Drive a Car'}, {id:'drivesportscar', label:'Drive a Sports Car'}, {id:'drivelimo', label:'Drive a Limo'},
   {id:'ridebike', label:'Ride a Bicycle'}, {id:'ridemotorcycle', label:'Ride a Motorcycle'},
-  {id:'flyplane', label:'Fly a Plane'}, {id:'flyhelicopter', label:'Pilot a Helicopter'}
+  {id:'flyplane', label:'Fly a Plane'}, {id:'flyhelicopter', label:'Pilot a Helicopter'},
+  {id:'shoot', label:'Shoot'}, {id:'slash', label:'Sword Slash'}
 ];
 const SEATED_CLIPS = { sit:true, drink:true, phone:false, eat:true, read:true, write:true, laptop:true };
 // Interactive clips read best when BOTH characters perform them together (like 'dance' already does) —
