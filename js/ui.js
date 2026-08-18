@@ -131,40 +131,6 @@ generateBtn.addEventListener('click', ()=>{
   if(!text){ generateStatus.textContent = 'Type a description first.'; return; }
   applyGeneratedScene(parsePromptToScene(text), 'Built');
 });
-// AI-assisted generation: same textarea, but the sentence goes to /api/generate-scene (js/../api/
-// generate-scene.js — a small serverless function that asks Claude Haiku to pick from the SAME fixed
-// menu of clip/background/animal/vehicle ids the offline parser already uses, so the AI can never draw
-// anything the app doesn't already know how to render). Falls back gracefully — with a clear message —
-// if the endpoint isn't configured, is rate-limited, or the network call fails.
-const aiGenerateBtn = document.getElementById('aiGenerateBtn');
-if(aiGenerateBtn){
-  aiGenerateBtn.addEventListener('click', async ()=>{
-    const text = promptInput.value.trim();
-    if(!text){ generateStatus.textContent = 'Type a description first.'; return; }
-    aiGenerateBtn.disabled = true; generateBtn.disabled = true;
-    const prevLabel = aiGenerateBtn.textContent;
-    aiGenerateBtn.textContent = 'Generating with AI…';
-    generateStatus.textContent = 'Asking AI to plan the scene…';
-    try{
-      const res = await fetch('/api/generate-scene', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt: text })
-      });
-      const data = await res.json().catch(()=> null);
-      if(!res.ok || !data || !data.timeline){
-        generateStatus.textContent = (data && data.error) || 'AI generation failed. Try the offline Generate button instead.';
-        return;
-      }
-      applyGeneratedScene(data, '✨ AI built');
-    } catch(err){
-      generateStatus.textContent = 'Couldn’t reach the AI planner (network issue). Try the offline Generate button instead.';
-    } finally{
-      aiGenerateBtn.disabled = false; generateBtn.disabled = false;
-      aiGenerateBtn.textContent = prevLabel;
-    }
-  });
-}
 presetSelect.addEventListener('change', ()=> loadPreset(presetSelect.value));
 const bgImageInput = document.getElementById('bgImageInput');
 const furnitureSelect = document.getElementById('furnitureSelect');
