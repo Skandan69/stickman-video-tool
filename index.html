@@ -213,21 +213,14 @@
       <div class="designer-preview" id="designerPreviewMount">
         <div class="designer-preview-controls">
           <button type="button" id="designerPlayBtn" class="secondary small">Play sequence</button>
+          <select id="designerCharSelect" style="display:none; font-size:12px; padding:2px 4px; border-radius:6px; border:1px solid var(--border);" title="Choose which character you're posing"></select>
           <span id="designerPreviewLabel" style="font-size:11px; color:var(--muted);">Editing keyframe pose</span>
         </div>
       </div>
       <div class="designer-controls">
         <div class="designer-sliders" id="designerSliders"></div>
-        <div class="designer-keyframes">
-          <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
-          <p style="font-size:11px; color:var(--muted); margin:0 0 6px; line-height:1.4;">Click any keyframe below (or its &#9998; button) to load that exact pose onto the sliders/preview and adjust it — drag the purple dots or use the sliders, and the preview updates live.</p>
-          <div id="designerKeyframeList"></div>
-          <div class="row" style="gap:6px; margin-top:6px;">
-            <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="flex:1;">+ Add keyframe from current pose</button>
-            <button type="button" id="designerAddNewKeyframeBtn" class="secondary small" style="flex:0 0 auto; display:none;" title="Keep the loaded keyframe as-is and add this pose as a brand new one instead of overwriting it">+ Add as new (don't overwrite)</button>
-          </div>
-
-          <h3 style="margin:14px 0 6px; font-size:13px;">Movement</h3>
+        <div class="designer-movement" style="margin:10px 0 14px; padding:10px; border:1px solid var(--border); border-radius:8px; background:rgba(124,58,237,0.05);">
+          <h3 style="margin:0 0 6px; font-size:13px;">Movement (forward / backward / up / down)</h3>
           <div class="checkbox-field" style="margin:0 0 6px;">
             <input type="checkbox" id="designerMoveCheckbox">
             <label for="designerMoveCheckbox">This move travels across the screen (like walking), instead of staying in place</label>
@@ -245,7 +238,7 @@
             <input type="checkbox" id="designerVertCheckbox">
             <label for="designerVertCheckbox">This move also rises/falls (a jump, duck, or climb), instead of staying at ground level</label>
           </div>
-          <div id="designerVertSpeedRow" class="row" style="align-items:center; gap:8px; display:none; margin-bottom:6px;">
+          <div id="designerVertSpeedRow" class="row" style="align-items:center; gap:8px; display:none;">
             <select id="designerVertDirSelect" style="flex:0 0 auto;">
               <option value="up">Up &uarr;</option>
               <option value="down">Down &darr;</option>
@@ -253,6 +246,15 @@
             <label style="flex:0 0 auto; font-size:12px; color:var(--muted);">Speed</label>
             <input type="range" id="designerVertSpeedSlider" min="10" max="150" step="5" value="45" style="flex:1;">
             <span id="designerVertSpeedVal" style="font-size:12px; color:var(--text); min-width:52px; text-align:right;">45 px/s</span>
+          </div>
+        </div>
+        <div class="designer-keyframes">
+          <h3 style="margin:10px 0 6px; font-size:13px;">Keyframes</h3>
+          <p style="font-size:11px; color:var(--muted); margin:0 0 6px; line-height:1.4;">Click any keyframe below (or its &#9998; button) to load that exact pose onto the sliders/preview and adjust it — drag the purple dots or use the sliders, and the preview updates live.</p>
+          <div id="designerKeyframeList"></div>
+          <div class="row" style="gap:6px; margin-top:6px;">
+            <button type="button" id="designerAddKeyframeBtn" class="secondary small" style="flex:1;">+ Add keyframe from current pose</button>
+            <button type="button" id="designerAddNewKeyframeBtn" class="secondary small" style="flex:0 0 auto; display:none;" title="Keep the loaded keyframe as-is and add this pose as a brand new one instead of overwriting it">+ Add as new (don't overwrite)</button>
           </div>
 
           <h3 style="margin:14px 0 6px; font-size:13px;">Move Library</h3>
@@ -400,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="js/customElements.js?v=20260801a"></script>
 <script src="js/poses.js?v=20260818a"></script>
 <script src="js/scene.js?v=20260818e"></script>
-<script src="js/ui.js?v=20260818a"></script>
+<script src="js/ui.js?v=20260818b"></script>
 <script src="js/flipbook.js?v=20260814a"></script>
 </body>
 </html>
