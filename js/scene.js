@@ -603,6 +603,8 @@ function renderFrame(frame){
           if(c.clipId === 'skateboard') drawSkateboardProp(c.x, GROUND_Y, c.faceDir, frame.localT);
           if(c.clipId === 'laptop') drawLaptopProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
           if(c.clipId === 'camera') drawCameraProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
+          if(c.clipId === 'shoot' && (c.appearance.accessory === 'pistol' || c.appearance.accessory === 'ak47')) drawGunFireEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, c.appearance.accessory === 'ak47');
+          if(c.clipId === 'slash' && (c.appearance.accessory === 'sword' || c.appearance.accessory === 'katana')) drawBloodEffect(handsById[c.id].rightHand, c.faceDir, frame.localT);
     });
     (frame.customElements || []).forEach(el=> drawCustomElement(el));
     if(frame.dialogue){
