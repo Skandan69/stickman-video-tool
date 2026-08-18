@@ -67,6 +67,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
       if(sk.accessory === 'scarf') drawScarf(sk.neck, sk.outfit);
       if(sk.accessory === 'cape') drawCape(sk.shoulder, sk.hip, faceDir, sk.outfit);
       if(sk.accessory === 'backpack') drawBackpack(sk.shoulder, sk.hip, faceDir, sk.outfit);
@@ -125,6 +129,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
       ctx.fillStyle = sk.skin; ctx.strokeStyle = '#2b2f38'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(sk.head.x, sk.head.y, HEAD_R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
@@ -216,6 +224,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
 
       // head: big filled circle
       ctx.fillStyle = sk.skin; ctx.strokeStyle = '#2b2f38'; ctx.lineWidth = 3;
@@ -341,6 +353,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
 
       // head: plain round white/light head, no hair drawn (the reference character is bald/hairless —
       // hairStyle 'none' is respected, but any other hairStyle is skipped here on purpose to keep the
@@ -456,6 +472,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
       drawHair(sk.head, faceDir, sk.hairStyle, sk.hairColor);
       if(sk.accessory === 'hat') drawHat(sk.head, sk.hairColor);
       if(sk.accessory === 'chefhat') drawChefHat(sk.head);
@@ -545,6 +565,10 @@ const STYLES = {
       if(sk.accessory === 'necktie') drawNecktie(sk.neck, sk.outfit);
       if(sk.accessory === 'bowtie') drawBowtie(sk.neck, sk.outfit);
       if(sk.accessory === 'wristwatch') drawWristwatch(sk.rHand);
+      if(sk.accessory === 'sword') drawSword(sk.rHand, faceDir);
+      if(sk.accessory === 'katana') drawKatana(sk.rHand, faceDir);
+      if(sk.accessory === 'pistol') drawPistol(sk.rHand, faceDir);
+      if(sk.accessory === 'ak47') drawAK47(sk.lHand, sk.rHand, faceDir);
 
       // head: skin-colored circle, black outline
       ctx.fillStyle = sk.skin; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
