@@ -249,7 +249,7 @@ function accessoryOptionsHtml(sel){
           ['chefhat','Chef Hat'],['police','Police Cap'],['headband','Headband'],['doctor','Stethoscope'],
           ['crown','Crown'],['backpack','Backpack'],['scarf','Scarf'],['mask','Mask'],
           ['cape','Cape'],['wizardhat','Wizard Hat'],['helmet','Helmet'],
-          ['necktie','Necktie'],['bowtie','Bow Tie'],['earrings','Earrings'],['wristwatch','Wristwatch']]
+          ['necktie','Necktie'],['bowtie','Bow Tie'],['earrings','Earrings'],['wristwatch','Wristwatch'],['sword','Sword'],['katana','Katana'],['pistol','Pistol'],['ak47','AK47']]
     .map(o=> '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>').join('');
 }
 function costumeOptionsHtml(){
