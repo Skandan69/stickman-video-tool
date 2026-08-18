@@ -603,8 +603,14 @@ function renderFrame(frame){
           if(c.clipId === 'skateboard') drawSkateboardProp(c.x, GROUND_Y, c.faceDir, frame.localT);
           if(c.clipId === 'laptop') drawLaptopProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
           if(c.clipId === 'camera') drawCameraProp(handsById[c.id].leftHand, handsById[c.id].rightHand);
-          if(c.clipId === 'shoot' && (c.appearance.accessory === 'pistol' || c.appearance.accessory === 'ak47')) drawGunFireEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, c.appearance.accessory === 'ak47');
-          if(c.clipId === 'slash' && (c.appearance.accessory === 'sword' || c.appearance.accessory === 'katana')) drawBloodEffect(handsById[c.id].rightHand, c.faceDir, frame.localT);
+          if(c.clipId === 'shoot' && (c.appearance.accessory === 'pistol' || c.appearance.accessory === 'ak47')){
+            const opp = frame.characters.find(o=> o.id !== c.id && Math.sign(o.x - c.x) === c.faceDir && Math.abs(o.x - c.x) < 260);
+            drawGunFireEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, c.appearance.accessory === 'ak47', opp ? opp.x : null);
+          }
+          if(c.clipId === 'slash' && (c.appearance.accessory === 'sword' || c.appearance.accessory === 'katana')){
+            const opp = frame.characters.find(o=> o.id !== c.id && Math.sign(o.x - c.x) === c.faceDir && Math.abs(o.x - c.x) < 170);
+            drawBloodEffect(handsById[c.id].rightHand, c.faceDir, frame.localT, opp ? { x: opp.x, y: handsById[c.id].rightHand.y } : null);
+          }
     });
     (frame.customElements || []).forEach(el=> drawCustomElement(el));
     if(frame.dialogue){
