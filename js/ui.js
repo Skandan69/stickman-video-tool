@@ -1874,6 +1874,7 @@ exportBtn.addEventListener('click', ()=>{
   // 1920x1080 in name only, look just as soft as before, and not meaningfully benefit from the resize.
   const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
   const chunks = [];
+  const recordStart = Date.now();
   recorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
   const restoreCanvas = () => {
     canvas.width = origW; canvas.height = origH;
@@ -1883,14 +1884,16 @@ exportBtn.addEventListener('click', ()=>{
     forceRedraw();
   };
   recorder.onstop = () => {
-    restoreCanvas();
-    const blob = new Blob(chunks, { type: 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    previewVideo.src = url; previewVideo.style.display = 'block';
-    downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
-    downloadLink.style.display = 'inline-block';
-    downloadLink.textContent = 'Download stickman_video.webm';
-    exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
+    const rawBlob = new Blob(chunks, { type: 'video/webm' });
+    const recordedMs = Date.now() - recordStart;
+    fixWebmDuration(rawBlob, recordedMs, { logger: false }).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      previewVideo.src = url; previewVideo.style.display = 'block';
+      downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
+      downloadLink.style.display = 'inline-block';
+      downloadLink.textContent = 'Download stickman_video.webm';
+      exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
+    });
   };
   exportBtn.disabled = true; exportBtn.textContent = 'Recording…';
   recorder.start(1000);
