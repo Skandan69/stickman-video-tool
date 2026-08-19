@@ -1892,13 +1892,26 @@ exportBtn.addEventListener('click', ()=>{
       downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
       downloadLink.style.display = 'inline-block';
       downloadLink.textContent = 'Download stickman_video.webm';
-      downloadLink.click();
       exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
     });
   };
   exportBtn.disabled = true; exportBtn.textContent = 'Recording…';
   recorder.start(1000);
-  setTimeout(()=> recorder.stop(), totalDur*1000/state.speed + 250);
+  setTimeout(() => {
+    // Don't trust a blind wall-clock timer to know when the scene is done: requestAnimationFrame
+    // (which drives `elapsed`) is paused by the browser whenever the tab loses focus/visibility,
+    // so a fixed timeout can fire before playback has actually caught up and cut the recording
+    // short. Poll the real `elapsed` value instead and only stop once it has truly finished.
+    const safetyDeadline = Date.now() + Math.max(5000, (totalDur*1000/state.speed)*4);
+    const waitForFinish = () => {
+      if(elapsed >= totalDur || Date.now() > safetyDeadline){
+        recorder.stop();
+      } else {
+        setTimeout(waitForFinish, 100);
+      }
+    };
+    waitForFinish();
+  }, 200)
 });
 
 // ---------- init ----------
