@@ -1864,7 +1864,7 @@ exportBtn.addEventListener('click', ()=>{
   // captureStream() on a still-blank, just-resized canvas produced a stream that recorded zero frames
   // (a real bug caught by testing the export live: the resulting .webm was 0 bytes) — forcing one
   // synchronous redraw here first fixes that.
-  ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+  ctx.scale(frameExportScale, frameExportScale); // must match the resize above, not the old EXPORT_SCALE
   forceRedraw();
 
   const FPS = 24; // lower than the on-screen 30fps preview - cuts total encode work by 20%
