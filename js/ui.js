@@ -1892,6 +1892,7 @@ exportBtn.addEventListener('click', ()=>{
       downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
       downloadLink.style.display = 'inline-block';
       downloadLink.textContent = 'Download stickman_video.webm';
+      downloadLink.click();
       exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
     });
   };
