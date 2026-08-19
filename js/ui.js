@@ -1824,13 +1824,15 @@ exportBtn.addEventListener('click', ()=>{
     return;
   }
   const totalDur = evaluateScene(state.scene, 0).totalDuration;
-  elapsed = 0;
-  // Force normal 1x speed for the recording itself, regardless of whatever preview speed the user
-  // had set on the Playback Speed slider   export always represents the real animation timing, not
-  // a sped-up/slowed-down preview. Restored once recording stops (see recorder.onstop below).
+  // Frame-by-frame export doesn't play the scene in real time at all, so the Playback Speed slider
+  // and whatever the user was doing on-screen (playing, paused, mid-scrub) are irrelevant to the
+  // recording itself - we just save them here and restore them once the export finishes so the
+  // editor snaps back to exactly how the user left it.
   const origSpeedForExport = state.speed;
+  const wasPlayingForExport = state.playing;
+  const savedElapsedForExport = elapsed;
   state.speed = 1;
-  state.playing = true;
+  state.playing = false;
 
   // Lock the ON-SCREEN displayed size to exactly what it already was (in CSS pixels) before touching
   // the backing resolution — canvas{max-width:100%} alone would otherwise let the browser stretch the
@@ -1858,66 +1860,78 @@ exportBtn.addEventListener('click', ()=>{
   ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
   forceRedraw();
 
-  const stream = canvas.captureStream(30);
-  // Belt-and-suspenders against the 0-byte-export bug: canvas.captureStream()'s automatic
-  // per-frame timer can still occasionally miss capturing anything right after a synchronous
-  // resize, even with the forceRedraw() above. CanvasCaptureMediaStreamTrack.requestFrame()
-  // explicitly pushes the canvas's current pixels into the stream as a real frame right now,
-  // independent of that timer, so the recorder always has at least one guaranteed frame to
-  // start from. Not all browsers implement requestFrame() yet, so guard for it.
-  const videoTrack = stream.getVideoTracks()[0];
-  if(videoTrack && typeof videoTrack.requestFrame === 'function') videoTrack.requestFrame();
-  // VP9 deliberately skipped: live testing at 1920x1080 found it unreliable — real-time VP9
-  // encoding at this resolution is CPU-heavy and, at least on some machines/Chrome builds,
-  // silently produced a completely empty (0-byte) recording with no error. VP8 encodes far
-  // more cheaply and was 100% reliable across repeated tests at the same resolution/bitrate,
-  // so it's used directly rather than attempted as a fallback after a broken vp9 pass.
-  let mime = 'video/webm;codecs=vp8';
-  if(!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
-  // A higher target bitrate keeps the extra resolution from being immediately thrown away by the
-  // codec's default (much lower, tuned-for-800x450) bitrate — without this the exported file would be
-  // 1920x1080 in name only, look just as soft as before, and not meaningfully benefit from the resize.
-  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
-  const chunks = [];
-  const recordStart = Date.now();
-  recorder.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+  const FPS = 30;
+  const totalFrames = Math.max(1, Math.round(totalDur * FPS));
+
   const restoreCanvas = () => {
     canvas.width = origW; canvas.height = origH;
     canvas.style.width = ''; canvas.style.height = ''; canvas.style.pointerEvents = '';
-    // No need to re-apply ctx.scale here: the resize above already reset the transform to identity,
-    // which is exactly what normal on-screen playback/editing expects.
     forceRedraw();
   };
-  recorder.onstop = () => {
+
+  if(!window.WebMWriter || !canvas.toDataURL){
+    alert('Video export needs a Chrome/Edge browser (Canvas WebP support).');
+    restoreCanvas();
+    state.playing = wasPlayingForExport;
+    elapsed = savedElapsedForExport;
     state.speed = origSpeedForExport;
-    const rawBlob = new Blob(chunks, { type: 'video/webm' });
-    const recordedMs = Date.now() - recordStart;
-    fixWebmDuration(rawBlob, recordedMs, { logger: false }).then((blob) => {
+    exportBtn.disabled = false;
+    exportBtn.textContent = 'Export Video (.webm)';
+    return;
+  }
+
+  const writer = new window.WebMWriter({ quality: 0.92, frameRate: FPS });
+
+  exportBtn.disabled = true;
+  exportBtn.textContent = 'Rendering... 0%';
+
+  // Frame-by-frame direct generation instead of real-time canvas.captureStream()/MediaRecorder.
+  // Each frame is rendered by calling evaluateScene/renderFrame at an exact timestamp, then handed
+  // straight to the WebM writer   there's no real-time playback involved at all, so this is
+  // completely immune to the bugs that plagued the old recording-based approach: browsers throttling
+  // or pausing requestAnimationFrame on unfocused/hidden tabs, wall-clock drift, and the Playback
+  // Speed slider all used to be able to cut the export short or skew its length. None of that can
+  // happen here because the loop below doesn't depend on real time passing at all   it runs exactly
+  // totalFrames iterations, full stop, so the output duration always exactly matches the timeline.
+  (async () => {
+    try {
+      for (let f = 0; f < totalFrames; f++) {
+        const t = Math.min(f / FPS, Math.max(0, totalDur - 1 / FPS));
+        const frameData = evaluateScene(state.scene, t);
+        renderFrame(frameData);
+        writer.addFrame(canvas);
+
+        if (f % 6 === 0 || f === totalFrames - 1) {
+          exportBtn.textContent = 'Rendering... ' + Math.round(((f + 1) / totalFrames) * 100) + '%';
+          // Yield back to the browser periodically so the tab stays responsive and the percentage
+          // label actually repaints between frames.
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+
+      const blob = await writer.complete();
+
+      restoreCanvas();
+      state.playing = wasPlayingForExport;
+      elapsed = savedElapsedForExport;
+      state.speed = origSpeedForExport;
+
       const url = URL.createObjectURL(blob);
       previewVideo.src = url; previewVideo.style.display = 'block';
       downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
       downloadLink.style.display = 'inline-block';
       downloadLink.textContent = 'Download stickman_video.webm';
-      exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
-    });
-  };
-  exportBtn.disabled = true; exportBtn.textContent = 'Recording…';
-  recorder.start(1000);
-  setTimeout(() => {
-    // Don't trust a blind wall-clock timer to know when the scene is done: requestAnimationFrame
-    // (which drives `elapsed`) is paused by the browser whenever the tab loses focus/visibility,
-    // so a fixed timeout can fire before playback has actually caught up and cut the recording
-    // short. Poll the real `elapsed` value instead and only stop once it has truly finished.
-    const safetyDeadline = Date.now() + Math.max(5000, (totalDur*1000/state.speed)*4);
-    const waitForFinish = () => {
-      if(elapsed >= totalDur || Date.now() > safetyDeadline){
-        recorder.stop();
-      } else {
-        setTimeout(waitForFinish, 100);
-      }
-    };
-    waitForFinish();
-  }, 200)
+    } catch (err) {
+      alert('Video export failed: ' + (err && err.message ? err.message : err));
+      restoreCanvas();
+      state.playing = wasPlayingForExport;
+      elapsed = savedElapsedForExport;
+      state.speed = origSpeedForExport;
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'Export Video (.webm)';
+    }
+  })();
 });
 
 // ---------- init ----------
