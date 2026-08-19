@@ -1849,8 +1849,15 @@ exportBtn.addEventListener('click', ()=>{
   canvas.style.pointerEvents = 'none';
 
   const origW = canvas.width, origH = canvas.height;
-  canvas.width = Math.round(origW * EXPORT_SCALE);
-  canvas.height = Math.round(origH * EXPORT_SCALE);
+  // Frame-by-frame export re-encodes every single frame to WebP on the CPU (no GPU/hardware
+  // encoder involved), and that cost scales with pixel count - at the full EXPORT_SCALE (1080p+)
+  // resolution used elsewhere, encoding a single detailed frame can take multiple seconds, which
+  // made a several-second animation take many minutes to export. Cap the export resolution at
+  // 1280px wide (standard HD) for this path specifically so exports finish in a reasonable time;
+  // still a clear upgrade over the original on-screen preview size.
+  const frameExportScale = Math.min(EXPORT_SCALE, 1280 / origW);
+  canvas.width = Math.round(origW * frameExportScale);
+  canvas.height = Math.round(origH * frameExportScale);
   // Resizing a canvas element always resets its 2D context state (transform included) AND clears its
   // pixel content back to blank — the scale has to be (re)applied right after, and critically the
   // canvas needs an actual painted frame at the new size BEFORE captureStream() is called. Calling
@@ -1860,7 +1867,8 @@ exportBtn.addEventListener('click', ()=>{
   ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
   forceRedraw();
 
-  const FPS = 30;
+  const FPS = 24; // lower than the on-screen 30fps preview - cuts total encode work by 20%
+  // without a visually obvious difference for this style of animation, on top of the resolution cap.
   const totalFrames = Math.max(1, Math.round(totalDur * FPS));
 
   const restoreCanvas = () => {
@@ -1880,7 +1888,7 @@ exportBtn.addEventListener('click', ()=>{
     return;
   }
 
-  const writer = new window.WebMWriter({ quality: 0.92, frameRate: FPS });
+  const writer = new window.WebMWriter({ quality: 0.85, frameRate: FPS });
 
   exportBtn.disabled = true;
   exportBtn.textContent = 'Rendering... 0%';
