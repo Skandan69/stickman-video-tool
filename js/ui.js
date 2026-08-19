@@ -1825,6 +1825,11 @@ exportBtn.addEventListener('click', ()=>{
   }
   const totalDur = evaluateScene(state.scene, 0).totalDuration;
   elapsed = 0;
+  // Force normal 1x speed for the recording itself, regardless of whatever preview speed the user
+  // had set on the Playback Speed slider   export always represents the real animation timing, not
+  // a sped-up/slowed-down preview. Restored once recording stops (see recorder.onstop below).
+  const origSpeedForExport = state.speed;
+  state.speed = 1;
   state.playing = true;
 
   // Lock the ON-SCREEN displayed size to exactly what it already was (in CSS pixels) before touching
@@ -1884,6 +1889,7 @@ exportBtn.addEventListener('click', ()=>{
     forceRedraw();
   };
   recorder.onstop = () => {
+    state.speed = origSpeedForExport;
     const rawBlob = new Blob(chunks, { type: 'video/webm' });
     const recordedMs = Date.now() - recordStart;
     fixWebmDuration(rawBlob, recordedMs, { logger: false }).then((blob) => {
