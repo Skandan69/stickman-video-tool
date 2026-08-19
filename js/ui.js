@@ -15,7 +15,9 @@ function loop(now){
   } else if(typeof designer !== 'undefined' && designer.active){
     if(designer.playing) designer.elapsed += dt;
     const pose = designer.playing ? evalKeyframePose(designer.elapsed, designer.keyframes) : Object.assign({}, designer.currentPose);
-    pose.altitude = 0;
+    // altitude is deliberately left off this hand-authored pose - buildDesignerFrame below now
+    // computes it live from the Movement controls (designer.vertSpeed/vertDir) plus whatever the
+    // real scene already had, rather than trusting a stale value here.
     renderFrame(buildDesignerFrame(pose));
     // Drag handles only make sense over a single held pose, not mid-animation during Play sequence.
     if(!designer.playing && typeof drawDesignerHandles === 'function') drawDesignerHandles();
@@ -1223,7 +1225,17 @@ function buildDesignerFrame(pose){
     // Preserve whatever altitude the real scene already computed for this character (e.g. mid-flight)
     // rather than forcing them back to ground level just because the designer's pose object has no
     // altitude field of its own.
-    return Object.assign({}, c, { pose: Object.assign({}, pose, { altitude: c.pose.altitude || 0 }) });
+    // Live-preview the Movement (forward/backward/up/down) controls here, on top of whatever x/altitude
+    // the real scene already computed for this character. Without this, the sliders/checkboxes only took
+    // effect once a hand-designed move was saved and actually applied to a segment - while still inside
+    // the Designer, Play sequence looked completely static no matter what Movement was set to.
+    const faceDir = c.faceDir || 1;
+    const localT = designer.playing ? designer.elapsed : 0;
+    const traveled = designer.moveSpeed ? designer.moveSpeed * localT * faceDir * (designer.moveDir || 1) : 0;
+    const vertTraveled = designer.vertSpeed ? designer.vertSpeed * localT * (designer.vertDir || 1) : 0;
+    const liveX = clamp(c.x + traveled, 60, W - 60);
+    const liveAltitude = clamp((c.pose.altitude || 0) + vertTraveled, 0, MAX_ALTITUDE);
+    return Object.assign({}, c, { x: liveX, pose: Object.assign({}, pose, { altitude: liveAltitude }) });
   });
   return frame;
 }
