@@ -27,7 +27,7 @@ h1 .hl{background:linear-gradient(135deg,#7c3aed,#f59e0b); -webkit-background-cl
   width:296px; flex-shrink:0;
   max-height: calc(100vh - 170px); overflow-y: auto;
   box-shadow:0 2px 10px rgba(124,58,237,0.06);
-}
+ flex-shrink: 1; min-width: 220px;}
 .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 10px;}
 .field{margin-bottom:12px;}
 .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
