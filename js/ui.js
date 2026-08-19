@@ -1917,6 +1917,12 @@ exportBtn.addEventListener('click', ()=>{
         }
       }
 
+      exportBtn.textContent = 'Finishing up...';
+      // Give the browser a beat to repaint that label before the (potentially chunky, synchronous)
+      // final file-assembly work below - otherwise "Rendering... 100%" can appear to hang for a
+      // while with zero feedback on slower machines, even though nothing is actually stuck.
+      await new Promise(r => setTimeout(r, 0));
+
       const blob = await writer.complete();
 
       restoreCanvas();
@@ -1929,8 +1935,20 @@ exportBtn.addEventListener('click', ()=>{
       downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
       downloadLink.style.display = 'inline-block';
       downloadLink.textContent = 'Download stickman_video.webm';
+      const tipEl = document.querySelector('.export-tip');
+      if (tipEl) { tipEl.style.color = ''; tipEl.textContent = 'Saved as .webm - plays natively in Chrome, Firefox, Edge, and VLC. Windows\' built-in video player may not open it; use the browser or VLC if it looks stuck.'; }
     } catch (err) {
-      alert('Video export failed: ' + (err && err.message ? err.message : err));
+      // Don't rely on alert() for this: if the browser previously showed a dialog on this page and
+      // the user checked "Prevent this page from creating additional dialogs" (a real Chrome option),
+      // every subsequent alert() silently does nothing - which looks exactly like "export finished
+      // but nothing happened", the exact bug this replaces. An on-page message can't be suppressed
+      // that way, and console.error keeps a copy for debugging.
+      console.error('Video export failed:', err);
+      const tipEl = document.querySelector('.export-tip');
+      if (tipEl) {
+        tipEl.style.color = '#dc2626';
+        tipEl.textContent = 'Export failed: ' + (err && err.message ? err.message : err) + ' - please try again. If it keeps happening, open the browser console (F12) and share what it shows.';
+      }
       restoreCanvas();
       state.playing = wasPlayingForExport;
       elapsed = savedElapsedForExport;
