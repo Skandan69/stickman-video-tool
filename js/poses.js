@@ -74,27 +74,22 @@ function poseIdle(t, offset){
     rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend, mouthOpen:0
   };
 }
+// Hand targets are normalized to arm length; IK coordinates shoulder and elbow together.
 function poseTalk(t, speaking, offset){
-  const o = offset||0;
-  const gesture = keyframeGesture(t, 7+o, 0.85, TALK_GESTURE_PALETTE);
-  // The listening character (Talk pose, but not the current dialogue speaker) used to get only a
-  // near-zero-amplitude drift on one arm and a flat, never-moving 0.15 elbow bend on the other — next
-  // to the speaker's big expressive gesture that read as a frozen mannequin standing beside a puppet.
-  // Give it the same keyframe-gesture treatment, just from a subtler "at rest / listening" palette.
-  const listen = keyframeGesture(t, 14+o, 1.6, LISTEN_GESTURE_PALETTE);
-  const ws = weightShift(t, 41, o);
-  const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
-  return {
-    torsoLean: keyframeDrift(t, 8+o, 2.2, 0.025) + ws.torsoLean,
-    headTilt: speaking ? keyframeDrift(t, 9+o, 0.9, 0.13) : keyframeDrift(t, 9+o, 2.3, 0.06),
-    bounceY: Math.sin(t*2)*1.2 + 0.35*Math.sin(t*0.9+0.6),
-    leftShoulderAngle: keyframeDrift(t, 10+o, 1.6, 0.16), leftElbowBend: 0.15 + keyframeDrift(t, 13+o, 1.7, 0.1),
-    rightShoulderAngle: speaking ? gesture.shoulder : listen.shoulder,
-    rightElbowBend: speaking ? gesture.elbow : listen.elbow,
-    leftHipAngle: ws.leftHipAngle, leftKneeBend: ws.leftKneeBend,
-    rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend,
-    mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
-  };
+  const o=offset||0,p=poseIdle(t,o);
+  const beat=((t+o*.17)%3.8+3.8)%3.8;
+  const envelope=beat<.6?smoothstep01(beat/.6):beat<1.5?1:beat<2.4?1-smoothstep01((beat-1.5)/.9):0;
+  const emphasis=speaking?envelope:0;
+  const length=UPPER_ARM+FORE_ARM;
+  const handX=length*(.16+.47*emphasis),handY=length*(.91-.69*emphasis);
+  const arc=Math.sin(emphasis*Math.PI)*length*.10;
+  const right=armReachAngles(handX,handY-arc);
+  const left=armReachAngles(length*(.10+.04*Math.sin(t*.8+o)),length*.94);
+  p.rightShoulderAngle=right.shoulderAngle;p.rightElbowBend=right.elbowBend;
+  p.leftShoulderAngle=left.shoulderAngle;p.leftElbowBend=left.elbowBend;
+  p.torsoLean+=emphasis*.035;p.headTilt+=speaking?.035*Math.sin(t*3)*envelope:0;
+  p.mouthOpen=speaking?clamp(.45+.3*Math.sin(t*9.2),.12,.9):0;
+  return p;
 }
 function poseKite(t){
   return {
@@ -692,6 +687,25 @@ function poseHugBehind(t){
     mouthOpen: 0
   };
 }
+// Combat uses an anticipation → fast extension → recovery curve, not a sine-wave swing.
+function poseGuard(t=0){
+  const p=poseIdle(t,0), breath=Math.sin(t*2)*.025;
+  return Object.assign(p,{torsoLean:.10+breath,headTilt:-.06,leftShoulderAngle:.6,leftElbowBend:2.0,rightShoulderAngle:.3,rightElbowBend:2.35,leftHipAngle:.25,leftKneeBend:-.12,rightHipAngle:-.3,rightKneeBend:.2,bounceY:-5});
+}
+function combatBlend(a,b,k){const out={};for(const key of Object.keys(a))out[key]=typeof a[key]==='number'?a[key]+((b[key]??a[key])-a[key])*k:a[key];return out;}
+function poseCombat(t,kind='punch',repeat=true){
+  const duration=kind==='kick'?.82:.64,phase=repeat?((t%duration)+duration)%duration/duration:clamp(t/duration,0,1);
+  const base=poseGuard(0),wind=Object.assign({},base,{torsoLean:-.10,headTilt:-.12,bounceY:-9,rightShoulderAngle:-.25});
+  const hit=kind==='kick'?Object.assign({},base,{torsoLean:-.28,headTilt:.12,leftHipAngle:1.45,leftKneeBend:.12,rightHipAngle:-.1,rightKneeBend:.12,bounceY:1}):Object.assign({},base,{torsoLean:.30,headTilt:-.08,rightShoulderAngle:1.77,rightElbowBend:-.10,leftHipAngle:.37,rightHipAngle:-.38,bounceY:-3});
+  const ease=x=>x*x*(3-2*x);
+  if(phase<.26)return combatBlend(base,wind,ease(phase/.26));
+  if(phase<.44)return combatBlend(wind,hit,1-Math.pow(1-(phase-.26)/.18,3));
+  if(phase<.52)return hit;
+  return combatBlend(hit,base,ease((phase-.52)/.48));
+}
+function poseBlock(t){return Object.assign(poseGuard(t),{leftShoulderAngle:.5,leftElbowBend:2.55,rightShoulderAngle:.45,rightElbowBend:2.6,torsoLean:-.07,bounceY:-10});}
+function poseDodge(t){const dip=Math.sin(clamp(t/.7,0,1)*Math.PI);return Object.assign(poseGuard(t),{torsoLean:-.38*dip,bounceY:-5-27*dip,leftKneeBend:.5*dip,rightKneeBend:.6*dip});}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t,opts)=>poseIdle(t, opts&&opts.phase) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking), opts&&opts.phase) },
@@ -705,11 +719,15 @@ const CLIPS = {
   jump: { label:'Jump', pose:(t)=>poseJump(t) },
   eat:  { label:'Eat', pose:(t)=>poseEat(t) },
   run:  { label:'Run', pose:(t)=>poseRun(t) },
-  fight:{ label:'Fight', pose:(t,opts)=>poseFight(t, opts&&opts.phase) },
+  fight:{ label:'Fight combo', pose:t=>poseCombat(t,'punch') },
+  punch:{ label:'Boxing punch', pose:t=>poseCombat(t,'punch') },
+  guard:{ label:'Fighting guard', pose:t=>poseGuard(t) },
+  block:{ label:'Block / defend', pose:t=>poseBlock(t) },
+  dodge:{ label:'Dodge', pose:t=>poseDodge(t%.7) },
   argue:{ label:'Argue', pose:(t,opts)=>poseArgue(t, opts&&opts.phase) },
   hug:  { label:'Hug', pose:(t)=>poseHug(t) },
   highfive: { label:'High Five', pose:(t)=>poseHighFive(t) },
-  kick: { label:'Kick', pose:(t)=>poseKick(t) },
+  kick: { label:'Front kick', pose:t=>poseCombat(t,'kick') },
   throw:{ label:'Throw', pose:(t)=>poseThrow(t) },
   swim: { label:'Swim', pose:(t)=>poseSwim(t) },
   sleep:{ label:'Sleep', pose:(t)=>poseSleep(t) },
@@ -784,17 +802,18 @@ const POSE_LERP_FIELDS = ['torsoLean','headTilt','bounceY','leftShoulderAngle','
 function evalKeyframePose(t, keyframes){
   if(!keyframes || !keyframes.length) return poseIdle(t, 0);
   if(keyframes.length === 1) return Object.assign({}, keyframes[0].pose);
-  const total = keyframes.reduce((s,k)=> s + Math.max(0.1, k.duration || 1), 0);
+  const total = keyframes.reduce((s,k)=> s + Math.max(0.1, k.duration || 1) + Math.max(0,k.hold||0), 0);
   const tt = ((t % total) + total) % total;
   let acc = 0;
   for(let i=0;i<keyframes.length;i++){
     const k = keyframes[i];
-    const d = Math.max(0.1, k.duration || 1);
+    const hold=Math.max(0,k.hold||0),transition=Math.max(.1,k.duration||1);
+    const d = hold+transition;
     if(tt < acc + d || i === keyframes.length - 1){
       const next = keyframes[(i+1) % keyframes.length];
-      const frac = Math.min(1, Math.max(0, (tt - acc) / d));
-      const eased = frac*frac*(3 - 2*frac); // smoothstep
-      const out = {};
+      const frac = Math.min(1, Math.max(0, (tt - acc - hold) / transition));
+      const eased = k.easing==='linear'?frac:k.easing==='easeIn'?frac*frac:k.easing==='easeOut'?1-(1-frac)*(1-frac):k.easing==='step'?0:frac*frac*frac*(frac*(frac*6-15)+10);
+      const out = {lying:!!(k.pose&&k.pose.lying)};
       POSE_LERP_FIELDS.forEach(f=>{
         const a = (k.pose && k.pose[f] != null) ? k.pose[f] : 0;
         const b = (next.pose && next.pose[f] != null) ? next.pose[f] : 0;
