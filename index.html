@@ -28,60 +28,42 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20260910a">
 </head>
 <body>
 
 <header class="site-nav">
   <div class="site-nav-logo"><span class="dot"></span>Stickman Studio</div>
   <nav>
-    <a id="navAiLink">Scene Builder</a>
-    <a id="navDesignLink">Pose Designer</a>
-    <a id="navFlipbookLink">Flipbook</a>
-    <a id="navDuelLink">Duel</a>
+    <a href="#" id="navAiLink">Scene Builder</a>
+    <a href="#" id="navDesignLink">Pose Designer</a>
+    <a href="#" id="navFlipbookLink">Flipbook</a>
+    <a href="#" id="navDuelLink">Duel</a>
   </nav>
   <button type="button" id="navStartBtn" class="nav-cta">Start creating</button>
 </header>
 
-<h1>Stickman Video Studio — Free Stickman <span class="hl">Animation Maker</span></h1>
-<p class="subtitle">Make stick figure animation videos free, right in your browser — no sign-up, no download. Describe a scene and it builds instantly, or hand-pose every move yourself with the Pose Designer. Add weapons and effects, pick from 7 art styles, and export a real .webm video.</p>
-<div class="hero-badges">
-  <span>★ Instant scene builder</span>
-  <span>★ Pose Designer</span>
-  <span>★ Weapons &amp; effects</span>
-  <span>★ 7 art styles</span>
-</div>
-<!-- Prominent entry point for the Pose Designer (js/ui.js's openPoseDesigner) — the dropdown option
-     ("Design your own...") still exists in every segment's action select, but this callout makes the
-     capability itself discoverable rather than requiring someone to already know it's there. -->
-<div class="scene-designer-cta">
-  <div class="scene-designer-cta-text">
-    <strong>&#127912; Design Your Own Scene</strong>
-    <p>Add as many characters as you want below, then hand-design each one's moves frame by frame &mdash; a boxing match, a dance routine, anything you can picture &mdash; instead of only picking from the built-in action list. The live preview shows the real background and every other character while you work, and you can save any move you build to reuse later.</p>
+<section class="studio-heading">
+  <div><p class="eyebrow">ANIMATION WORKSPACE</p><h1>Stickman Video Studio</h1><p class="subtitle">Build a scene. Make your move. Export your story.</p></div>
+  <div class="studio-tools">
+    <button type="button" id="startSceneDesignBtn" class="secondary">Pose designer</button>
+    <button type="button" id="startFlipbookBtn" class="secondary">Flipbook</button>
+    <button type="button" id="startDuelBtn" class="secondary">Duel</button>
   </div>
-  <button type="button" id="startSceneDesignBtn">Start designing &rarr;</button>
+</section>
+<div class="project-bar" aria-label="Project controls">
+  <label for="projectName">Project</label><input id="projectName" type="text" value="Untitled animation" maxlength="80">
+  <button id="undoBtn" class="secondary" disabled title="Undo (Ctrl/Cmd+Z)">Undo</button>
+  <button id="redoBtn" class="secondary" disabled title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+  <button id="saveProjectBtn" class="secondary">Save project</button>
+  <button id="openProjectBtn" class="secondary">Open project</button>
+  <input id="projectFile" type="file" accept=".json,application/json" hidden>
+  <span id="projectStatus" role="status" aria-live="polite">Save a project to keep editing later.</span>
 </div>
+<main class="layout">
 
-<div class="scene-designer-cta" style="background:linear-gradient(135deg,#fff7ed,#fffbeb); border-color:#fed7aa;">
-  <div class="scene-designer-cta-text">
-    <strong>&#9998; Flipbook Animator</strong>
-    <p>Draw your own frame-by-frame animation from scratch &mdash; sketch a frame, click "+ Add" for the next one (the faint outline of the last frame, the onion skin, stays visible so you can line up the motion), then play it back or export it as a real .webm video.</p>
-  </div>
-  <button type="button" id="startFlipbookBtn" style="background:linear-gradient(135deg,#f59e0b,#ea580c);">Start drawing &rarr;</button>
-</div>
-
-<div class="scene-designer-cta" style="background:linear-gradient(135deg,#fef2f2,#fff1f2); border-color:#fecaca;">
-  <div class="scene-designer-cta-text">
-    <strong>&#9876;&#65039; Stickman Duel</strong>
-    <p>Pick a weapon &mdash; fists, sword, katana, pistol, or AK47 &mdash; and spar against a friend on the same keyboard. It's a quick, fun way to see the fight engine in action before you go build your own scene with it.</p>
-  </div>
-  <button type="button" id="startDuelBtn" style="background:linear-gradient(135deg,#ef4444,#b91c1c);">Fight now &rarr;</button>
-</div>
-
-<div class="layout">
-
-  <div class="panel">
-    <h2>Scene</h2>
+  <div class="panel scene-panel">
+    <h2>01 / Scene &amp; cast</h2>
     <div class="field">
       <label for="promptInput">Describe your video</label>
       <textarea id="promptInput" rows="3" placeholder="e.g. A stickman walks into a cafe, sits down, drinks coffee, then talks on the phone for 2 minutes" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
@@ -180,10 +162,14 @@
   </div>
 
   <div class="stage-wrap">
-    <canvas id="stage" width="800" height="450"></canvas>
+    <div class="stage-heading"><h2>02 / Preview</h2><span>800 × 450 · 16:9</span></div>
+    <canvas id="stage" width="800" height="450" aria-label="Animated scene preview"></canvas>
+    <div class="scrub-row"><output id="timecode">0:00.00 / 0:00.00</output><input id="playheadRange" type="range" min="0" max="7.5" step="0.01" value="0" aria-label="Preview position"></div>
     <div class="controls-row">
       <button id="playPauseBtn" class="secondary">Pause</button>
       <button id="restartBtn" class="secondary">Restart</button>
+      <button id="previousFrameBtn" class="secondary" title="Previous frame (Left arrow)">−1 frame</button>
+      <button id="nextFrameBtn" class="secondary" title="Next frame (Right arrow)">+1 frame</button>
       <div class="speed-wrap">
         Speed
         <input type="range" id="speedRange" min="0.5" max="2" step="0.1" value="1" style="width:100px;">
@@ -191,22 +177,26 @@
       </div>
     </div>
     <div class="export-box">
+      <div class="export-settings"><label for="exportQuality">Quality</label><select id="exportQuality"><option value="1280">HD · 720p</option><option value="1920">Full HD · 1080p</option><option value="800">Draft · 450p</option></select><label for="exportFps">Frame rate</label><select id="exportFps"><option value="24">24 fps</option><option value="30">30 fps</option></select></div>
       <button id="exportBtn">Export Video (.webm)</button>
+      <button id="cancelExportBtn" class="secondary" hidden>Cancel export</button>
+      <progress id="exportProgress" max="100" value="0" hidden aria-label="Video export progress"></progress>
+      <p id="exportStatus" role="status" aria-live="polite"></p>
       <div><video id="previewVideo" controls loop></video></div>
       <a id="downloadLink" class="download-link">Download stickman_video.webm</a>
       <p class="export-tip" style="font-size:12px;color:#777;margin-top:6px;max-width:800px;width:100%;box-sizing:border-box;">Saved as .webm — plays natively in Chrome, Firefox, Edge, and VLC. Windows’ built-in video player may not open it; use the browser or VLC if it looks stuck.</p>
     </div>
   </div>
 
-  <div class="panel">
-    <h2>Timeline</h2>
+  <div class="panel timeline-panel">
+    <h2>03 / Timeline</h2>
     <p class="timeline-total" id="timelineTotal">Total: 0.0s</p>
     <div id="timelineStrip" class="timeline-strip"></div>
     <div id="segmentList"></div>
     <button type="button" id="addSegmentBtn" class="secondary small">+ Add segment</button>
   </div>
 
-</div>
+</main>
 
 <!-- Pose Designer: general-purpose keyframe move builder (js/ui.js). Hidden by default; opened from a
      segment's action dropdown ("Design your own...") or its pencil edit button. Reuses the single
@@ -369,7 +359,7 @@
   </div>
 </div>
 
-<p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes", seating like "sofa", animals like "dog" or "cat", and vehicles like "car" or "bicycle" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
+<details class="studio-help"><summary>How to use the studio</summary><p class="quick-guide">1. Describe your scene or choose a preset. 2. Edit your characters and timeline actions. 3. Scrub the preview or design a custom pose. 4. Export a WebM video. Save your project separately to keep an editable copy. Space plays or pauses; arrow keys step one frame.</p><p class="note">This runs entirely in your browser — no AI credits used. The description box uses built-in keyword understanding (not a live AI call) to recognize actions like walk, sit, drink coffee, talk on the phone, wave, dance, jump and fly a kite, plus a duration like "2 minutes", seating like "sofa", animals like "dog" or "cat", and vehicles like "car" or "bicycle" — it builds a timeline you can still fine-tune below. Add as many timeline segments as you want; the exported video length always matches the full timeline.</p>
 
 <section class="seo-guide" style="max-width:900px; margin:40px auto 0; padding:0 16px;">
   <h2 style="font-size:22px; margin-bottom:10px;">How to animate stick figures (a quick guide)</h2>
@@ -379,7 +369,7 @@
   <h3 style="font-size:17px; margin:18px 0 6px;">Design your own scene, step by step</h3>
   <p style="line-height:1.6; color:var(--muted);">The instant scene builder is the fast path, but the "Design Your Own Scene" tool is how you build a move nothing on the built-in action list covers — a specific punch combo, a signature dance, a custom sword stance. Here is the exact flow:</p>
   <ol style="line-height:1.8; color:var(--muted); padding-left:20px;">
-    <li>Click <b>Start designing →</b> in the "Design Your Own Scene" banner near the top of the page (or pick "Design your own..." from any segment's action dropdown, or its pencil edit button, to edit an existing move).</li>
+    <li>Click <b>Pose designer</b> using the "Pose designer" button above the editor (or pick "Design your own..." from any segment's action dropdown, or its pencil edit button, to edit an existing move).</li>
     <li>If your scene has more than one character, pick which one you are posing.</li>
     <li>On the live preview, drag the purple dots on the hands, feet, and head to pose the character — or use the sliders on the right for precise control. The background and every other character stay visible while you work.</li>
     <li>Happy with the pose? Click <b>Add keyframe</b>. Build a sequence by adding a few keyframes in order — for example guard, then jab, then kick, then back to guard — and the tool smoothly animates between each one on a loop.</li>
@@ -405,14 +395,14 @@
   <p style="line-height:1.6; color:var(--muted);">Everything here runs directly in your browser with no downloads, and every feature — export, weapons and effects, all 7 art styles, and the instant scene builder — is free with no account and no paid tier. Pivot Animator and Stick Nodes are the classic hand-posed tools this one is compatible in spirit with, but neither can turn a plain-English description into a working scene the way the builder here does, instantly and entirely offline.</p>
   <h3 style="font-size:16px; margin:14px 0 4px;">Can I draw my own animation from scratch instead?</h3>
   <p style="line-height:1.6; color:var(--muted);">Yes, the Flipbook Animator is a separate frame-by-frame drawing tool with onion skinning, built for sketching your own animation rather than posing a stick figure rig.</p>
-</section>
+</section></details>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Is this stickman animation maker really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. There is no sign-up, no account, and no credits system - everything runs directly in your browser and exports a real .webm video file." } },
-    { "@type": "Question", "name": "Is this a good alternative to Pivot Animator or Stick Nodes?", "acceptedAnswer": { "@type": "Answer", "text": "If you want the classic hand-posed, frame-by-frame stick figure animation experience, the Pose Designer works the same way those tools do, with an AI scene generator added on top." } },
+    { "@type": "Question", "name": "Is this a good alternative to Pivot Animator or Stick Nodes?", "acceptedAnswer": { "@type": "Answer", "text": "If you want the classic hand-posed, frame-by-frame stick figure animation experience, the Pose Designer works the same way those tools do, with an offline keyword-based scene builder added on top." } },
     { "@type": "Question", "name": "Can two stickman characters interact, like a fight or a dance?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Actions like Fight, Argue, Hug, High Five, and Dance are designed for two characters performing together, and weapon effects like bullets and sword slashes detect a nearby character and land on them." } },
     { "@type": "Question", "name": "What art styles are available?", "acceptedAnswer": { "@type": "Answer", "text": "Seven: Bold Cartoon, Neon Glow, Flat Clipart, Big Head Comedy, Doodle Ghost, Hand-Drawn Sketch, and Sticker Doodle." } },
     { "@type": "Question", "name": "How is this different from Pivot Animator, Stick Nodes, or Stick Studio Pro?", "acceptedAnswer": { "@type": "Answer", "text": "Everything runs in the browser with no downloads, and every feature - export, weapons and effects, all 7 art styles, and the instant scene builder - is free with no account and no paid tier." } },
@@ -455,8 +445,9 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="js/scene.js?v=20260818f"></script>
 <script src="js/webmDurationFix.js?v=20260819a"></script>
 <script src="js/webmWriter.js?v=20260819c"></script>
-<script src="js/ui.js?v=20260820a"></script>
+<script src="js/ui.js?v=20260910a"></script>
 <script src="js/duel.js?v=20260818a"></script>
 <script src="js/flipbook.js?v=20260814a"></script>
+<script src="js/studio.js?v=20260910a"></script>
 </body>
 </html>

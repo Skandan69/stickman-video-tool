@@ -1,12 +1,14 @@
 // ---------- main render loop ----------
 let elapsed = 0, lastNow = performance.now();
+let exportInProgress = false, exportCancelled = false;
 // Cache of the most recently evaluated frame — used outside the render loop for canvas hit-testing
 // (drag-to-reposition below) so we know exactly where each character was actually drawn this frame,
 // rather than recomputing scene evaluation separately and risking it drifting out of sync.
 let lastFrame = null;
 function loop(now){
-  const dt = (now - lastNow)/1000;
+  const dt = Math.min(0.1, Math.max(0, (now - lastNow)/1000));
   lastNow = now;
+  if(exportInProgress){ requestAnimationFrame(loop); return; }
   // Stickman Duel (js/duel.js) also takes over the single shared canvas while open, same reparenting
   // trick as the Pose Designer below — checked first since Duel and the Designer are never open at the
   // same time, but if they somehow were, the faster-paced game loop should win the canvas.
@@ -27,6 +29,7 @@ function loop(now){
     renderFrame(lastFrame);
     if(canvasDrag) drawCanvasDragGhost();
     updateTimelineStripPlayhead();
+    if(typeof updateStudioTransport === "function") updateStudioTransport();
   }
   requestAnimationFrame(loop);
 }
@@ -36,7 +39,7 @@ requestAnimationFrame(loop);
 // changing a dropdown (Art Style, Background, Weather, Furniture, Food) could otherwise sit invisibly
 // in state until the next natural animation frame. Every listener that mutates state.scene outside of
 // normal playback should call this right after.
-function forceRedraw(){ lastFrame = evaluateScene(state.scene, elapsed); renderFrame(lastFrame); if(canvasDrag) drawCanvasDragGhost(); }
+function forceRedraw(){ if(typeof scheduleStudioHistory === "function") scheduleStudioHistory(); lastFrame = evaluateScene(state.scene, elapsed); renderFrame(lastFrame); if(canvasDrag) drawCanvasDragGhost(); }
 
 // ---------- Scene panel wiring ----------
 const promptInput = document.getElementById('promptInput');
@@ -191,7 +194,7 @@ playPauseBtn.addEventListener('click', ()=>{
   state.playing = !state.playing;
   playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
 });
-restartBtn.addEventListener('click', ()=>{ elapsed = 0; });
+restartBtn.addEventListener('click', ()=>{ elapsed = 0; forceRedraw(); updateTimelineStripPlayhead(); });
 
 // ---------- Character panel (dynamic list, any number of characters) ----------
 const characterList = document.getElementById('characterList');
@@ -815,7 +818,7 @@ function renderTimelineStrip(){
     handle.setAttribute('draggable', 'true');
     handle.title = 'Drag to reorder';
     handle.textContent = '⋮⋮';
-    handle.addEventListener('mousedown', (e)=> e.stopPropagation());
+    handle.addEventListener('pointerdown', (e)=> e.stopPropagation());
     handle.addEventListener('dragstart', (e)=>{ e.stopPropagation(); dragSegId = seg.id; block.classList.add('dragging'); });
     handle.addEventListener('dragend', (e)=>{ e.stopPropagation(); block.classList.remove('dragging'); dragSegId = null; });
     block.appendChild(handle);
@@ -828,7 +831,7 @@ function renderTimelineStrip(){
     const resize = document.createElement('span');
     resize.className = 'strip-resize-handle';
     resize.title = 'Drag to trim duration';
-    resize.addEventListener('mousedown', (e)=>{
+    resize.addEventListener('pointerdown', (e)=>{
       e.stopPropagation(); e.preventDefault();
       const total = state.scene.timeline.reduce((s,sg)=> s + Math.max(0.1, sg.duration), 0) || 1;
       const stripWidth = timelineStrip.getBoundingClientRect().width || 1;
@@ -850,13 +853,15 @@ function renderTimelineStrip(){
         forceRedraw();
       }
       function onUp(){
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
         renderTimelineStrip();
         renderSegmentList();
       }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
     });
     block.appendChild(resize);
 
@@ -885,20 +890,23 @@ function renderTimelineStrip(){
 // Click-drag scrubbing: mousedown anywhere on the strip's own background (not a block's drag/resize
 // handle, which stopPropagation their own mousedowns) starts scrubbing — playback pauses for the
 // duration of the drag, like a real editor, and resumes to wherever it was left (paused or not).
-timelineStrip.addEventListener('mousedown', (e)=>{
+timelineStrip.addEventListener('pointerdown', (e)=>{
+  if(exportInProgress || !e.isPrimary || e.button !== 0) return;
   const wasPlaying = state.playing;
   state.playing = false;
   elapsed = stripTimeAt(e.clientX);
   forceRedraw(); updateTimelineStripPlayhead();
   function onMove(ev){ elapsed = stripTimeAt(ev.clientX); forceRedraw(); updateTimelineStripPlayhead(); }
   function onUp(){
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
     state.playing = wasPlaying;
     if(playPauseBtn) playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
   }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
 });
 function updateTimelineStripPlayhead(){
   const playhead = document.getElementById('timelineStripPlayhead');
@@ -952,7 +960,9 @@ function drawCanvasDragGhost(){
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
   ctx.restore();
 }
-canvas.addEventListener('mousedown', (e)=>{
+canvas.addEventListener('pointerdown', (e)=>{
+  if(exportInProgress || (typeof duel !== 'undefined' && duel.active) || !e.isPrimary || e.button !== 0) return;
+  canvas.setPointerCapture(e.pointerId);
   // The Pose Designer physically reparents this same canvas into its own overlay while open (see
   // openPoseDesigner below) and installs its own drag-to-pose handles on it — this listener's
   // "drag a character's end position" logic is for the NORMAL scene canvas and would otherwise
@@ -976,8 +986,9 @@ canvas.addEventListener('mousedown', (e)=>{
     forceRedraw();
   }
   function onUp(){
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
     const targetSeg = findSegment(canvasDrag.segId);
     if(targetSeg){
       if(!targetSeg.dragTargets) targetSeg.dragTargets = {};
@@ -993,10 +1004,11 @@ canvas.addEventListener('mousedown', (e)=>{
     renderSegmentList();
     forceRedraw();
   }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
 });
-canvas.addEventListener('mousemove', (e)=>{
+canvas.addEventListener('pointermove', (e)=>{
   if(typeof designer !== 'undefined' && designer.active) return; // designer installs its own cursor/hover logic
   if(canvasDrag) return; // an active drag is driven by the document-level listener installed above
   const pt = canvasPointFromEvent(e);
@@ -1335,7 +1347,9 @@ function drawDesignerHandles(){
   });
   ctx.restore();
 }
-canvas.addEventListener('mousedown', (e)=>{
+canvas.addEventListener('pointerdown', (e)=>{
+  if(exportInProgress || (typeof duel !== 'undefined' && duel.active) || !e.isPrimary || e.button !== 0) return;
+  canvas.setPointerCapture(e.pointerId);
   if(!designer.active || designer.playing) return;
   const pt = canvasPointFromEvent(e);
   const handle = designerHandleHitTest(pt.x, pt.y);
@@ -1349,15 +1363,17 @@ canvas.addEventListener('mousedown', (e)=>{
     applyDesignerDrag(designerDragPart, p.x, p.y);
   }
   function onUp(){
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
     designerDragPart = null;
     canvas.style.cursor = '';
   }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
 });
-canvas.addEventListener('mousemove', (e)=>{
+canvas.addEventListener('pointermove', (e)=>{
   if(!designer.active || designerDragPart) return; // dragging is driven by the document-level listener above
   const pt = canvasPointFromEvent(e);
   canvas.style.cursor = designerHandleHitTest(pt.x, pt.y) ? 'grab' : '';
@@ -1568,11 +1584,12 @@ function renderDesignerCharSelect(){
   designerCharSelect.style.display = '';
   designerCharSelect.innerHTML = chars.map(c=>{
     const kfCount = (c.id === designer.charId) ? designer.keyframes.length : ((designer.charStash[c.id] && designer.charStash[c.id].keyframes.length) || 0);
-    return '<option value="'+c.id+'"'+(c.id===designer.charId?' selected':'')+'>'+c.name+(kfCount ? ' ('+kfCount+' kf)' : '')+'</option>';
+    return '<option value="'+c.id+'"'+(c.id===designer.charId?' selected':'')+'>'+escapeHtml(c.name)+(kfCount ? ' ('+kfCount+' kf)' : '')+'</option>';
   }).join('');
 }
 
 function openPoseDesigner(segId, charId, explicitPreviousAction){
+  if(typeof commitStudioHistory === "function") commitStudioHistory();
   const seg = findSegment(segId);
   const character = findCharacter(charId);
   if(!seg || !character) return;
@@ -1830,146 +1847,78 @@ if(startSceneDesignBtn){
 // once at page load, not re-read from the live canvas), so the scale transform is ALL that's needed to
 // get a crisp, full-resolution export with zero changes anywhere else in the renderer.
 const EXPORT_SCALE = 2.4; // 800x450 * 2.4 = 1920x1080
-exportBtn.addEventListener('click', ()=>{
-  if(!canvas.captureStream || !window.MediaRecorder){
-    alert('Video export needs a Chrome/Edge browser (MediaRecorder API). Playback still works everywhere.');
-    return;
+exportBtn.addEventListener('click', async ()=>{
+  if(exportInProgress) return;
+  const status = document.getElementById('exportStatus');
+  const progress = document.getElementById('exportProgress');
+  const cancel = document.getElementById('cancelExportBtn');
+  const say = text => { if(status) status.textContent = text; };
+  if(!window.WebMWriter || !canvas.toDataURL('image/webp').startsWith('data:image/webp')){
+    say('This browser cannot encode WebM. Try Chrome or Edge.'); return;
   }
   const totalDur = evaluateScene(state.scene, 0).totalDuration;
-  // Frame-by-frame export doesn't play the scene in real time at all, so the Playback Speed slider
-  // and whatever the user was doing on-screen (playing, paused, mid-scrub) are irrelevant to the
-  // recording itself - we just save them here and restore them once the export finishes so the
-  // editor snaps back to exactly how the user left it.
-  const origSpeedForExport = state.speed;
-  const wasPlayingForExport = state.playing;
-  const savedElapsedForExport = elapsed;
-  state.speed = 1;
+  const saved = { speed:state.speed, playing:state.playing, elapsed, width:canvas.width, height:canvas.height };
+  const width = Number(document.getElementById('exportQuality')?.value || 1280);
+  const fps = Number(document.getElementById('exportFps')?.value || 24);
+  const scale = width / saved.width;
+  const frames = Math.max(1, Math.round(totalDur * fps));
+  const locked = [...document.querySelectorAll('button,input,select,textarea')].filter(el => el !== cancel && !el.disabled);
+  exportInProgress = true; exportCancelled = false;
   state.playing = false;
-
-  // Lock the ON-SCREEN displayed size to exactly what it already was (in CSS pixels) before touching
-  // the backing resolution — canvas{max-width:100%} alone would otherwise let the browser stretch the
-  // now-much-taller backing buffer to fill the container width, visibly distorting the aspect ratio for
-  // the few seconds of recording. Capturing the current rendered box size and pinning it via inline
-  // style keeps the visible preview looking completely unchanged while it secretly records much bigger.
+  locked.forEach(el => { el.disabled = true; });
+  document.querySelector('.layout').inert = true;
+  // Cancel remains available outside the inert editor during rendering.
+  const cancelHome = cancel.parentNode, cancelNext = cancel.nextSibling;
+  document.querySelector('.project-bar').appendChild(cancel);
+  cancel.hidden = false; cancel.focus();
+  if(progress){ progress.hidden = false; progress.value = 0; }
   const displayW = canvas.offsetWidth, displayH = canvas.offsetHeight;
-  canvas.style.width = displayW + 'px';
-  canvas.style.height = displayH + 'px';
-  // A user dragging a character/timeline-scrub on the canvas mid-export would compute the wrong
-  // position (canvasPointFromEvent divides by the now-larger canvas.width), so just disable pointer
-  // interaction on the canvas for the brief recording window — export already disables the button, this
-  // covers the canvas itself.
-  canvas.style.pointerEvents = 'none';
-
-  const origW = canvas.width, origH = canvas.height;
-  // Frame-by-frame export re-encodes every single frame to WebP on the CPU (no GPU/hardware
-  // encoder involved), and that cost scales with pixel count - at the full EXPORT_SCALE (1080p+)
-  // resolution used elsewhere, encoding a single detailed frame can take multiple seconds, which
-  // made a several-second animation take many minutes to export. Cap the export resolution at
-  // 1280px wide (standard HD) for this path specifically so exports finish in a reasonable time;
-  // still a clear upgrade over the original on-screen preview size.
-  const frameExportScale = Math.min(EXPORT_SCALE, 1280 / origW);
-  canvas.width = Math.round(origW * frameExportScale);
-  canvas.height = Math.round(origH * frameExportScale);
-  // Resizing a canvas element always resets its 2D context state (transform included) AND clears its
-  // pixel content back to blank — the scale has to be (re)applied right after, and critically the
-  // canvas needs an actual painted frame at the new size BEFORE captureStream() is called. Calling
-  // captureStream() on a still-blank, just-resized canvas produced a stream that recorded zero frames
-  // (a real bug caught by testing the export live: the resulting .webm was 0 bytes) — forcing one
-  // synchronous redraw here first fixes that.
-  ctx.scale(frameExportScale, frameExportScale); // must match the resize above, not the old EXPORT_SCALE
-  forceRedraw();
-
-  const FPS = 24; // lower than the on-screen 30fps preview - cuts total encode work by 20%
-  // without a visually obvious difference for this style of animation, on top of the resolution cap.
-  const totalFrames = Math.max(1, Math.round(totalDur * FPS));
-
-  const restoreCanvas = () => {
-    canvas.width = origW; canvas.height = origH;
-    canvas.style.width = ''; canvas.style.height = ''; canvas.style.pointerEvents = '';
-    forceRedraw();
-  };
-
-  if(!window.WebMWriter || !canvas.toDataURL){
-    alert('Video export needs a Chrome/Edge browser (Canvas WebP support).');
-    restoreCanvas();
-    state.playing = wasPlayingForExport;
-    elapsed = savedElapsedForExport;
-    state.speed = origSpeedForExport;
-    exportBtn.disabled = false;
-    exportBtn.textContent = 'Export Video (.webm)';
-    return;
-  }
-
-  const writer = new window.WebMWriter({ quality: 0.85, frameRate: FPS });
-
-  exportBtn.disabled = true;
-  exportBtn.textContent = 'Rendering... 0%';
-
-  // Frame-by-frame direct generation instead of real-time canvas.captureStream()/MediaRecorder.
-  // Each frame is rendered by calling evaluateScene/renderFrame at an exact timestamp, then handed
-  // straight to the WebM writer   there's no real-time playback involved at all, so this is
-  // completely immune to the bugs that plagued the old recording-based approach: browsers throttling
-  // or pausing requestAnimationFrame on unfocused/hidden tabs, wall-clock drift, and the Playback
-  // Speed slider all used to be able to cut the export short or skew its length. None of that can
-  // happen here because the loop below doesn't depend on real time passing at all   it runs exactly
-  // totalFrames iterations, full stop, so the output duration always exactly matches the timeline.
-  (async () => {
-    try {
-      for (let f = 0; f < totalFrames; f++) {
-        const t = Math.min(f / FPS, Math.max(0, totalDur - 1 / FPS));
-        const frameData = evaluateScene(state.scene, t);
-        renderFrame(frameData);
-        writer.addFrame(canvas);
-
-        if (f % 6 === 0 || f === totalFrames - 1) {
-          exportBtn.textContent = 'Rendering... ' + Math.round(((f + 1) / totalFrames) * 100) + '%';
-          // Yield back to the browser periodically so the tab stays responsive and the percentage
-          // label actually repaints between frames.
-          await new Promise(r => setTimeout(r, 0));
-        }
+  canvas.style.width = displayW + 'px'; canvas.style.height = displayH + 'px';
+  canvas.width = width; canvas.height = Math.round(saved.height * scale);
+  ctx.scale(scale, scale);
+  say('Rendering your video. Keep this tab open.');
+  try {
+    const writer = new window.WebMWriter({ quality:0.85, frameRate:fps });
+    for(let f=0; f<frames; f++){
+      if(exportCancelled) break;
+      renderFrame(evaluateScene(state.scene, Math.min(f/fps, Math.max(0,totalDur-1/fps))));
+      writer.addFrame(canvas);
+      if(f % 6 === 0 || f === frames-1){
+        const pct = Math.round((f+1)/frames*100);
+        exportBtn.textContent = 'Rendering… ' + pct + '%';
+        if(progress) progress.value = pct;
+        await new Promise(resolve=>setTimeout(resolve,0));
       }
-
-      exportBtn.textContent = 'Finishing up...';
-      // Give the browser a beat to repaint that label before the (potentially chunky, synchronous)
-      // final file-assembly work below - otherwise "Rendering... 100%" can appear to hang for a
-      // while with zero feedback on slower machines, even though nothing is actually stuck.
-      await new Promise(r => setTimeout(r, 0));
-
-      const blob = await writer.complete();
-
-      restoreCanvas();
-      state.playing = wasPlayingForExport;
-      elapsed = savedElapsedForExport;
-      state.speed = origSpeedForExport;
-
-      const url = URL.createObjectURL(blob);
-      previewVideo.src = url; previewVideo.style.display = 'block';
-      downloadLink.href = url; downloadLink.download = 'stickman_video.webm';
-      downloadLink.style.display = 'inline-block';
-      downloadLink.textContent = 'Download stickman_video.webm';
-      const tipEl = document.querySelector('.export-tip');
-      if (tipEl) { tipEl.style.color = ''; tipEl.textContent = 'Saved as .webm - plays natively in Chrome, Firefox, Edge, and VLC. Windows\' built-in video player may not open it; use the browser or VLC if it looks stuck.'; }
-    } catch (err) {
-      // Don't rely on alert() for this: if the browser previously showed a dialog on this page and
-      // the user checked "Prevent this page from creating additional dialogs" (a real Chrome option),
-      // every subsequent alert() silently does nothing - which looks exactly like "export finished
-      // but nothing happened", the exact bug this replaces. An on-page message can't be suppressed
-      // that way, and console.error keeps a copy for debugging.
-      console.error('Video export failed:', err);
-      const tipEl = document.querySelector('.export-tip');
-      if (tipEl) {
-        tipEl.style.color = '#dc2626';
-        tipEl.textContent = 'Export failed: ' + (err && err.message ? err.message : err) + ' - please try again. If it keeps happening, open the browser console (F12) and share what it shows.';
-      }
-      restoreCanvas();
-      state.playing = wasPlayingForExport;
-      elapsed = savedElapsedForExport;
-      state.speed = origSpeedForExport;
-    } finally {
-      exportBtn.disabled = false;
-      exportBtn.textContent = 'Export Video (.webm)';
     }
-  })();
+    if(exportCancelled){ say('Export cancelled. Your scene is ready to edit.'); return; }
+    say('Finishing your video…');
+    const blob = await writer.complete();
+    if(exportCancelled){ say('Export cancelled. Your scene is ready to edit.'); return; }
+    if(!blob.size) throw new Error('The encoder returned an empty file.');
+    if(previewVideo.src.startsWith('blob:')) URL.revokeObjectURL(previewVideo.src);
+    const url = URL.createObjectURL(blob);
+    const name = (document.getElementById('projectName')?.value || 'stickman_video').replace(/[^a-z0-9_-]+/gi,'_').slice(0,80) || 'stickman_video';
+    previewVideo.src = url; previewVideo.style.display = 'block';
+    downloadLink.href = url; downloadLink.download = name + '.webm';
+    downloadLink.style.display = 'inline-block'; downloadLink.textContent = 'Download ' + name + '.webm';
+    say('Ready · ' + (frames/fps).toFixed(2) + ' seconds · ' + (blob.size/1048576).toFixed(1) + ' MB · ' + width + ' × ' + canvas.height);
+  } catch(err){
+    console.error('Video export failed:', err);
+    say('Export failed. Try Draft quality or a shorter timeline. ' + (err.message || ''));
+  } finally {
+    state.speed = saved.speed; state.playing = saved.playing; elapsed = saved.elapsed;
+    canvas.width = saved.width; canvas.height = saved.height;
+    canvas.style.width = ''; canvas.style.height = '';
+    exportInProgress = false; lastNow = performance.now();
+    locked.forEach(el=>{ el.disabled = false; });
+    document.querySelector('.layout').inert = false;
+    cancelHome.insertBefore(cancel,cancelNext); cancel.hidden = true;
+    if(progress) progress.hidden = true;
+    exportBtn.disabled = false; exportBtn.textContent = 'Export Video (.webm)';
+    playPauseBtn.textContent = state.playing ? 'Pause' : 'Play';
+    forceRedraw(); exportBtn.focus();
+    if(typeof refreshHistoryButtons === 'function') refreshHistoryButtons();
+  }
 });
 
 // ---------- init ----------
