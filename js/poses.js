@@ -692,6 +692,25 @@ function poseHugBehind(t){
     mouthOpen: 0
   };
 }
+// Combat uses an anticipation → fast extension → recovery curve, not a sine-wave swing.
+function poseGuard(t=0){
+  const p=poseIdle(t,0), breath=Math.sin(t*2)*.025;
+  return Object.assign(p,{torsoLean:.10+breath,headTilt:-.06,leftShoulderAngle:.6,leftElbowBend:2.0,rightShoulderAngle:.3,rightElbowBend:2.35,leftHipAngle:.25,leftKneeBend:-.12,rightHipAngle:-.3,rightKneeBend:.2,bounceY:-5});
+}
+function combatBlend(a,b,k){const out={};for(const key of Object.keys(a))out[key]=typeof a[key]==='number'?a[key]+((b[key]??a[key])-a[key])*k:a[key];return out;}
+function poseCombat(t,kind='punch',repeat=true){
+  const duration=kind==='kick'?.82:.64,phase=repeat?((t%duration)+duration)%duration/duration:clamp(t/duration,0,1);
+  const base=poseGuard(0),wind=Object.assign({},base,{torsoLean:-.10,headTilt:-.12,bounceY:-9,rightShoulderAngle:-.25});
+  const hit=kind==='kick'?Object.assign({},base,{torsoLean:-.28,headTilt:.12,leftHipAngle:1.45,leftKneeBend:.12,rightHipAngle:-.1,rightKneeBend:.12,bounceY:1}):Object.assign({},base,{torsoLean:.30,headTilt:-.08,rightShoulderAngle:1.77,rightElbowBend:-.10,leftHipAngle:.37,rightHipAngle:-.38,bounceY:-3});
+  const ease=x=>x*x*(3-2*x);
+  if(phase<.26)return combatBlend(base,wind,ease(phase/.26));
+  if(phase<.44)return combatBlend(wind,hit,1-Math.pow(1-(phase-.26)/.18,3));
+  if(phase<.52)return hit;
+  return combatBlend(hit,base,ease((phase-.52)/.48));
+}
+function poseBlock(t){return Object.assign(poseGuard(t),{leftShoulderAngle:.5,leftElbowBend:2.55,rightShoulderAngle:.45,rightElbowBend:2.6,torsoLean:-.07,bounceY:-10});}
+function poseDodge(t){const dip=Math.sin(clamp(t/.7,0,1)*Math.PI);return Object.assign(poseGuard(t),{torsoLean:-.38*dip,bounceY:-5-27*dip,leftKneeBend:.5*dip,rightKneeBend:.6*dip});}
+
 const CLIPS = {
   idle: { label:'Idle', pose:(t,opts)=>poseIdle(t, opts&&opts.phase) },
   talk: { label:'Talk', pose:(t,opts)=>poseTalk(t, !!(opts&&opts.speaking), opts&&opts.phase) },
@@ -705,11 +724,15 @@ const CLIPS = {
   jump: { label:'Jump', pose:(t)=>poseJump(t) },
   eat:  { label:'Eat', pose:(t)=>poseEat(t) },
   run:  { label:'Run', pose:(t)=>poseRun(t) },
-  fight:{ label:'Fight', pose:(t,opts)=>poseFight(t, opts&&opts.phase) },
+  fight:{ label:'Fight combo', pose:t=>poseCombat(t,'punch') },
+  punch:{ label:'Boxing punch', pose:t=>poseCombat(t,'punch') },
+  guard:{ label:'Fighting guard', pose:t=>poseGuard(t) },
+  block:{ label:'Block / defend', pose:t=>poseBlock(t) },
+  dodge:{ label:'Dodge', pose:t=>poseDodge(t%.7) },
   argue:{ label:'Argue', pose:(t,opts)=>poseArgue(t, opts&&opts.phase) },
   hug:  { label:'Hug', pose:(t)=>poseHug(t) },
   highfive: { label:'High Five', pose:(t)=>poseHighFive(t) },
-  kick: { label:'Kick', pose:(t)=>poseKick(t) },
+  kick: { label:'Front kick', pose:t=>poseCombat(t,'kick') },
   throw:{ label:'Throw', pose:(t)=>poseThrow(t) },
   swim: { label:'Swim', pose:(t)=>poseSwim(t) },
   sleep:{ label:'Sleep', pose:(t)=>poseSleep(t) },

@@ -103,6 +103,10 @@ function loadPreset(key){
   const p = PRESETS[key];
   if(!p) return;
   state.scene.timeline = resolveIndexedTimeline(p.timeline, p.charCount);
+  if(key==='sparring'){
+    state.scene.timeline[0].dragTargets = { [state.scene.characters[0].id]:{x:340}, [state.scene.characters[1].id]:{x:460} };
+    state.scene.background='stadium'; bgSelect.value='stadium';
+  }
   renderCharacterList();
   renderSegmentList();
   elapsed = 0;

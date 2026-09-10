@@ -230,3 +230,13 @@ document.addEventListener('keydown',e=>{
   else if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); stepStudio(e.key === 'ArrowLeft' ? -1 : 1); }
 });
 updateStudioTransport(); refreshHistoryButtons();
+
+// Artwork is transferred only after an explicit "Use in animation" action on this origin.
+if(new URLSearchParams(location.search).get('artwork')==='1'){
+  try{
+    const src=localStorage.getItem('stickman.pendingArtwork');
+    if(src && /^data:image\/png;base64,[a-z0-9+/=]+$/i.test(src) && src.length<12000000){
+      const img=new Image();img.onload=()=>{commitStudioHistory();state.scene.customElements.push({id:uid(),img,x:400,y:235,scale:Math.min(1,350/Math.max(img.naturalWidth,img.naturalHeight)),rotation:0});renderCustomElementList();renderSegmentList();forceRedraw();commitStudioHistory();projectStatus.textContent='Artwork added. Choose its animation in each timeline segment.';localStorage.removeItem('stickman.pendingArtwork');history.replaceState(null,'',location.pathname);};img.onerror=()=>{projectStatus.textContent='Could not open artwork. Upload its PNG under Custom Images.';};img.src=src;
+    }
+  }catch(e){projectStatus.textContent='Could not transfer artwork. Upload its PNG under Custom Images.';}
+}

@@ -28,7 +28,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
-<link rel="stylesheet" href="styles.css?v=20260910a">
+<link rel="stylesheet" href="styles.css?v=20260910b">
 </head>
 <body>
 
@@ -49,6 +49,7 @@
     <button type="button" id="startSceneDesignBtn" class="secondary">Pose designer</button>
     <button type="button" id="startFlipbookBtn" class="secondary">Flipbook</button>
     <button type="button" id="startDuelBtn" class="secondary">Duel</button>
+    <a class="tool-link" href="portraits.html">Portraits</a><a class="tool-link" href="canvas.html">Infinite Canvas</a><a class="tool-link" href="art.html">Art Studio</a>
   </div>
 </section>
 <div class="project-bar" aria-label="Project controls">
@@ -78,7 +79,7 @@
         <option value="kite">Flying a Kite</option>
         <option value="walk">Walking</option>
         <option value="wave">Waving Hello</option>
-        <option value="dance">Dance Party</option>
+        <option value="dance">Dance Party</option><option value="sparring">Choreographed sparring</option>
       </select>
     </div>
     <div class="field">
@@ -274,7 +275,7 @@
   </div>
 </div>
 
-<div id="flipbookOverlay" class="designer-overlay" style="display:none;">
+<div id="flipbookOverlay" role="dialog" aria-modal="true" aria-label="Flipbook Animator" class="designer-overlay" style="display:none;">
   <div class="designer-panel">
     <div class="designer-head">
       <h2>Flipbook Animator</h2>
@@ -304,7 +305,7 @@
           <button type="button" id="flipDupBtn" class="secondary small">Copy</button>
           <button type="button" id="flipDelBtn" class="secondary small">&times; Delete</button>
         </div>
-        <div id="flipStrip" class="flip-strip"></div>
+        <div id="flipStrip" class="flip-strip"></div><p id="flipStatus" role="status"></p><a id="flipDownload" class="tool-link" hidden>Download flipbook</a>
 
         <h3 style="margin:14px 0 6px; font-size:13px;">Speed <span id="flipFpsVal">8 fps</span></h3>
         <input type="range" id="flipFps" min="2" max="24" value="8" style="width:100%;">
@@ -320,17 +321,18 @@
   </div>
 </div>
 
-<div id="duelOverlay" class="designer-overlay" style="display:none;">
+<div id="duelOverlay" role="dialog" aria-modal="true" aria-label="Stickman Duel" class="designer-overlay" style="display:none;">
   <div class="designer-panel">
     <div class="designer-head">
       <h2>Stickman Duel</h2>
       <button type="button" id="duelCloseBtn" class="icon-btn" title="Close">&times;</button>
     </div>
-    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">A quick 2-player sparring demo built on the same engine that powers the animation tool &mdash; pick a weapon, fight it out, then go design your own moves with it. Player 1: A/D to move, F to attack. Player 2: &larr;/&rarr; to move, L to attack.</p>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px; line-height:1.4;">A quick 2-player sparring demo built on the same engine that powers the animation tool &mdash; pick a weapon, fight it out, then go design your own moves with it. Play against the computer or a friend. P1: A/D move, F punch, G kick, S block. P2: arrows move, L punch, K kick, ↓ block. Touch controls below work on phones.</p>
     <div class="designer-body">
       <div class="designer-preview" id="duelPreviewMount"></div>
+      <div class="duel-touch" aria-label="Touch duel controls"><div>Player 1 <button data-duel-key="a">←</button><button data-duel-key="d">→</button><button data-duel-key="s">Block</button><button data-duel-attack="0">Punch</button><button data-duel-kick="0">Kick</button></div><div id="duelP2Touch">Player 2 <button data-duel-key="arrowleft">←</button><button data-duel-key="arrowright">→</button><button data-duel-key="arrowdown">Block</button><button data-duel-attack="1">Punch</button><button data-duel-kick="1">Kick</button></div></div>
       <div class="designer-controls">
-        <div id="duelSetup">
+        <div id="duelSetup"><label for="duelMode">Opponent</label><select id="duelMode"><option value="computer">Computer</option><option value="friend">Friend · same device</option></select>
           <h3 style="margin:0 0 6px; font-size:13px;">Player 1 weapon</h3>
           <select id="duelP1Weapon" style="width:100%; margin-bottom:14px;">
             <option value="">Fists</option>
@@ -441,13 +443,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="js/render.js?v=20260818c"></script>
 <script src="js/styles.js?v=20260818b"></script>
 <script src="js/customElements.js?v=20260801a"></script>
-<script src="js/poses.js?v=20260818b"></script>
-<script src="js/scene.js?v=20260818f"></script>
+<script src="js/poses.js?v=20260910b"></script>
+<script src="js/scene.js?v=20260910b"></script>
 <script src="js/webmDurationFix.js?v=20260819a"></script>
 <script src="js/webmWriter.js?v=20260819c"></script>
-<script src="js/ui.js?v=20260910a"></script>
-<script src="js/duel.js?v=20260818a"></script>
-<script src="js/flipbook.js?v=20260814a"></script>
-<script src="js/studio.js?v=20260910a"></script>
+<script src="js/ui.js?v=20260910b"></script>
+<script src="js/duel.js?v=20260910b"></script>
+<script src="js/flipbook.js?v=20260910b"></script>
+<script src="js/studio.js?v=20260910b"></script>
 </body>
 </html>

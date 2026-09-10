@@ -60,6 +60,13 @@ const RIDE_DECORATIVE_TYPE = { drivecar:'car', drivesportscar:'car', drivelimo:'
 // since the actual character list is open-ended now. resolveIndexedTimeline() below translates
 // indices into whichever real character ids currently occupy those slots (growing the list if needed).
 const PRESETS = {
+    sparring:{charCount:2,timeline:[
+      {duration:1.2,actions:{0:'walk',1:'walk'}},
+      {duration:1.28,actions:{0:'punch',1:'block'}},
+      {duration:1.4,actions:{0:'dodge',1:'punch'}},
+      {duration:1.64,actions:{0:'kick',1:'block'}},
+      {duration:1.2,actions:{0:'guard',1:'guard'}}
+    ]},
     talk: { charCount:2, timeline:[
       { duration:2.5, actions:{0:'talk', 1:'idle'}, dialogue:{speakerIdx:0, text:'Hi! Nice day, right?'} },
       { duration:2.5, actions:{0:'idle', 1:'talk'}, dialogue:{speakerIdx:1, text:'It sure is! Coffee?'} },

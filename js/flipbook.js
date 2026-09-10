@@ -1,258 +1,48 @@
-// ---------- Flipbook Animator (standalone, frame-by-frame draw animation) ----------
-// A simple hand-drawn flipbook tool: draw a frame, add another (with a faint "onion skin" of the
-// previous one to help line things up), keep going, then play it back or export a real .webm video.
-// This is completely independent from the rest of the app's character/pose/scene-timeline system —
-// its own little canvas, its own frame list, no shared state with anything else on the page.
-(function () {
-  const W = 480, H = 320;
-  let cv, ctx, ghost, gctx;
-  let drawing = false, last = null;
-  let brush = 'pencil', colour = '#1b1f27', size = 8;
-  let frames = [{ url: null }];
-  let cur = 0;
-  let onion = 30; // 0-100
-  let playTimer = null;
-  let inited = false;
-
-  const PALETTE = ['#1b1f27', '#e0483d', '#f5a524', '#2f6df6', '#12a150', '#8b5cf6', '#ffffff'];
-
-  function $(id) { return document.getElementById(id); }
-
-  function wipe(x) { x.clearRect(0, 0, W, H); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); }
-
-  function paste(url, then) {
-    if (!url) { wipe(ctx); if (then) then(); return; }
-    const img = new Image();
-    img.onload = () => { ctx.clearRect(0, 0, W, H); ctx.drawImage(img, 0, 0); if (then) then(); };
-    img.src = url;
+// Canvas-backed frames avoid asynchronous image loads overwriting a newer frame.
+(() => {
+  const $=id=>document.getElementById(id), width=480, height=320;
+  let frames=[], current=0, drawing=false, last=null, timer=null, busy=false, previousFocus=null;
+  const cv=$('flipCanvas'), ctx=cv.getContext('2d'), ghost=$('flipGhost'), gx=ghost.getContext('2d');
+  cv.width=ghost.width=width; cv.height=ghost.height=height;
+  let brush='pencil', colour='#1b1f27', size=8;
+  function blank(){ const c=document.createElement('canvas'); c.width=width;c.height=height;return c; }
+  frames=[blank()];
+  function save(){const g=frames[current].getContext('2d');g.clearRect(0,0,width,height);g.drawImage(cv,0,0);}
+  function paint(index=current){ctx.clearRect(0,0,width,height);ctx.drawImage(frames[index],0,0);}
+  function strip(){
+    $('flipStrip').replaceChildren();
+    frames.forEach((frame,i)=>{const b=document.createElement('button');b.className='flip-frame'+(i===current?' on':'');b.setAttribute('aria-label','Frame '+(i+1));b.setAttribute('aria-pressed',String(i===current));const thumb=document.createElement('canvas');thumb.width=80;thumb.height=50;thumb.getContext('2d').drawImage(frame,0,0,80,50);const label=document.createElement('b');label.textContent=i+1;b.append(thumb,label);b.onclick=()=>{if(busy)return;stop();save();current=i;paint();update();};$('flipStrip').append(b);});
+    $('flipDelBtn').disabled=frames.length<2||busy;
   }
-
-  function at(e) {
-    const r = cv.getBoundingClientRect();
-    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-  }
-
-  function dab(a, b) {
-    ctx.save();
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    if (brush === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = size * 2.2;
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = colour;
-      ctx.lineWidth = size;
-    }
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.restore();
-  }
-
-  function shootThumb() {
-    frames[cur].url = cv.toDataURL('image/png');
-    renderStrip();
-  }
-
-  function renderStrip() {
-    const strip = $('flipStrip');
-    if (!strip) return;
-    strip.innerHTML = '';
-    frames.forEach((f, i) => {
-      const d = document.createElement('div');
-      d.className = 'flip-frame' + (i === cur ? ' on' : '');
-      const c = document.createElement('canvas');
-      c.width = 80; c.height = 50;
-      const g = c.getContext('2d');
-      g.fillStyle = '#fff'; g.fillRect(0, 0, 80, 50);
-      if (f.url) {
-        const img = new Image();
-        img.onload = () => g.drawImage(img, 0, 0, 80, 50);
-        img.src = f.url;
-      }
-      const b = document.createElement('b'); b.textContent = i + 1;
-      d.appendChild(c); d.appendChild(b);
-      d.addEventListener('click', () => gotoFrame(i));
-      strip.appendChild(d);
-    });
-  }
-
-  function drawOnion() {
-    gctx.clearRect(0, 0, W, H);
-    ghost.style.opacity = (onion / 100).toString();
-    const prev = frames[cur - 1];
-    if (onion > 0 && prev && prev.url) {
-      const img = new Image();
-      img.onload = () => { gctx.clearRect(0, 0, W, H); gctx.drawImage(img, 0, 0); };
-      img.src = prev.url;
-    }
-  }
-
-  function gotoFrame(i, skipSave) {
-    if (!skipSave) shootThumb();
-    cur = Math.max(0, Math.min(i, frames.length - 1));
-    paste(frames[cur].url, () => { shootThumb(); drawOnion(); renderStrip(); });
-  }
-
-  function addFrame(duplicate) {
-    shootThumb();
-    const f = { url: duplicate ? frames[cur].url : null };
-    frames.splice(cur + 1, 0, f);
-    cur++;
-    gotoFrame(cur, true);
-  }
-
-  function deleteFrame() {
-    if (frames.length < 2) return;
-    frames.splice(cur, 1);
-    cur = Math.max(0, cur - 1);
-    gotoFrame(cur, true);
-  }
-
-  function setBrush(id) {
-    brush = id;
-    if ($('flipBrushPencil')) $('flipBrushPencil').classList.toggle('on', id === 'pencil');
-    if ($('flipBrushEraser')) $('flipBrushEraser').classList.toggle('on', id === 'eraser');
-  }
-
-  function setColour(c) {
-    colour = c;
-    document.querySelectorAll('.flip-sw').forEach(s => s.classList.toggle('on', s.dataset.c === c));
-    if ($('flipColourPick')) $('flipColourPick').value = c;
-  }
-
-  function play() {
-    if (playTimer) { stopPlay(); return; }
-    shootThumb();
-    if (frames.length < 2) { alert('Add a second frame first.'); return; }
-    if ($('flipPlayBtn')) $('flipPlayBtn').textContent = 'Stop';
-    ghost.style.opacity = '0';
-    let i = 0;
-    const fps = +($('flipFps') ? $('flipFps').value : 8);
-    playTimer = setInterval(() => {
-      paste(frames[i % frames.length].url);
-      i++;
-    }, 1000 / fps);
-  }
-
-  function stopPlay() {
-    clearInterval(playTimer); playTimer = null;
-    if ($('flipPlayBtn')) $('flipPlayBtn').textContent = 'Play';
-    gotoFrame(cur, true);
-  }
-
-  async function exportVideo() {
-    shootThumb();
-    if (frames.length < 2) { alert('Draw at least two frames first.'); return; }
-    if (!window.MediaRecorder) { alert("This browser can't record video."); return; }
-    const out = document.createElement('canvas'); out.width = W; out.height = H;
-    const o = out.getContext('2d');
-    const stream = out.captureStream(30);
-    const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    const chunks = [];
-    rec.ondataavailable = e => chunks.push(e.data);
-    rec.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'flipbook_animation.webm';
-      a.click();
-    };
-    const imgs = await Promise.all(frames.map(f => new Promise(res => {
-      if (!f.url) return res(null);
-      const img = new Image();
-      img.onload = () => res(img);
-      img.onerror = () => res(null);
-      img.src = f.url;
-    })));
-    const fps = +($('flipFps') ? $('flipFps').value : 8);
-    rec.start();
-    const gap = 1000 / fps;
-    for (let loop = 0; loop < 2; loop++) {
-      for (const im of imgs) {
-        o.fillStyle = '#fff'; o.fillRect(0, 0, W, H);
-        if (im) o.drawImage(im, 0, 0);
-        await new Promise(r => setTimeout(r, gap));
-      }
-    }
-    rec.stop();
-  }
-
-  function initCanvas() {
-    cv = $('flipCanvas'); ctx = cv.getContext('2d', { willReadFrequently: true });
-    ghost = $('flipGhost'); gctx = ghost.getContext('2d');
-    cv.width = W; cv.height = H; ghost.width = W; ghost.height = H;
-    wipe(ctx);
-
-    cv.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      const p = at(e);
-      drawing = true; last = p;
-      cv.setPointerCapture(e.pointerId);
-      dab(p, { x: p.x + 0.01, y: p.y });
-    });
-    cv.addEventListener('pointermove', e => {
-      if (!drawing) return;
-      const p = at(e);
-      dab(last, p);
-      last = p;
-    });
-    addEventListener('pointerup', () => { if (drawing) { drawing = false; shootThumb(); } });
-
-    const pal = $('flipPalette');
-    if (pal) {
-      pal.innerHTML = PALETTE.map(c => '<span class="flip-sw" data-c="' + c + '" style="background:' + c + '"></span>').join('');
-      pal.addEventListener('click', e => {
-        const sw = e.target.closest('.flip-sw');
-        if (sw) setColour(sw.dataset.c);
-      });
-    }
-    if ($('flipColourPick')) $('flipColourPick').addEventListener('input', e => setColour(e.target.value));
-    if ($('flipBrushPencil')) $('flipBrushPencil').addEventListener('click', () => setBrush('pencil'));
-    if ($('flipBrushEraser')) $('flipBrushEraser').addEventListener('click', () => setBrush('eraser'));
-    if ($('flipSize')) $('flipSize').addEventListener('input', e => {
-      size = +e.target.value;
-      if ($('flipSizeVal')) $('flipSizeVal').textContent = size;
-    });
-    if ($('flipFps')) $('flipFps').addEventListener('input', e => {
-      if ($('flipFpsVal')) $('flipFpsVal').textContent = e.target.value + ' fps';
-    });
-    if ($('flipOnion')) $('flipOnion').addEventListener('input', e => {
-      onion = +e.target.value;
-      if ($('flipOnionVal')) $('flipOnionVal').textContent = onion ? onion + '%' : 'off';
-      drawOnion();
-    });
-    if ($('flipAddBtn')) $('flipAddBtn').addEventListener('click', () => addFrame(false));
-    if ($('flipDupBtn')) $('flipDupBtn').addEventListener('click', () => addFrame(true));
-    if ($('flipDelBtn')) $('flipDelBtn').addEventListener('click', deleteFrame);
-    if ($('flipPlayBtn')) $('flipPlayBtn').addEventListener('click', play);
-    if ($('flipExportBtn')) $('flipExportBtn').addEventListener('click', exportVideo);
-
-    setColour(PALETTE[0]);
-    renderStrip();
-    inited = true;
-  }
-
-  function openFlipbook() {
-    const overlay = $('flipbookOverlay');
-    if (!overlay) return;
-    overlay.style.display = 'flex';
-    if (!inited) initCanvas();
-  }
-  function closeFlipbook() {
-    if (playTimer) stopPlay();
-    const overlay = $('flipbookOverlay');
-    if (overlay) overlay.style.display = 'none';
-  }
-
-  function init() {
-    const openBtn = $('startFlipbookBtn');
-    const closeBtn = $('flipbookCloseBtn');
-    if (openBtn) openBtn.addEventListener('click', openFlipbook);
-    if (closeBtn) closeBtn.addEventListener('click', closeFlipbook);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  function update(){strip();gx.clearRect(0,0,width,height);ghost.style.opacity=Number($('flipOnion').value)/100;if(current>0)gx.drawImage(frames[current-1],0,0);$('flipStatus').textContent=`Frame ${current+1} of ${frames.length} · ${(frames.length/Number($('flipFps').value)).toFixed(2)} seconds`;}
+  function stop(){if(timer){clearInterval(timer);timer=null;paint();} $('flipPlayBtn').textContent='Play';ghost.hidden=false;}
+  function point(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*width/r.width,y:(e.clientY-r.top)*height/r.height};}
+  function dab(a,b){ctx.save();ctx.globalCompositeOperation=brush==='eraser'?'destination-out':'source-over';ctx.lineWidth=size;ctx.strokeStyle=colour;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x+.01,b.y);ctx.stroke();ctx.restore();}
+  cv.addEventListener('pointerdown',e=>{if(busy||e.button!==0||e.isPrimary===false)return;e.preventDefault();stop();cv.setPointerCapture(e.pointerId);drawing=true;last=point(e);dab(last,last);});
+  cv.addEventListener('pointermove',e=>{if(!drawing)return;const p=point(e);dab(last,p);last=p;});
+  function finish(){if(!drawing)return;drawing=false;save();update();}
+  cv.addEventListener('pointerup',finish);cv.addEventListener('pointercancel',finish);
+  for(const [id,copy] of [['flipAddBtn',false],['flipDupBtn',true]]) $(id).onclick=()=>{if(busy)return;stop();save();if(frames.length>=240){$('flipStatus').textContent='240-frame limit reached. Export this sequence first.';return;}const c=blank();if(copy)c.getContext('2d').drawImage(cv,0,0);frames.splice(++current,0,c);paint();update();};
+  $('flipDelBtn').onclick=()=>{if(busy||frames.length<2)return;stop();frames.splice(current,1);current=Math.max(0,current-1);paint();update();};
+  $('flipPlayBtn').onclick=()=>{if(busy)return;if(timer){stop();update();return;}save();if(frames.length<2){$('flipStatus').textContent='Draw a frame, then add or copy a second frame to preview motion.';return;}let i=0;ghost.hidden=true;$('flipPlayBtn').textContent='Stop';paint(0);timer=setInterval(()=>paint(++i%frames.length),1000/Number($('flipFps').value));};
+  $('flipBrushPencil').onclick=()=>{brush='pencil';$('flipBrushPencil').classList.add('on');$('flipBrushEraser').classList.remove('on');};
+  $('flipBrushEraser').onclick=()=>{brush='eraser';$('flipBrushEraser').classList.add('on');$('flipBrushPencil').classList.remove('on');};
+  for(const c of ['#1b1f27','#e0483d','#f5a524','#2f6df6','#12a150','#8b5cf6','#ffffff']){const b=document.createElement('button');b.className='flip-sw';b.style.background=c;b.setAttribute('aria-label','Brush colour '+c);b.onclick=()=>{colour=c;$('flipColourPick').value=c;};$('flipPalette').append(b);}
+  $('flipColourPick').oninput=e=>colour=e.target.value;
+  $('flipSize').oninput=e=>{size=Number(e.target.value);$('flipSizeVal').textContent=size;};
+  $('flipFps').oninput=e=>{stop();$('flipFpsVal').textContent=e.target.value+' fps';update();};
+  $('flipOnion').oninput=e=>{$('flipOnionVal').textContent=e.target.value+'%';update();};
+  $('flipExportBtn').onclick=async()=>{
+    if(busy)return;stop();save();busy=true;
+    const controls=[...$('flipbookOverlay').querySelectorAll('button,input')].filter(e=>!e.disabled);controls.forEach(e=>e.disabled=true);
+    try{if(!window.WebMWriter||!cv.toDataURL('image/webp').startsWith('data:image/webp'))throw Error('Use Chrome or Edge to export WebM.');const writer=new WebMWriter({quality:.9,frameRate:Number($('flipFps').value)}),out=blank(),g=out.getContext('2d');
+      for(let i=0;i<frames.length;i++){g.fillStyle='#fff';g.fillRect(0,0,width,height);g.drawImage(frames[i],0,0);writer.addFrame(out);$('flipStatus').textContent=`Exporting frame ${i+1} of ${frames.length}…`;await new Promise(r=>setTimeout(r,0));}
+      const blob=await writer.complete();if(!blob.size)throw Error('The encoder produced an empty file.');const url=URL.createObjectURL(blob),a=$('flipDownload');if(a.href.startsWith('blob:'))URL.revokeObjectURL(a.href);a.href=url;a.download='flipbook-animation.webm';a.hidden=false;$('flipStatus').textContent='Video ready. Use Download flipbook.';
+    }catch(e){$('flipStatus').textContent='Export failed: '+e.message;}finally{busy=false;controls.forEach(e=>e.disabled=false);strip();}
+  };
+  function open(){if(exportInProgress||busy)return;previousFocus=document.activeElement;$('flipbookOverlay').style.display='flex';paint();update();$('flipbookCloseBtn').focus();}
+  function close(){if(busy)return;finish();stop();$('flipbookOverlay').style.display='none';previousFocus?.focus();}
+  $('startFlipbookBtn').onclick=open;$('flipbookCloseBtn').onclick=close;
+  $('flipbookOverlay').addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+  update();
 })();
