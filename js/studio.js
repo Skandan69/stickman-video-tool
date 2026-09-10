@@ -166,7 +166,7 @@ function validateStudioProject(data){
     for(const target of Object.values(seg.dragTargets || {})) requireValue(record(target) && typeof target.x === 'number');
     for(const move of Object.values(seg.customPoses || {})){
       requireValue(record(move) && Array.isArray(move.keyframes) && move.keyframes.length <= 500);
-      for(const frame of move.keyframes) requireValue(frame && record(frame.pose) && typeof frame.duration === 'number' && frame.duration > 0 && Object.values(frame.pose).every(v=>typeof v === 'number' || typeof v === 'boolean'));
+      for(const frame of move.keyframes) requireValue(frame && record(frame.pose) && typeof frame.duration === 'number' && frame.duration > 0 && (frame.hold === undefined || (typeof frame.hold === 'number' && frame.hold >= 0 && frame.hold <= 30)) && (frame.easing === undefined || ['smooth','linear','easeIn','easeOut','step'].includes(frame.easing)) && Object.values(frame.pose).every(v=>typeof v === 'number' || typeof v === 'boolean'));
     }
   }
   for(const key of ['background','weather','style','food','furniture']) requireValue(typeof scene[key] === 'string');

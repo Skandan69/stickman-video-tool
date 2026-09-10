@@ -16,7 +16,7 @@ const context = new Proxy({}, {get:(o,k)=> k in o ? o[k] : k==='measureText' ? t
 w.HTMLCanvasElement.prototype.getContext = ()=>context;
 w.HTMLCanvasElement.prototype.toDataURL = ()=>'data:image/webp;base64,UklGRg==';
 w.HTMLCanvasElement.prototype.setPointerCapture = ()=>{};
-w.eval(files.map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n;\n')+`\nwindow.testStudio={get state(){return state},get elapsed(){return elapsed},get exporting(){return exportInProgress},studioSnapshot,snapshotText,validateStudioProject,openStudioProject,commitStudioHistory,travelHistory,stepStudio,syncStudioScene,loop,forceRedraw,duel,duelTryAttack,tickDuel,poseCombat};`);
+w.eval(files.map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n;\n')+`\nwindow.testStudio={get state(){return state},get elapsed(){return elapsed},get exporting(){return exportInProgress},studioSnapshot,snapshotText,validateStudioProject,openStudioProject,commitStudioHistory,travelHistory,stepStudio,syncStudioScene,loop,forceRedraw,duel,duelTryAttack,tickDuel,poseCombat,poseTalk,evalKeyframePose,designer,beginDesignerRecording,captureDesignerDrag,finishDesignerRecording,saveDesignerMove};`);
 const t=w.testStudio, doc=w.document, click=id=>doc.getElementById(id).click();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const pack=()=>JSON.parse(JSON.stringify({format:'stickman-studio',version:1,project:JSON.parse(t.snapshotText(t.studioSnapshot()))}));
@@ -42,6 +42,26 @@ const pack=()=>JSON.parse(JSON.stringify({format:'stickman-studio',version:1,pro
   click('duelCloseBtn');
   for(const kind of ['punch','kick'])for(let time=0;time<2;time+=.04)assert.ok(Object.values(t.poseCombat(time,kind)).every(v=>typeof v==='boolean'||Number.isFinite(v)),'combat pose remains finite');
   assert.ok(Math.abs(t.poseCombat(0,'punch').rightShoulderAngle-t.poseCombat(.28,'punch').rightShoulderAngle)>1,'punch has distinct extension');
+  for(let time=0;time<8;time+=.01){
+    const a=t.poseTalk(time,true,0),b=t.poseTalk(time+.001,true,0);
+    assert.ok(Object.values(a).every(v=>typeof v==='boolean'||Number.isFinite(v)));
+    assert.ok(Math.abs(a.rightShoulderAngle-b.rightShoulderAngle)<.02,'talking arm follows a continuous path');
+  }
+  const keyframes=[{pose:{rightShoulderAngle:0},duration:1,hold:.5,easing:'linear'},{pose:{rightShoulderAngle:2},duration:1}];
+  assert.equal(t.evalKeyframePose(.25,keyframes).rightShoulderAngle,0,'hold keeps pose still');
+  assert.equal(t.evalKeyframePose(1,keyframes).rightShoulderAngle,1,'linear interpolation includes hold');
+  keyframes[0].easing='step';assert.equal(t.evalKeyframePose(1.49,keyframes).rightShoulderAngle,0);assert.equal(t.evalKeyframePose(1.5,keyframes).rightShoulderAngle,2);
+  click('startSceneDesignBtn');
+  doc.getElementById('recordDesignerDrag').checked=true;
+  const count=t.designer.keyframes.length;t.beginDesignerRecording();
+  t.designer.currentPose.rightShoulderAngle=.75;t.captureDesignerDrag(true);t.finishDesignerRecording();
+  assert.ok(t.designer.keyframes.length>=count+2,'drag recording captures editable poses');
+  t.designer.keyframes[0].hold=.7;t.designer.keyframes[0].easing='easeOut';
+  t.saveDesignerMove();
+  const moves=Object.values(t.state.scene.timeline[0].customPoses);
+  assert.equal(moves[0].keyframes[0].hold,.7);assert.equal(moves[0].keyframes[0].easing,'easeOut');
+  const movementProject=pack();await t.openStudioProject({size:1000,text:async()=>JSON.stringify(movementProject)});
+  assert.equal(Object.values(t.state.scene.timeline[0].customPoses)[0].keyframes[0].hold,.7,'custom timing survives project round trip');
   const initial=t.state.scene.characters[0].name;
   t.state.scene.characters[0].name='Edited'; t.commitStudioHistory();
   t.travelHistory(false); assert.equal(t.state.scene.characters[0].name,initial);

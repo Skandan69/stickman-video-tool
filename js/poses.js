@@ -74,27 +74,22 @@ function poseIdle(t, offset){
     rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend, mouthOpen:0
   };
 }
+// Hand targets are normalized to arm length; IK coordinates shoulder and elbow together.
 function poseTalk(t, speaking, offset){
-  const o = offset||0;
-  const gesture = keyframeGesture(t, 7+o, 0.85, TALK_GESTURE_PALETTE);
-  // The listening character (Talk pose, but not the current dialogue speaker) used to get only a
-  // near-zero-amplitude drift on one arm and a flat, never-moving 0.15 elbow bend on the other — next
-  // to the speaker's big expressive gesture that read as a frozen mannequin standing beside a puppet.
-  // Give it the same keyframe-gesture treatment, just from a subtler "at rest / listening" palette.
-  const listen = keyframeGesture(t, 14+o, 1.6, LISTEN_GESTURE_PALETTE);
-  const ws = weightShift(t, 41, o);
-  const mouthWave = Math.sin(t*9.2)*0.5 + Math.sin(t*13.7+1)*0.15;
-  return {
-    torsoLean: keyframeDrift(t, 8+o, 2.2, 0.025) + ws.torsoLean,
-    headTilt: speaking ? keyframeDrift(t, 9+o, 0.9, 0.13) : keyframeDrift(t, 9+o, 2.3, 0.06),
-    bounceY: Math.sin(t*2)*1.2 + 0.35*Math.sin(t*0.9+0.6),
-    leftShoulderAngle: keyframeDrift(t, 10+o, 1.6, 0.16), leftElbowBend: 0.15 + keyframeDrift(t, 13+o, 1.7, 0.1),
-    rightShoulderAngle: speaking ? gesture.shoulder : listen.shoulder,
-    rightElbowBend: speaking ? gesture.elbow : listen.elbow,
-    leftHipAngle: ws.leftHipAngle, leftKneeBend: ws.leftKneeBend,
-    rightHipAngle: ws.rightHipAngle, rightKneeBend: ws.rightKneeBend,
-    mouthOpen: speaking ? Math.max(0.12, Math.min(1, 0.55 + mouthWave)) : 0
-  };
+  const o=offset||0,p=poseIdle(t,o);
+  const beat=((t+o*.17)%3.8+3.8)%3.8;
+  const envelope=beat<.6?smoothstep01(beat/.6):beat<1.5?1:beat<2.4?1-smoothstep01((beat-1.5)/.9):0;
+  const emphasis=speaking?envelope:0;
+  const length=UPPER_ARM+FORE_ARM;
+  const handX=length*(.16+.47*emphasis),handY=length*(.91-.69*emphasis);
+  const arc=Math.sin(emphasis*Math.PI)*length*.10;
+  const right=armReachAngles(handX,handY-arc);
+  const left=armReachAngles(length*(.10+.04*Math.sin(t*.8+o)),length*.94);
+  p.rightShoulderAngle=right.shoulderAngle;p.rightElbowBend=right.elbowBend;
+  p.leftShoulderAngle=left.shoulderAngle;p.leftElbowBend=left.elbowBend;
+  p.torsoLean+=emphasis*.035;p.headTilt+=speaking?.035*Math.sin(t*3)*envelope:0;
+  p.mouthOpen=speaking?clamp(.45+.3*Math.sin(t*9.2),.12,.9):0;
+  return p;
 }
 function poseKite(t){
   return {
@@ -807,17 +802,18 @@ const POSE_LERP_FIELDS = ['torsoLean','headTilt','bounceY','leftShoulderAngle','
 function evalKeyframePose(t, keyframes){
   if(!keyframes || !keyframes.length) return poseIdle(t, 0);
   if(keyframes.length === 1) return Object.assign({}, keyframes[0].pose);
-  const total = keyframes.reduce((s,k)=> s + Math.max(0.1, k.duration || 1), 0);
+  const total = keyframes.reduce((s,k)=> s + Math.max(0.1, k.duration || 1) + Math.max(0,k.hold||0), 0);
   const tt = ((t % total) + total) % total;
   let acc = 0;
   for(let i=0;i<keyframes.length;i++){
     const k = keyframes[i];
-    const d = Math.max(0.1, k.duration || 1);
+    const hold=Math.max(0,k.hold||0),transition=Math.max(.1,k.duration||1);
+    const d = hold+transition;
     if(tt < acc + d || i === keyframes.length - 1){
       const next = keyframes[(i+1) % keyframes.length];
-      const frac = Math.min(1, Math.max(0, (tt - acc) / d));
-      const eased = frac*frac*(3 - 2*frac); // smoothstep
-      const out = {};
+      const frac = Math.min(1, Math.max(0, (tt - acc - hold) / transition));
+      const eased = k.easing==='linear'?frac:k.easing==='easeIn'?frac*frac:k.easing==='easeOut'?1-(1-frac)*(1-frac):k.easing==='step'?0:frac*frac*frac*(frac*(frac*6-15)+10);
+      const out = {lying:!!(k.pose&&k.pose.lying)};
       POSE_LERP_FIELDS.forEach(f=>{
         const a = (k.pose && k.pose[f] != null) ? k.pose[f] : 0;
         const b = (next.pose && next.pose[f] != null) ? next.pose[f] : 0;

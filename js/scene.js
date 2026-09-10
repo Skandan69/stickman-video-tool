@@ -521,7 +521,16 @@ function evaluateScene(scene, t){
                                               // function the Designer's own in-modal preview uses), so a saved custom move actually plays back
                                               // here instead of silently falling through to idle.
                                               const customPose = clipId === 'customPose' ? (active.customPoses && active.customPoses[appearance.id]) : null;
-                                              const pose = customPose ? evalKeyframePose(localT, customPose.keyframes) : (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
+                                              let pose = customPose ? evalKeyframePose(localT, customPose.keyframes) : (CLIPS[clipId]||CLIPS.idle).pose(localT, { speaking: speaking, phase: i*Math.PI });
+        // Blend only conversational built-ins. Custom sequences retain their authored timing.
+        if(activeIdx>0 && localT<.28 && ['talk','idle'].includes(clipId)){
+          const previous=timeline[activeIdx-1],oldClip=(previous.actions||{})[appearance.id]||'idle';
+          if(['talk','idle'].includes(oldClip)){
+            const old=CLIPS[oldClip].pose(Math.max(0,previous.duration-.001),{speaking:!!(previous.dialogue&&previous.dialogue.speakerId===appearance.id),phase:i*Math.PI});
+            const blend=smoothstep01(localT/.28);
+            POSE_LERP_FIELDS.forEach(key=>{pose[key]=(old[key]||0)+((pose[key]||0)-(old[key]||0))*blend;});
+          }
+        }
         pose.bounceY *= preset.scale * (appearance.sizeScale || 1); // keep jump/idle/sit bounce proportional to body size
                                               const faceDir = resolveFaceDir(active, appearance.id, positions[i].faceDir);
         // Flying characters climbing/descending this segment (vdir!=0) hold x still and travel on the

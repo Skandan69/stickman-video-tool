@@ -1032,7 +1032,7 @@ function onSegmentAction(e){
     const tmp = state.scene.timeline[idx+1]; state.scene.timeline[idx+1] = state.scene.timeline[idx]; state.scene.timeline[idx] = tmp;
   } else if(act === 'duplicate'){
     const seg = state.scene.timeline[idx];
-    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), elementAnims: Object.assign({}, seg.elementAnims), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: d.moveSpeed || 0, moveDir: d.moveDir || 1, vertSpeed: d.vertSpeed || 0, vertDir: d.vertDir || 1 }])) };
+    const copy = { id: uid(), duration: seg.duration, actions: Object.assign({}, seg.actions), dialogue: seg.dialogue ? Object.assign({}, seg.dialogue) : null, background: seg.background, weather: seg.weather, directions: Object.assign({}, seg.directions), povCamera: !!seg.povCamera, dragTargets: Object.assign({}, seg.dragTargets), elementAnims: Object.assign({}, seg.elementAnims), customPoses: Object.fromEntries(Object.entries(seg.customPoses||{}).map(([cid,d])=>[cid, { keyframes: (d.keyframes||[]).map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" })), moveSpeed: d.moveSpeed || 0, moveDir: d.moveDir || 1, vertSpeed: d.vertSpeed || 0, vertDir: d.vertDir || 1 }])) };
     state.scene.timeline.splice(idx+1, 0, copy);
   } else if(act === 'clearDrag'){
     const charId = e.currentTarget.getAttribute('data-char');
@@ -1075,7 +1075,7 @@ function onSegmentFieldChange(e){
       if(entry){
         if(!seg.customPoses) seg.customPoses = {};
         seg.customPoses[charId] = {
-          keyframes: entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })),
+          keyframes: entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" })),
           moveSpeed: entry.moveSpeed || 0, moveDir: entry.moveDir || 1,
           vertSpeed: entry.vertSpeed || 0, vertDir: entry.vertDir || 1
         };
@@ -1180,7 +1180,7 @@ const DEFAULT_DESIGNER_POSE = {
 const DESIGNER_SLIDERS = [
   { field:'torsoLean', label:'Torso lean', min:-1.6, max:1.6, step:0.01 },
   { field:'headTilt', label:'Head tilt', min:-1.2, max:1.2, step:0.01 },
-  { field:'bounceY', label:'Body height (crouch / lift)', min:-20, max:170, step:1 },
+  { field:'bounceY', label:'Body height (crouch / lift)', min:-80, max:170, step:1 },
   { field:'leftShoulderAngle', label:'Left shoulder', min:-3.2, max:3.2, step:0.01 },
   { field:'leftElbowBend', label:'Left elbow bend', min:-2.5, max:2.5, step:0.01 },
   { field:'rightShoulderAngle', label:'Right shoulder', min:-3.2, max:3.2, step:0.01 },
@@ -1280,7 +1280,7 @@ function designerHandleHitTest(px, py){
   const pts = designerHandlePoints();
   if(!pts) return null;
   let best = null, bestDist = DESIGNER_HANDLE_HIT_RADIUS;
-  ['leftHand','rightHand','leftFoot','rightFoot','head'].forEach(name=>{
+  ['leftHand','rightHand','leftFoot','rightFoot','head','hip'].forEach(name=>{
     const d = Math.hypot(px - pts[name].x, py - pts[name].y);
     if(d < bestDist){ bestDist = d; best = name; }
   });
@@ -1320,6 +1320,8 @@ function applyDesignerDrag(part, canvasX, canvasY){
   } else if(part === 'rightFoot'){
     const r = legReachAngles(localDx, localDy);
     designer.currentPose.rightHipAngle = r.shoulderAngle; designer.currentPose.rightKneeBend = r.elbowBend;
+  } else if(part === 'hip'){
+    designer.currentPose.bounceY=clamp(designer.currentPose.bounceY+pts.hip.y-canvasY,-80,170);
   } else if(part === 'head'){
     // Only the angle matters here (head/neck are a fixed-length chain from the shoulder), so this
     // ignores drag distance entirely and just points headTilt at wherever the cursor is.
@@ -1334,6 +1336,7 @@ function applyDesignerDrag(part, canvasX, canvasY){
   // the Update-vs-Add-as-new buttons already make the user's intent explicit, so there's no need to
   // guess by watching for pose changes.
   syncDesignerSlidersFromCurrentPose();
+  if(typeof captureDesignerDrag==='function')captureDesignerDrag();
 }
 // Small purple handles drawn on top of the normal render at each draggable point — only shown in
 // static edit mode (see loop() below), both so users can see exactly where to grab and to visually
@@ -1342,7 +1345,7 @@ function drawDesignerHandles(){
   const pts = designerHandlePoints();
   if(!pts) return;
   ctx.save();
-  ['leftHand','rightHand','leftFoot','rightFoot','head'].forEach(name=>{
+  ['leftHand','rightHand','leftFoot','rightFoot','head','hip'].forEach(name=>{
     const p = pts[name];
     ctx.beginPath(); ctx.arc(p.x, p.y, DESIGNER_HANDLE_DRAW_RADIUS, 0, Math.PI*2);
     ctx.fillStyle = designerDragPart === name ? 'rgba(192,38,211,0.9)' : 'rgba(124,58,237,0.75)';
@@ -1359,6 +1362,7 @@ canvas.addEventListener('pointerdown', (e)=>{
   const handle = designerHandleHitTest(pt.x, pt.y);
   if(!handle) return;
   designerDragPart = handle;
+  if(typeof beginDesignerRecording==='function')beginDesignerRecording();
   canvas.style.cursor = 'grabbing';
   applyDesignerDrag(handle, pt.x, pt.y);
   function onMove(ev){
@@ -1370,6 +1374,7 @@ canvas.addEventListener('pointerdown', (e)=>{
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
     document.removeEventListener('pointercancel', onUp);
+    if(typeof finishDesignerRecording==='function')finishDesignerRecording();
     designerDragPart = null;
     canvas.style.cursor = '';
   }
@@ -1426,7 +1431,9 @@ function renderDesignerKeyframeList(){
   designerKeyframeListEl.innerHTML = designer.keyframes.length ? designer.keyframes.map((k,idx)=>
     '<div class="designer-kf-row'+(idx===designer.editingIdx?' active':'')+'" data-kf-row="'+idx+'" title="Click to load this keyframe onto the sliders/preview and edit it">' +
       '<span>'+(idx+1)+'.</span>' +
-      '<input type="number" min="0.1" step="0.1" value="'+k.duration+'" data-kf-duration="'+idx+'" title="Seconds to hold/transition"><span class="designer-kf-s">s</span>' +
+      '<input type="number" min="0.1" step="0.1" value="'+k.duration+'" data-kf-duration="'+idx+'" title="Transition duration"><span class="designer-kf-s">s move</span>' +
+      '<input type="number" min="0" max="30" step="0.1" value="'+(k.hold||0)+'" data-kf-hold="'+idx+'" aria-label="Hold keyframe '+(idx+1)+' in seconds"><span>hold</span>' +
+      '<select data-kf-easing="'+idx+'" aria-label="Transition curve for keyframe '+(idx+1)+'">'+['smooth','linear','easeIn','easeOut','step'].map(v=>'<option value="'+v+'"'+((k.easing||'smooth')===v?' selected':'')+'>'+({smooth:'Smooth',linear:'Linear',easeIn:'Accelerate',easeOut:'Decelerate',step:'Hold / cut'}[v])+'</option>').join('')+'</select>' +
       '<button type="button" class="icon-btn" data-kf-load="'+idx+'" title="Load onto sliders to edit">&#9998;</button>' +
       '<button type="button" class="icon-btn" data-kf-up="'+idx+'" '+(idx===0?'disabled':'')+' title="Move earlier">&uarr;</button>' +
       '<button type="button" class="icon-btn" data-kf-down="'+idx+'" '+(idx===designer.keyframes.length-1?'disabled':'')+' title="Move later">&darr;</button>' +
@@ -1444,7 +1451,7 @@ function renderDesignerKeyframeList(){
   // obvious you can pick any keyframe, not only the first, and jump straight to editing it with the
   // preview already reflecting that exact pose.
   designerKeyframeListEl.querySelectorAll('[data-kf-row]').forEach(row=> row.addEventListener('click', e=>{
-    if(e.target.closest('button, input')) return; // let the specific icon-buttons/duration input handle their own clicks
+    if(e.target.closest('button, input, select')) return; // let the specific icon-buttons/duration input handle their own clicks
     loadKeyframe(parseInt(row.getAttribute('data-kf-row'),10));
   }));
   designerKeyframeListEl.querySelectorAll('[data-kf-duration]').forEach(inp=> inp.addEventListener('input', e=>{
@@ -1469,6 +1476,8 @@ function renderDesignerKeyframeList(){
     else if(designer.editingIdx>idx) designer.editingIdx -= 1;
     renderDesignerKeyframeList();
   }));
+  designerKeyframeListEl.querySelectorAll('[data-kf-hold]').forEach(el=>el.oninput=()=>{designer.keyframes[Number(el.dataset.kfHold)].hold=clamp(Number(el.value)||0,0,30);});
+  designerKeyframeListEl.querySelectorAll('[data-kf-easing]').forEach(el=>el.onchange=()=>{designer.keyframes[Number(el.dataset.kfEasing)].easing=el.value;});
   updateAddKeyframeUI();
 }
 
@@ -1559,7 +1568,7 @@ function switchDesignerCharacter(newCharId){
     const existing = seg.customPoses && seg.customPoses[newCharId];
     designer.previousAction = (seg.actions && seg.actions[newCharId]) || 'idle';
     designer.keyframes = (existing && existing.keyframes && existing.keyframes.length)
-      ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }))
+      ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" }))
       : [];
     designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
     designer.editingIdx = designer.keyframes.length ? 0 : -1;
@@ -1609,7 +1618,7 @@ function openPoseDesigner(segId, charId, explicitPreviousAction){
   designer.previousAction = explicitPreviousAction != null ? explicitPreviousAction : ((seg.actions && seg.actions[charId]) || 'idle');
   const existing = seg.customPoses && seg.customPoses[charId];
   designer.keyframes = (existing && existing.keyframes && existing.keyframes.length)
-    ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }))
+    ? existing.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" }))
     : [];
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
   if(designer.keyframes.length) designer.editingIdx = 0;
@@ -1677,7 +1686,7 @@ function saveDesignerMove(){
         seg.actions[cid] = 'idle';
         delete seg.customPoses[cid];
       } else {
-        seg.customPoses[cid] = { keyframes: st.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: st.moveSpeed || 0, moveDir: st.moveDir || 1, vertSpeed: st.vertSpeed || 0, vertDir: st.vertDir || 1 };
+        seg.customPoses[cid] = { keyframes: st.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" })), moveSpeed: st.moveSpeed || 0, moveDir: st.moveDir || 1, vertSpeed: st.vertSpeed || 0, vertDir: st.vertDir || 1 };
         seg.actions[cid] = 'customPose';
       }
     });
@@ -1785,7 +1794,7 @@ designerSaveToLibBtn.addEventListener('click', ()=>{
   if(!name) return;
   const list = loadMoveLibrary();
   const id = genMoveId();
-  list.push({ id: id, label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration })), moveSpeed: designer.moveSpeed || 0, moveDir: designer.moveDir || 1, vertSpeed: designer.vertSpeed || 0, vertDir: designer.vertDir || 1 });
+  list.push({ id: id, label: name, keyframes: designer.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" })), moveSpeed: designer.moveSpeed || 0, moveDir: designer.moveDir || 1, vertSpeed: designer.vertSpeed || 0, vertDir: designer.vertDir || 1 });
   saveMoveLibrary(list);
   refreshMoveLibSelect();
   designerMoveLibSelect.value = id;
@@ -1798,7 +1807,7 @@ designerLoadMoveBtn.addEventListener('click', ()=>{
   const list = loadMoveLibrary();
   const entry = list.find(m=> m.id === designerMoveLibSelect.value);
   if(!entry) return;
-  designer.keyframes = entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration }));
+  designer.keyframes = entry.keyframes.map(k=>({ pose: Object.assign({}, k.pose), duration: k.duration, hold:k.hold||0, easing:k.easing||"smooth" }));
   designer.editingIdx = designer.keyframes.length ? 0 : -1;
   designer.currentPose = designer.keyframes.length ? Object.assign({}, designer.keyframes[0].pose) : Object.assign({}, DEFAULT_DESIGNER_POSE);
   designer.moveSpeed = entry.moveSpeed || 0;
